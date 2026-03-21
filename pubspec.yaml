@@ -38,6 +38,11 @@ dependencies:
   latlong2: ^0.9.1
   geolocator: ^14.0.2
   http: ^1.6.0
+  google_fonts: ^8.0.2
+  flutter_animate: ^4.5.2
+  sliding_up_panel: ^2.0.0+1
+  lottie: ^3.3.2
+  intl: ^0.20.2
 
 dev_dependencies:
   flutter_test:

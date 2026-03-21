@@ -4,8 +4,9 @@ import '../../../../core/services/map_service.dart';
 class ReportDialog extends StatefulWidget {
   final double latitud;
   final double longitud;
+  final String userId;
 
-  const ReportDialog({super.key, required this.latitud, required this.longitud});
+  const ReportDialog({super.key, required this.latitud, required this.longitud, required this.userId});
 
   @override
   State<ReportDialog> createState() => _ReportDialogState();
@@ -30,7 +31,8 @@ class _ReportDialogState extends State<ReportDialog> {
         "longitud": widget.longitud,
         "descripcion": _descripcionController.text,
         "direccion": _direccionController.text,
-        "relacion_incidente": _relacionSeleccionada, // <- NUEVO 3
+        "relacion_incidente": _relacionSeleccionada,
+        "usuario_id": widget.userId,
     };
 
     try {
@@ -115,10 +117,6 @@ class _ReportDialogState extends State<ReportDialog> {
                 border: OutlineInputBorder(),
               ),
               maxLines: 3,
-            ),
-            const SizedBox(height: 10),
-            Text('Coord. GPS: \${widget.latitud.toStringAsFixed(4)}, \${widget.longitud.toStringAsFixed(4)}', 
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],
         ),

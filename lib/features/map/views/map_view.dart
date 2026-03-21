@@ -2,19 +2,28 @@
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+import 'dart:async';
+import 'package:sliding_up_panel/sliding_up_panel.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/services/map_service.dart';
 import 'widgets/report_dialog.dart';
 
 class MapView extends StatefulWidget {
-  const MapView({super.key});
+  final String userId;
+  const MapView({super.key, required this.userId});
 
   @override
   State<MapView> createState() => _MapViewState();
 }
 
 class _MapViewState extends State<MapView> {
-  LatLng? _currentPosition;
+  LatLng? _currentPosition; // La posici�n inicial del mapa o donde enfoca
+  LatLng? _realUserPosition; // La ubicaci�n EXACTA por GPS del usuario
   final MapController _mapController = MapController();
+  final PanelController _panelController = PanelController(); // Panel deslizante
+  dynamic _selectedZona; // Info de la zona actual tocada
+  
+  StreamSubscription<Position>? _positionStreamSubscription;
   bool _isLoading = true;
   List<dynamic> _zonasRiesgo = [];
   List<dynamic> _puntosExactos = []; // <--- NUEVO: para reportes ciudadanos
@@ -36,7 +45,7 @@ class _MapViewState extends State<MapView> {
         });
       }
     } catch (e) {
-      debugPrint("❌ Error cargando puntos exactos: $e");
+      debugPrint("? Error cargando puntos exactos: $e");
     }
   }
 
@@ -46,9 +55,9 @@ class _MapViewState extends State<MapView> {
       setState(() {
         _zonasRiesgo = zonas;
       });
-      debugPrint("✅ Zonas de riesgo cargadas: ${_zonasRiesgo.length}");
+      debugPrint("? Zonas de riesgo cargadas: ${_zonasRiesgo.length}");
     } catch (e) {
-      debugPrint("❌ Error cargando zonas de riesgo: $e");
+      debugPrint("? Error cargando zonas de riesgo: $e");
     }
   }
 
@@ -62,19 +71,30 @@ class _MapViewState extends State<MapView> {
     }
   }
 
-  /// Define una ubicacion por defecto (ej. Centro de Tacna) si falla el GPS
-  void _useFallbackLocation() {
+/// Define una ubicacion por defecto (ej. Centro de Tacna) si falla el GPS
+  void _useFallbackLocation({bool userForced = false}) {
     if (!mounted) return;
     setState(() {
-      _currentPosition = const LatLng(-18.0146, -70.2536);
+      _currentPosition ??= const LatLng(-18.0146, -70.2536);
       _isLoading = false;
     });
-    // Se intenta mover el mapa, aunque puede que no este listo aun,
-    // pero initialCenter lo tomara de todos modos.
+
+    if (userForced) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('?? No se pudo obtener ubicaci�n exacta tan r�pido. Esperando actualizaci�n...'),
+          duration: Duration(seconds: 4),
+          backgroundColor: Colors.orange, // Cambiado de error a aviso temporal
+        ),
+      );
+    }
   }
 
   /// Solicita permisos y obtiene la ubicacion actual del usuario
-  Future<void> _determinePosition() async {
+  Future<void> _determinePosition({bool userForced = false}) async {
+    if (userForced && mounted) {
+      setState(() => _isLoading = true);
+    }
     try {
       bool serviceEnabled;
       LocationPermission permission;
@@ -82,7 +102,8 @@ class _MapViewState extends State<MapView> {
       // Verifica si el servicio de ubicacion esta habilitado.
       serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        _useFallbackLocation();
+        _useFallbackLocation(userForced: userForced);
+        if (userForced) await Geolocator.openLocationSettings();
         return;
       }
 
@@ -90,37 +111,66 @@ class _MapViewState extends State<MapView> {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          _useFallbackLocation();
+          _useFallbackLocation(userForced: userForced);
           return;
         }
       }
-      
+
       if (permission == LocationPermission.deniedForever) {
-        _useFallbackLocation();
+        _useFallbackLocation(userForced: userForced);
+        if (userForced) await Geolocator.openAppSettings();
         return;
-      } 
+      }
 
-      // Intentamos obtener la última posición conocida por rapidez
-      Position? position = await Geolocator.getLastKnownPosition();
-      
-      // Si no hay última posición, esperamos la actual (amplié el tiempo a 15 segundos para móviles un poco lentos)
-      position ??= await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      ).timeout(const Duration(seconds: 15));
+      // Iniciamos el stream de rastreo de inmediato si tenemos permisos
+      _iniciarRastreoUbicacion();
 
-      if (mounted) {
+      Position? position;
+      try {
+        // Intentamos primero la ubicaci�n conocida para acelerar el proceso inicial (sin forzar GPS nuevo)
+        if (!userForced) {
+           position = await Geolocator.getLastKnownPosition();
+        }
+        
+        // Si no hay �ltima conocida o forz�, esperamos la actual (pero con un timeout m�s corto para no bloquear la app)
+        if (position == null || userForced) {
+           position = await Geolocator.getCurrentPosition(
+             locationSettings: const LocationSettings(accuracy: LocationAccuracy.high), // High en vez de Best para agilizar
+           ).timeout(const Duration(seconds: 8)); 
+        }
+      } catch (e) {
+        debugPrint('Geolocator request timeout: $e');
+        // Si hay timeout ac�, dejamos que el Stream de rastreo lo solucione (llegar� en un momento)
+      }
+
+      // Si nos dio posicion puntual
+      if (mounted && position != null) {
+        final newPos = LatLng(position.latitude, position.longitude);
         setState(() {
-          _currentPosition = LatLng(position!.latitude, position.longitude);
+          _realUserPosition = newPos;
+          _currentPosition = newPos;
           _isLoading = false;
         });
+        
         // Con una ligera espera para asegurar que el map_controller haya cargado en UI
         Future.delayed(const Duration(milliseconds: 300), () {
-          _mapController.move(_currentPosition!, 16.0);
+          try { _mapController.move(newPos, 16.0); } catch (_) {}
         });
+      } else if (mounted) {
+        // Si el stream de rastreo todavia no obtuvo nada
+        if (_realUserPosition == null) {
+          _useFallbackLocation(userForced: userForced); 
+        } else {
+          // Ya tiene posici�n por el stream de rastreo, solo quitamos loading y centramos si forz�
+          setState(() => _isLoading = false);
+          if (userForced && _realUserPosition != null) {
+             try { _mapController.move(_realUserPosition!, 16.0); } catch (_) {}
+          }
+        }
       }
     } catch (e) {
-      debugPrint('Error geolocator: $e');
-      _useFallbackLocation(); // Falla si el GPS está apagado o en Web sin permisos
+      debugPrint('Error cr�tico geolocator: $e');
+      _useFallbackLocation(userForced: userForced);
     }
   }
 
@@ -132,6 +182,7 @@ class _MapViewState extends State<MapView> {
       builder: (context) => ReportDialog(
         latitud: coordenada.latitude,
         longitud: coordenada.longitude,
+        userId: widget.userId, // <- PASAR EL USUARIO
       ),
     );
 
@@ -141,20 +192,182 @@ class _MapViewState extends State<MapView> {
     }
   }
 
+  void _iniciarRastreoUbicacion() {
+    _positionStreamSubscription ??= Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 2),
+    ).listen((Position position) {
+      if (mounted) {
+        final newPos = LatLng(position.latitude, position.longitude);
+        setState(() {
+          _realUserPosition = newPos;
+          // Si el mapa estaba en ubicacion por defecto, lo enfocamos de inmediato
+          if (_currentPosition == null || _currentPosition == const LatLng(-18.0146, -70.2536)) {
+            _currentPosition = newPos;
+            _isLoading = false;
+            Future.delayed(const Duration(milliseconds: 300), () {
+              try { _mapController.move(newPos, 16.0); } catch (_) {}
+            });
+          }
+        });
+      }
+    });
+  }
+
+  void _handleMapTap(TapPosition _, LatLng tapLatLng) {
+    const Distance distance = Distance();
+    
+    // Buscar si el tap ocurrió dentro de alguna zona de calor
+    for (var zona in _zonasRiesgo) {
+      if (zona['centroide'] == null || zona['centroide']['coordinates'] == null) continue;
+      
+      final coords = zona['centroide']['coordinates'];
+      final lat = (coords[1] as num).toDouble();
+      final lng = (coords[0] as num).toDouble();
+      final radius = (zona['radio_metros'] as num?)?.toDouble() ?? 500.0;
+      
+      final zoneLatLng = LatLng(lat, lng);
+      final distToTap = distance.as(LengthUnit.Meter, zoneLatLng, tapLatLng);
+      
+      if (distToTap <= radius) {
+        _showZoneInfo(zona);
+        return; 
+      }
+    }
+  }
+
+  void _showZoneInfo(dynamic zona) {
+    setState(() {
+      _selectedZona = zona;
+    });
+    _panelController.open();
+  }
+
+  Widget _buildPanelContent() {
+    if (_selectedZona == null) return const SizedBox.shrink();
+
+    final zona = _selectedZona;
+    final nivel = zona['nivel_riesgo'].toString().toUpperCase();
+    Color colorNivel = Colors.grey;
+    if (nivel == 'CRITICO' || nivel == 'ALTO') colorNivel = Colors.red;
+    if (nivel == 'MEDIO') colorNivel = Colors.orange;
+    if (nivel == 'BAJO') colorNivel = Colors.green;
+
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.grey[400],
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+               Icon(Icons.whatshot, color: colorNivel, size: 28)
+                   .animate(onPlay: (controller) => controller.repeat(reverse: true))
+                   .scale(duration: 800.ms, curve: Curves.easeInOut, begin: const Offset(1, 1), end: const Offset(1.2, 1.2)),
+               const SizedBox(width: 8),
+               Expanded(
+                 child: Column(
+                   crossAxisAlignment: CrossAxisAlignment.start,
+                   children: [
+                     Text(
+                      'Zona de Riesgo $nivel',
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                     ).animate().fadeIn(duration: 400.ms).slideX(begin: -0.1),
+                     if (zona['distrito'] != null)
+                       Text(
+                         zona['distrito'].toString().toUpperCase(),
+                         style: const TextStyle(
+                           fontSize: 14,
+                           color: Colors.grey,
+                           fontWeight: FontWeight.w600,
+                         ),
+                       ).animate().fadeIn(delay: 100.ms).slideX(begin: -0.1),
+                   ],
+                 ),
+               ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const CircleAvatar(backgroundColor: Colors.blueAccent, child: Icon(Icons.security, color: Colors.white)),
+            title: Text('Incidentes registrados: ${zona['total_incidentes'] ?? "Varios"}'),
+            subtitle: const Text('Basado en denuncias y reportes policiales.'),
+          ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2),
+          if (zona['delito_predominante'] != null)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const CircleAvatar(backgroundColor: Colors.redAccent, child: Icon(Icons.warning, color: Colors.white)),
+              title: Text('Delito frecuente: ${zona['delito_predominante']}'),
+            ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.2),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const CircleAvatar(backgroundColor: Colors.orangeAccent, child: Icon(Icons.trending_up, color: Colors.white)),
+            title: Text('Tendencia: ${zona['tendencia'] ?? "Desconocida"}'),
+          ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.2),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _positionStreamSubscription?.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          _isLoading 
-              ? const Center(child: CircularProgressIndicator(semanticsLabel: 'Obteniendo ubicacion...'))
-              : _currentPosition == null
-                  ? const Center(child: Text('No se pudo inicializar el mapa. Revisar permisos.'))
-                  : FlutterMap(
+      body: SlidingUpPanel(
+        controller: _panelController,
+        minHeight: 0,
+        maxHeight: 380,
+        backdropEnabled: true,
+        backdropOpacity: 0.3,
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: [
+          BoxShadow(blurRadius: 10, color: Colors.black.withAlpha(25))
+        ],
+        panel: _buildPanelContent(),
+        body: Stack(
+          children: [
+            _isLoading
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.location_on, size: 60, color: Colors.blue)
+                            .animate(onPlay: (controller) => controller.repeat(reverse: true))
+                            .scale(duration: 800.ms, curve: Curves.easeInOut)
+                            .tint(color: Colors.lightBlueAccent, duration: 800.ms),
+                        const SizedBox(height: 16),
+                        const Text("Ubicando señal GPS...").animate().fadeIn(duration: 500.ms),
+                      ],
+                    ),
+                  )
+                : _currentPosition == null
+                    ? const Center(child: Text('No se pudo inicializar el mapa. Revisar permisos.'))
+                    : FlutterMap(
                       mapController: _mapController,
                       options: MapOptions(
                         initialCenter: _currentPosition!,
                         initialZoom: 15.0,
+                        // Al tocar un punto (tap normal), detectamos si es una zona de riesgo para mostrar info
+                        onTap: (tapPosition, latLng) {
+                          _handleMapTap(tapPosition, latLng);
+                        },
                         // Permitir a la persona presionar largo en una calle especifica para reportar
                         onLongPress: (tapPosition, latLng) {
                           _abrirFormularioReporte(latLng);
@@ -162,8 +375,9 @@ class _MapViewState extends State<MapView> {
                       ),
                       children: [
                         TileLayer(
-                          // Usamos OpenStreetMap por defecto (No requiere API Key y es libre)
-                          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            // Capa de mapa base CARTO voyager (Minimalista, moderna, basada en OpenStreetMap)
+                            urlTemplate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+                            subdomains: const ['a', 'b', 'c', 'd'],
                           userAgentPackageName: 'com.example.sgeo_pp',
                         ),
                         if (_zonasRiesgo.isNotEmpty)
@@ -200,27 +414,62 @@ class _MapViewState extends State<MapView> {
                               );
                             }),
                             
-                            // 2. Posición actual del usuario
-                            Marker(
-                              point: _currentPosition!,
-                              width: 80,
-                              height: 80,
-                              child: const Icon(
-                                Icons.person_pin_circle,
-                                color: Colors.blue,
-                                size: 45.0,
+                            // 2. Posici�n actual REAL del usuario (solo si existe)
+                            if (_realUserPosition != null)
+                              Marker(
+                                point: _realUserPosition!,
+                                width: 80,
+                                height: 80,
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    // Sombra / Pulso (Halo)
+                                    Container(
+                                      width: 45,
+                                      height: 45,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Colors.blue.withAlpha(50),
+                                      ),
+                                    ),
+                                    Container(
+                                      width: 28,
+                                      height: 28,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Colors.blue.withAlpha(100),
+                                      ),
+                                    ),
+                                    // Punto central blanco con anillo azul
+                                    Container(
+                                      width: 16,
+                                      height: 16,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Colors.blue,
+                                        border: Border.all(color: Colors.white, width: 2.5),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withAlpha(80),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
                           ],
                         ),
                       ],
                     ),
 
-          // -- BOTÓN PARA REPORTAR (Esquina Superior Derecha) --
+          // -- BOT�N PARA REPORTAR (Esquina Superior Derecha) --
           Positioned(
             top: 40,
             right: 20,
-            child: FloatingActionButton.extended(
+            child: FloatingActionButton(
               heroTag: 'btn_reportar_incidente',
               backgroundColor: Colors.red.shade700,
               foregroundColor: Colors.white,
@@ -234,26 +483,27 @@ class _MapViewState extends State<MapView> {
                   ),
                 );
               },
-              icon: const Icon(Icons.campaign, size: 28),
-              label: const Text("Reportar Incidente"),
+              child: const Icon(Icons.campaign, size: 28),
+              
             ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
+    ),
+    floatingActionButton: FloatingActionButton(
         heroTag: 'map_location',
         onPressed: () {
-          if (_currentPosition != null) {
-            // Un pequeño truco que el usuario puede usar para ir a las zonas IA
-            // Si el usuario mantiene pulsado o pulsa normal
-            _mapController.move(_currentPosition!, 15.0);
-          } else {
-            setState(() => _isLoading = true);
-            _determinePosition();
-          }
+          // Al presionar este bot�n, obl�gamos a pedir una nueva ubicaci�n real
+          _determinePosition(userForced: true);
         },
         child: const Icon(Icons.my_location),
       ),
     );
   }
 }
+
+
+
+
+
+

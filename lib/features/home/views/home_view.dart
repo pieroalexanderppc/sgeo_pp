@@ -1,14 +1,16 @@
 ﻿import 'package:flutter/material.dart';
-import 'package:sgeo_pp/features/auth/views/login_view.dart';
 import 'package:sgeo_pp/features/map/views/map_view.dart';
 import 'package:sgeo_pp/features/reports/views/my_reports_view.dart';
 import 'package:sgeo_pp/features/profile/views/profile_view.dart';
+import 'package:sgeo_pp/features/news/views/news_view.dart';
+import 'package:sgeo_pp/features/notifications/views/notifications_view.dart';
 
 class HomeView extends StatefulWidget {
   final String userRole; // "admin", "policia", o "ciudadano"
   final String userName;
+  final String userId;
 
-  const HomeView({super.key, required this.userRole, required this.userName});
+  const HomeView({super.key, required this.userRole, required this.userName, required this.userId});
 
   @override
   State<HomeView> createState() => _HomeViewState();
@@ -17,11 +19,19 @@ class HomeView extends StatefulWidget {
 class _HomeViewState extends State<HomeView> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = const [
-    MapView(),
-    MyReportsView(),
-    ProfileView(),
-  ];
+  late final List<Widget> _pages;
+
+  @override
+  void initState() {
+    super.initState();
+    _pages = [
+      MapView(userId: widget.userId),
+      const NewsView(),
+      const NotificationsView(),
+      MyReportsView(userId: widget.userId),
+      ProfileView(userName: widget.userName, userRole: widget.userRole),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,6 +42,7 @@ class _HomeViewState extends State<HomeView> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
+        type: BottomNavigationBarType.fixed, // Esto es muy importante cuando hay mÃ¡s de 3 items
         onTap: (index) {
           setState(() {
             _currentIndex = index;
@@ -43,8 +54,16 @@ class _HomeViewState extends State<HomeView> {
             label: 'Mapa',
           ),
           BottomNavigationBarItem(
+            icon: Icon(Icons.newspaper),
+            label: 'Noticias',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.notifications),
+            label: 'Notificaciones',
+          ),
+          BottomNavigationBarItem(
             icon: Icon(Icons.list_alt),
-            label: 'Mis Reportes',
+            label: 'Mi Historial',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
@@ -53,16 +72,5 @@ class _HomeViewState extends State<HomeView> {
         ],
       ),
     );
-  }
-
-  IconData _getRoleIcon(String role) {
-    switch (role) {
-      case 'admin':
-        return Icons.admin_panel_settings;
-      case 'policia':
-        return Icons.local_police;
-      default:
-        return Icons.person;
-    }
   }
 }

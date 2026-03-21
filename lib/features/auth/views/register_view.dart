@@ -48,7 +48,6 @@ class _RegisterViewState extends State<RegisterView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blue.shade50,
       appBar: AppBar(
         title: const Text('Registro de Ciudadano'),
         centerTitle: true,
@@ -69,7 +68,6 @@ class _RegisterViewState extends State<RegisterView> {
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   prefixIcon: const Icon(Icons.person),
                   filled: true,
-                  fillColor: Colors.white,
                 ),
               ),
               const SizedBox(height: 16),
@@ -80,7 +78,6 @@ class _RegisterViewState extends State<RegisterView> {
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   prefixIcon: const Icon(Icons.email),
                   filled: true,
-                  fillColor: Colors.white,
                 ),
                 keyboardType: TextInputType.emailAddress,
               ),
@@ -92,7 +89,6 @@ class _RegisterViewState extends State<RegisterView> {
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   prefixIcon: const Icon(Icons.lock),
                   filled: true,
-                  fillColor: Colors.white,
                 ),
                 obscureText: true,
               ),

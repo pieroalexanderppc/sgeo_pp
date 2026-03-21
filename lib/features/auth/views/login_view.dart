@@ -35,8 +35,9 @@ class _LoginViewState extends State<LoginView> {
         context,
         MaterialPageRoute(
           builder: (context) => HomeView(
-            userRole: userData['rol'], 
-            userName: userData['nombre']
+            userRole: userData['rol'],
+            userName: userData['nombre'],
+            userId: userData['id'] ?? userData['_id'] ?? '',
           ),
         ),
       );
@@ -50,11 +51,6 @@ class _LoginViewState extends State<LoginView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blue.shade50,
-      appBar: AppBar(
-        title: const Text('SGEO - Iniciar Sesión'),
-        centerTitle: true,
-      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24),
@@ -74,11 +70,9 @@ class _LoginViewState extends State<LoginView> {
                 controller: _emailController,
                 decoration: InputDecoration(
                   labelText: 'Correo Electrónico',
-                  hintText: 'ej: admin@sgeo.com',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   prefixIcon: const Icon(Icons.email),
                   filled: true,
-                  fillColor: Colors.white,
                 ),
                 keyboardType: TextInputType.emailAddress,
               ),
@@ -86,7 +80,7 @@ class _LoginViewState extends State<LoginView> {
               TextField(
                 controller: _passwordController,
                 decoration: InputDecoration(
-                  labelText: 'Contraseña (123456)',
+                  labelText: 'Contraseña',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   prefixIcon: const Icon(Icons.lock),
                   suffixIcon: IconButton(
@@ -98,7 +92,6 @@ class _LoginViewState extends State<LoginView> {
                     },
                   ),
                   filled: true,
-                  fillColor: Colors.white,
                 ),
                 obscureText: _obscurePassword,
               ),
