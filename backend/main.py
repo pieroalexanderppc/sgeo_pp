@@ -175,15 +175,19 @@ def obtner_zonas_riesgo():
 
 from datetime import datetime
 
+from typing import Optional
+from bson.errors import InvalidId
+
 class ReporteCiudadano(BaseModel):
     sub_tipo: str # "HURTO", "ROBO", "EXTORSION"
     modalidad: str = "PUNTEO/ARREBATO"
     latitud: float
     longitud: float
-    direccion: str = "Ubicacion reportada por mapa" 
+    direccion: str = "Ubicacion reportada por mapa"
     distrito: str = "TACNA"
     descripcion: str = ""
     relacion_incidente: str = "Fui testigo presencial" # "Fui testigo presencial", "Familiar / Conocido"
+    usuario_id: Optional[str] = None
 
 @app.post("/api/reportes")
 def crear_reporte(reporte: ReporteCiudadano):
@@ -191,8 +195,18 @@ def crear_reporte(reporte: ReporteCiudadano):
     Recibe un reporte del ciudadano desde la App y lo guarda como 'pendiente'.
     """
     try:
+        user_id_obj = None
+        if hasattr(reporte, 'usuario_id') and reporte.usuario_id:
+            try:
+                from bson.objectid import ObjectId
+                from bson.errors import InvalidId
+                user_id_obj = ObjectId(reporte.usuario_id)
+            except Exception:
+                pass
+                
         nuevo_reporte = {
             "anonimo": True,
+            "usuario_id": user_id_obj,
             "tipo": "PATRIMONIO (DELITO)",
             "sub_tipo": reporte.sub_tipo,
             "modalidad": reporte.modalidad,
@@ -200,7 +214,7 @@ def crear_reporte(reporte: ReporteCiudadano):
                 "type": "Point",
                 "coordinates": [reporte.longitud, reporte.latitud] # GeoJSON pide primero Longitud, luego Latitud
             },
-            "direccion": reporte.direccion, 
+            "direccion": reporte.direccion,
             "distrito": reporte.distrito,
             "relacion_incidente": reporte.relacion_incidente, # NUEVO: Guardamos quién lo reporta
             "fecha_hecho": datetime.utcnow(),
@@ -213,6 +227,31 @@ def crear_reporte(reporte: ReporteCiudadano):
     except Exception as e:
         print("Error guardando reporte:", str(e))
         raise HTTPException(status_code=500, detail="Error guardando reporte: " + str(e))
+
+@app.get("/api/reportes/mis_reportes/{user_id}")
+def obtener_mis_reportes(user_id: str):
+    try:
+        from bson.objectid import ObjectId
+        from bson.errors import InvalidId
+        try:
+            user_obj_id = ObjectId(user_id)
+        except InvalidId:
+            raise HTTPException(status_code=400, detail="ID de usuario inválido")
+            
+        reportes = list(db.reportes_ciudadano.find({"usuario_id": user_obj_id}).sort("creado_en", -1))
+        for r in reportes:
+            r["_id"] = str(r["_id"])
+            if "usuario_id" in r and r["usuario_id"]:
+                r["usuario_id"] = str(r["usuario_id"])
+            if "creado_en" in r:
+                r["creado_en"] = r["creado_en"].isoformat()
+            if "fecha_hecho" in r:
+                r["fecha_hecho"] = r["fecha_hecho"].isoformat()
+                
+        return {"status": "success", "reportes": reportes}
+    except Exception as e:
+        print("Error en obtener_mis_reportes:", e)
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/map/puntos_exactos")
 def obtener_puntos_exactos():
@@ -232,4 +271,39 @@ def obtener_puntos_exactos():
         return {"status": "success", "puntos": reportes}
     except Exception as e:
         raise HTTPException(status_code=500, detail="Error obteniendo los puntos: " + str(e))
+
+from bson import ObjectId
+
+class UpdateUser(BaseModel):
+    nombre: str
+    email: EmailStr
+    telefono: str = ""
+
+@app.get("/api/usuarios/{user_id}")
+def obtener_usuario(user_id: str):
+    try:
+        user = db.usuarios.find_one({"_id": ObjectId(user_id)}, {"password_hash": 0})
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        user["_id"] = str(user["_id"])
+        return {"status": "success", "user": user}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="ID Invalido o error: " + str(e))
+
+@app.put("/api/usuarios/{user_id}")
+def actualizar_usuario(user_id: str, data: UpdateUser):
+    try:
+        resultado = db.usuarios.update_one(
+            {"_id": ObjectId(user_id)},
+            {"$set": {
+                "nombre": data.nombre,
+                "email": data.email,
+                "telefono": data.telefono
+            }}
+        )
+        if resultado.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        return {"status": "success", "message": "Datos actualizados"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Error actualizando: " + str(e))
 

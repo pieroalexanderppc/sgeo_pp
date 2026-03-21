@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
@@ -17,8 +18,8 @@ class MapView extends StatefulWidget {
 }
 
 class _MapViewState extends State<MapView> {
-  LatLng? _currentPosition; // La posici�n inicial del mapa o donde enfoca
-  LatLng? _realUserPosition; // La ubicaci�n EXACTA por GPS del usuario
+  LatLng? _currentPosition; // La posici?n inicial del mapa o donde enfoca
+  LatLng? _realUserPosition; // La ubicaci?n EXACTA por GPS del usuario
   final MapController _mapController = MapController();
   final PanelController _panelController = PanelController(); // Panel deslizante
   dynamic _selectedZona; // Info de la zona actual tocada
@@ -82,7 +83,7 @@ class _MapViewState extends State<MapView> {
     if (userForced) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('?? No se pudo obtener ubicaci�n exacta tan r�pido. Esperando actualizaci�n...'),
+          content: Text('?? No se pudo obtener ubicaci?n exacta tan r?pido. Esperando actualizaci?n...'),
           duration: Duration(seconds: 4),
           backgroundColor: Colors.orange, // Cambiado de error a aviso temporal
         ),
@@ -93,6 +94,12 @@ class _MapViewState extends State<MapView> {
   /// Solicita permisos y obtiene la ubicacion actual del usuario
   Future<void> _determinePosition({bool userForced = false}) async {
     if (userForced && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Buscando ubicación actual, por favor espera...'),
+          duration: Duration(seconds: 4),
+        ),
+      );
       setState(() => _isLoading = true);
     }
     try {
@@ -126,21 +133,25 @@ class _MapViewState extends State<MapView> {
       _iniciarRastreoUbicacion();
 
       Position? position;
-      try {
-        // Intentamos primero la ubicaci�n conocida para acelerar el proceso inicial (sin forzar GPS nuevo)
-        if (!userForced) {
-           position = await Geolocator.getLastKnownPosition();
+      
+      // 1. Obtener la ubicación cacheadísima en celulares (Web crashea con esto)
+      if (!userForced) {
+        try {
+          if (!kIsWeb) {
+            position = await Geolocator.getLastKnownPosition();
+          }
+        } catch (_) {}
+      }
+      
+      // 2. Si forzamos, o no hay caché, pedir la ubicación con ALTA precisión y SIN ahogarlo
+      if (position == null) {
+        try {
+          position = await Geolocator.getCurrentPosition(
+            locationSettings: const LocationSettings(accuracy: LocationAccuracy.best) // Mejor precisión satelital
+          ).timeout(const Duration(seconds: 15)); // Un margen decente de 15 segundos para el GPS
+        } catch (e) {
+          debugPrint('Aviso GPS: $e');
         }
-        
-        // Si no hay �ltima conocida o forz�, esperamos la actual (pero con un timeout m�s corto para no bloquear la app)
-        if (position == null || userForced) {
-           position = await Geolocator.getCurrentPosition(
-             locationSettings: const LocationSettings(accuracy: LocationAccuracy.high), // High en vez de Best para agilizar
-           ).timeout(const Duration(seconds: 8)); 
-        }
-      } catch (e) {
-        debugPrint('Geolocator request timeout: $e');
-        // Si hay timeout ac�, dejamos que el Stream de rastreo lo solucione (llegar� en un momento)
       }
 
       // Si nos dio posicion puntual
@@ -153,15 +164,16 @@ class _MapViewState extends State<MapView> {
         });
         
         // Con una ligera espera para asegurar que el map_controller haya cargado en UI
-        Future.delayed(const Duration(milliseconds: 300), () {
-          try { _mapController.move(newPos, 16.0); } catch (_) {}
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (!mounted) return;
+          try { _mapController.move(newPos, 16.0); } catch (e) { debugPrint('Error map: $e'); }
         });
       } else if (mounted) {
         // Si el stream de rastreo todavia no obtuvo nada
         if (_realUserPosition == null) {
           _useFallbackLocation(userForced: userForced); 
         } else {
-          // Ya tiene posici�n por el stream de rastreo, solo quitamos loading y centramos si forz�
+          // Ya tiene posici?n por el stream de rastreo, solo quitamos loading y centramos si forz?
           setState(() => _isLoading = false);
           if (userForced && _realUserPosition != null) {
              try { _mapController.move(_realUserPosition!, 16.0); } catch (_) {}
@@ -169,7 +181,7 @@ class _MapViewState extends State<MapView> {
         }
       }
     } catch (e) {
-      debugPrint('Error cr�tico geolocator: $e');
+      debugPrint('Error cr?tico geolocator: $e');
       _useFallbackLocation(userForced: userForced);
     }
   }
@@ -414,7 +426,7 @@ class _MapViewState extends State<MapView> {
                               );
                             }),
                             
-                            // 2. Posici�n actual REAL del usuario (solo si existe)
+                            // 2. Posici?n actual REAL del usuario (solo si existe)
                             if (_realUserPosition != null)
                               Marker(
                                 point: _realUserPosition!,
@@ -465,7 +477,7 @@ class _MapViewState extends State<MapView> {
                       ],
                     ),
 
-          // -- BOT�N PARA REPORTAR (Esquina Superior Derecha) --
+          // -- BOT?N PARA REPORTAR (Esquina Superior Derecha) --
           Positioned(
             top: 40,
             right: 20,
@@ -477,7 +489,7 @@ class _MapViewState extends State<MapView> {
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Mantén presionado sobre la calle en el mapa para ubicar tu reporte.'),
+                    content: Text('Mantén presionado sobre la ubicación en el mapa para iniciar tu reporte.'),
                     duration: Duration(seconds: 3),
                     behavior: SnackBarBehavior.floating,
                   ),
@@ -493,7 +505,7 @@ class _MapViewState extends State<MapView> {
     floatingActionButton: FloatingActionButton(
         heroTag: 'map_location',
         onPressed: () {
-          // Al presionar este bot�n, obl�gamos a pedir una nueva ubicaci�n real
+          // Al presionar este bot?n, obl?gamos a pedir una nueva ubicaci?n real
           _determinePosition(userForced: true);
         },
         child: const Icon(Icons.my_location),

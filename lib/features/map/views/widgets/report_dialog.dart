@@ -16,7 +16,6 @@ class _ReportDialogState extends State<ReportDialog> {
   String _subTipoSeleccionado = 'HURTO'; // Valor default
   String _relacionSeleccionada = 'Fui testigo presencial'; 
   final TextEditingController _descripcionController = TextEditingController();
-  final TextEditingController _direccionController = TextEditingController(); 
   bool _isSubmitting = false;
 
   final List<String> _tiposDelito = ['HURTO', 'ROBO', 'EXTORSION'];
@@ -30,7 +29,7 @@ class _ReportDialogState extends State<ReportDialog> {
         "latitud": widget.latitud,
         "longitud": widget.longitud,
         "descripcion": _descripcionController.text,
-        "direccion": _direccionController.text,
+        "direccion": "", // Ya no necesitamos enviarla por form si va implícito en coord
         "relacion_incidente": _relacionSeleccionada,
         "usuario_id": widget.userId,
     };
@@ -97,16 +96,6 @@ class _ReportDialogState extends State<ReportDialog> {
                   _relacionSeleccionada = val!;
                 });
               },
-            ),
-            const SizedBox(height: 15),
-            TextField(
-              controller: _direccionController,
-              decoration: const InputDecoration(
-                labelText: 'Dirección o lugar exacto',
-                hintText: 'Ej: Av. Bolognesi frente al mercado',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.place),
-              ),
             ),
             const SizedBox(height: 15),
             TextField(

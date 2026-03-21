@@ -1,9 +1,9 @@
 ﻿import 'package:flutter/material.dart';
-import 'package:sgeo_pp/features/map/views/map_view.dart';
-import 'package:sgeo_pp/features/reports/views/my_reports_view.dart';
-import 'package:sgeo_pp/features/profile/views/profile_view.dart';
-import 'package:sgeo_pp/features/news/views/news_view.dart';
-import 'package:sgeo_pp/features/notifications/views/notifications_view.dart';
+import '../../map/views/map_view.dart';
+import '../../reports/views/my_reports_view.dart';
+import '../../profile/views/profile_view.dart';
+import '../../news/views/news_view.dart';
+import '../../notifications/views/notifications_view.dart';
 
 class HomeView extends StatefulWidget {
   final String userRole; // "admin", "policia", o "ciudadano"
@@ -18,6 +18,7 @@ class HomeView extends StatefulWidget {
 
 class _HomeViewState extends State<HomeView> {
   int _currentIndex = 0;
+  final Set<int> _visitedPages = {0};
 
   late final List<Widget> _pages;
 
@@ -29,7 +30,11 @@ class _HomeViewState extends State<HomeView> {
       const NewsView(),
       const NotificationsView(),
       MyReportsView(userId: widget.userId),
-      ProfileView(userName: widget.userName, userRole: widget.userRole),
+      ProfileView(
+        userId: widget.userId,
+        userName: widget.userName, 
+        userRole: widget.userRole,
+      ),
     ];
   }
 
@@ -38,7 +43,7 @@ class _HomeViewState extends State<HomeView> {
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
-        children: _pages,
+        children: List.generate(5, (index) => _visitedPages.contains(index) ? _pages[index] : const SizedBox.shrink()),
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
@@ -46,6 +51,7 @@ class _HomeViewState extends State<HomeView> {
         onTap: (index) {
           setState(() {
             _currentIndex = index;
+              _visitedPages.add(index);
           });
         },
         items: const [
@@ -63,7 +69,7 @@ class _HomeViewState extends State<HomeView> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.list_alt),
-            label: 'Mi Historial',
+            label: 'Reportes',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
@@ -74,3 +80,4 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 }
+

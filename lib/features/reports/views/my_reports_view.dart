@@ -24,7 +24,7 @@ class _MyReportsViewState extends State<MyReportsView> {
   Future<void> _fetchMyReports() async {
     setState(() => _isLoading = true);
     try {
-      final response = await http.get(Uri.parse('http://127.0.0.1:8000/api/reportes/mis_reportes/${widget.userId}'));
+      final response = await http.get(Uri.parse('https://sgeo-backend-production.up.railway.app/api/reportes/mis_reportes/${widget.userId}'));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['status'] == 'success') {
