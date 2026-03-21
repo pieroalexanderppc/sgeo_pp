@@ -422,6 +422,7 @@ class _MapViewState extends State<MapView> {
                                 point: LatLng((coords[1] as num).toDouble(), (coords[0] as num).toDouble()),
                                 width: 40,
                                 height: 40,
+                                alignment: Alignment.center, // Centrado para que la 'X' de la alerta quede exactamente en el punto
                                 child: Icon(Icons.warning_amber_rounded, color: colorPunto, size: 30.0),
                               );
                             }),
@@ -485,15 +486,19 @@ class _MapViewState extends State<MapView> {
               heroTag: 'btn_reportar_incidente',
               backgroundColor: Colors.red.shade700,
               foregroundColor: Colors.white,
-              // Al presionar solicitamos dónde reportarlo con instrucciones
+              // Al presionar reportamos EXACTAMENTE en la ubicaci?n GPS actual
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Mantén presionado sobre la ubicación en el mapa para iniciar tu reporte.'),
-                    duration: Duration(seconds: 3),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
+                if (_realUserPosition != null) {
+                  _abrirFormularioReporte(_realUserPosition!);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Esperando tu ubicación GPS. Tambien puedes mantener presionado en el mapa para reportar manualmente.'),
+                      duration: Duration(seconds: 3),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
               },
               child: const Icon(Icons.campaign, size: 28),
               

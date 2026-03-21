@@ -78,6 +78,23 @@ class _MyReportsViewState extends State<MyReportsView> {
                     }
                     final formattedDate = date != null ? DateFormat('dd/MM/yyyy HH:mm').format(date) : 'Fecha desconocida';
 
+                    String direccionStr = report['direccion']?.toString() ?? '';
+                    if (direccionStr.trim().isEmpty) {
+                      if (report['ubicacion'] != null && report['ubicacion']['coordinates'] != null) {
+                        try {
+                          final coords = report['ubicacion']['coordinates'];
+                          // coords es [longitud, latitud]
+                          final lng = (coords[0] as num).toStringAsFixed(5);
+                          final lat = (coords[1] as num).toStringAsFixed(5);
+                          direccionStr = 'GPS: Lat $lat, Lng $lng';
+                        } catch (e) {
+                          direccionStr = 'Ubicación por mapa';
+                        }
+                      } else {
+                        direccionStr = 'Ubicación por mapa';
+                      }
+                    }
+
                     return Card(
                       elevation: 2,
                       margin: const EdgeInsets.only(bottom: 12),
@@ -88,7 +105,7 @@ class _MyReportsViewState extends State<MyReportsView> {
                           size: 32,
                         ),
                         title: Text('${report['sub_tipo']} - ${report['estado'].toString().toUpperCase()}'),
-                        subtitle: Text('Fecha: $formattedDate\nDirección: ${report['direccion'] ?? 'No especificada'}'),
+                        subtitle: Text('Fecha: $formattedDate\nLugar: $direccionStr'),
                         isThreeLine: true,
                         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                         onTap: () {

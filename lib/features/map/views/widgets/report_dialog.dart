@@ -69,6 +69,22 @@ class _ReportDialogState extends State<ReportDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('Está a punto de enviar una alerta ciudadana. Por favor, indique el tipo de incidente:'),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade400)
+              ),
+              child: Row(
+                children: [
+                   const Icon(Icons.gps_fixed, size: 20, color: Colors.blue),
+                   const SizedBox(width: 8),
+                   Expanded(child: Text("Ubicación exacta de captura:\nLat: ${widget.latitud.toStringAsFixed(6)}, Lng: ${widget.longitud.toStringAsFixed(6)}", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87))),
+                ],
+              ),
+            ),
             const SizedBox(height: 15),
             DropdownButtonFormField<String>(
               initialValue: _subTipoSeleccionado,
