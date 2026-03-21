@@ -79,6 +79,7 @@ def setup_db():
                     },
                     "direccion": {"bsonType": "string"},
                     "distrito": {"bsonType": "string"},
+                    "relacion_incidente": {"enum": ["Fui testigo presencial", "Familiar / Conocido"]},
                     "ubigeo": {"bsonType": "string"},
                     "fecha_hecho": {"bsonType": "date"},
                     "hora_aprox": {"bsonType": "string"},

@@ -1,80 +1,57 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:sgeo_pp/features/auth/views/login_view.dart';
-import 'package:sgeo_pp/features/map/views/map_view.dart'; // Asegúrate de ajustar importaciones si cambian
+import 'package:sgeo_pp/features/map/views/map_view.dart';
+import 'package:sgeo_pp/features/reports/views/my_reports_view.dart';
+import 'package:sgeo_pp/features/profile/views/profile_view.dart';
 
-class HomeView extends StatelessWidget {
+class HomeView extends StatefulWidget {
   final String userRole; // "admin", "policia", o "ciudadano"
   final String userName;
 
   const HomeView({super.key, required this.userRole, required this.userName});
 
   @override
+  State<HomeView> createState() => _HomeViewState();
+}
+
+class _HomeViewState extends State<HomeView> {
+  int _currentIndex = 0;
+
+  final List<Widget> _pages = const [
+    MapView(),
+    MyReportsView(),
+    ProfileView(),
+  ];
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('SGEO - Mapa Principal'),
-        centerTitle: true,
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _pages,
       ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            UserAccountsDrawerHeader(
-              accountName: Text(userName),
-              accountEmail: Text('Rol: ${userRole.toUpperCase()}'),
-              currentAccountPicture: CircleAvatar(
-                backgroundColor: Colors.white,
-                child: Icon(
-                  _getRoleIcon(userRole),
-                  size: 40,
-                  color: Colors.blue.shade900,
-                ),
-              ),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade800,
-              ),
-            ),
-            if (userRole == 'admin' || userRole == 'policia')
-              ListTile(
-                leading: const Icon(Icons.dashboard),
-                title: const Text('Panel de Control Sidpol'),
-                onTap: () {
-                  // Navegar a estadísticas (futuro)
-                },
-              ),
-            if (userRole == 'admin')
-              ListTile(
-                leading: const Icon(Icons.people),
-                title: const Text('Gestión de Usuarios'),
-                onTap: () {
-                  // Navegar a ABM usuarios (futuro)
-                },
-              ),
-            if (userRole == 'ciudadano' || userRole == 'policia')
-              ListTile(
-                leading: const Icon(Icons.add_alert),
-                title: const Text('Reportar Incidente'),
-                onTap: () {
-                  // Navegar a formulario de reporte (futuro)
-                },
-              ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.logout, color: Colors.red),
-              title: const Text('Cerrar Sesión', style: TextStyle(color: Colors.red)),
-              onTap: () {
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (context) => const LoginView()),
-                  (route) => false,
-                );
-              },
-            ),
-          ],
-        ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.map),
+            label: 'Mapa',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.list_alt),
+            label: 'Mis Reportes',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Perfil',
+          ),
+        ],
       ),
-      // El mapa es compartido por todos, aquí lo inyectamos en el cuerpo
-      body: const MapView(),
     );
   }
 

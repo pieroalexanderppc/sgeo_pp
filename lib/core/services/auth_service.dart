@@ -1,17 +1,10 @@
 ﻿import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart';
 
 class AuthService {
-  // Ajuste automatico de la URL segun plataforma
-  static String get _baseUrl {
-    if (kIsWeb) return 'http://127.0.0.1:8000';
-    try {
-      if (Platform.isAndroid) return 'http://10.0.2.2:8000';
-    } catch (_) {}
-    return 'http://127.0.0.1:8000';
-  }
+  // Enlace directo a tu servidor Railway
+  static const String _baseUrl = 'https://sgeo-backend-production.up.railway.app';
 
   // --- LOGIN ---
   static Future<Map<String, dynamic>> login(String email, String password) async {
@@ -29,7 +22,7 @@ class AuthService {
         return {'success': false, 'message': error['detail'] ?? 'Error desconocido'};
       }
     } catch (e) {
-      print('AuthService login error: $e');
+      debugPrint('AuthService login error: $e');
       return {'success': false, 'message': 'No se pudo conectar con el servidor.'};
     }
   }
@@ -54,7 +47,7 @@ class AuthService {
         return {'success': false, 'message': error['detail'] ?? 'Error de registro'};
       }
     } catch (e) {
-      print('AuthService register error: $e');
+      debugPrint('AuthService register error: $e');
       return {'success': false, 'message': 'No se pudo conectar con el servidor.'};
     }
   }
