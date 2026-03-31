@@ -162,6 +162,30 @@ def setup_db():
     except Exception as e:
         print("⚠️  La colección 'estadisticas_sidpol' ya existe o hubo un error.")
 
+    # 4.5. ESTADISTICAS_FLAGRANCIA (NUEVO)
+    try:
+        db.create_collection('estadisticas_flagrancia', validator={
+            "$jsonSchema": {
+                "bsonType": "object",
+                "required": ["anio", "mes", "distrito", "cantidad"], # Ajustado a lo mínimo probable
+                "properties": {
+                    "anio": {"bsonType": "int"},
+                    "mes": {"bsonType": "int", "minimum": 1, "maximum": 12},
+                    "distrito": {"bsonType": "string"},
+                    "provincia": {"bsonType": "string"},
+                    "departamento": {"bsonType": "string"},
+                    "delito": {"bsonType": "string"},
+                    "juzgado": {"bsonType": "string"},
+                    "dependencia_policial": {"bsonType": "string"},
+                    "cantidad": {"bsonType": "int"},
+                    "importado_en": {"bsonType": "date"}
+                }
+            }
+        })
+        print("✅ Colección 'estadisticas_flagrancia' creada")
+    except Exception as e:
+        print("⚠️  La colección 'estadisticas_flagrancia' ya existe o hubo un error.")
+
     # 5. ZONAS_RIESGO
     try:
         db.create_collection('zonas_riesgo', validator={
