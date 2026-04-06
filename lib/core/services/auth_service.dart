@@ -1,6 +1,7 @@
 ﻿import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
   // Enlace directo a tu servidor Railway
@@ -20,7 +21,17 @@ class AuthService {
       );
 
       if (response.statusCode == 200) {
-        return {'success': true, 'data': jsonDecode(response.body)};
+        final data = jsonDecode(response.body);
+        final userData = data['usuario'];
+        
+        // Guardar sesión en SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_id', userData['id'] ?? userData['_id'] ?? '');
+        await prefs.setString('user_name', userData['nombre'] ?? '');
+        await prefs.setString('user_role', userData['rol'] ?? 'ciudadano');
+        await prefs.setBool('is_logged_in', true);
+
+        return {'success': true, 'data': data};
       } else {
         final error = jsonDecode(response.body);
         String errorMessage = 'Error desconocido';
@@ -83,6 +94,16 @@ class AuthService {
         'success': false,
         'message': 'No se pudo conectar con el servidor.',
       };
+    }
+  }
+
+  // --- LOGOUT ---
+  static Future<void> logout() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear(); // Borra todos los datos de sesión
+    } catch (e) {
+      debugPrint('AuthService logout error: $e');
     }
   }
 }

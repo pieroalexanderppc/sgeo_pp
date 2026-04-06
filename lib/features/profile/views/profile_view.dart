@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import '../../auth/views/login_view.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/services/auth_service.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -18,7 +19,7 @@ class ProfileView extends StatefulWidget {
 class _ProfileViewState extends State<ProfileView> {
   bool _isLoading = true;
   bool _isEditing = false;
-  
+
   String? _nombre;
   String? _email;
   String? _telefono;
@@ -36,18 +37,22 @@ class _ProfileViewState extends State<ProfileView> {
     _nameController = TextEditingController(text: _nombre);
     _emailController = TextEditingController();
     _phoneController = TextEditingController();
-    
+
     _loadProfileData();
   }
-  
+
   Future<void> _loadProfileData() async {
     if (widget.userId == null) {
       setState(() => _isLoading = false);
       return;
     }
-    
+
     try {
-      final response = await http.get(Uri.parse('https://sgeo-backend-production.up.railway.app/api/usuarios/${widget.userId}'));
+      final response = await http.get(
+        Uri.parse(
+          'https://sgeo-backend-production.up.railway.app/api/usuarios/${widget.userId}',
+        ),
+      );
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['status'] == 'success') {
@@ -56,7 +61,7 @@ class _ProfileViewState extends State<ProfileView> {
             _email = data['user']['email'];
             _telefono = data['user']['telefono'] ?? '';
             _rol = data['user']['rol'] ?? widget.userRole;
-            
+
             _nameController.text = _nombre ?? '';
             _emailController.text = _email ?? '';
             _phoneController.text = _telefono ?? '';
@@ -74,19 +79,21 @@ class _ProfileViewState extends State<ProfileView> {
 
   Future<void> _saveChanges() async {
     if (widget.userId == null) return;
-    
+
     setState(() => _isLoading = true);
     try {
       final response = await http.put(
-        Uri.parse('https://sgeo-backend-production.up.railway.app/api/usuarios/${widget.userId}'),
+        Uri.parse(
+          'https://sgeo-backend-production.up.railway.app/api/usuarios/${widget.userId}',
+        ),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'nombre': _nameController.text.trim(),
           'email': _emailController.text.trim(),
           'telefono': _phoneController.text.trim(),
-        })
+        }),
       );
-      
+
       if (response.statusCode == 200) {
         setState(() {
           _nombre = _nameController.text.trim();
@@ -96,21 +103,21 @@ class _ProfileViewState extends State<ProfileView> {
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Perfil actualizado con éxito'))
+            const SnackBar(content: Text('Perfil actualizado con éxito')),
           );
         }
       } else {
-         if (mounted) {
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Error al actualizar datos'))
+            const SnackBar(content: Text('Error al actualizar datos')),
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error de red: $e'))
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error de red: $e')));
       }
     } finally {
       if (mounted) {
@@ -139,7 +146,10 @@ class _ProfileViewState extends State<ProfileView> {
             if (!_isEditing) ...[
               Text(
                 _nombre ?? 'Mi Perfil',
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
@@ -149,64 +159,95 @@ class _ProfileViewState extends State<ProfileView> {
                   style: const TextStyle(fontSize: 14, color: Colors.grey),
                 ),
             ],
-            
+
             const SizedBox(height: 30),
-            
+
             Card(
               margin: EdgeInsets.zero,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
                     ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.person_outline),
-                        title: _isEditing
-                            ? TextField(
-                                controller: _nameController,
-                                decoration: const InputDecoration(labelText: 'Nombre Completo', border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero),
-                              )
-                            : const Text('Nombre'),
-                        subtitle: _isEditing ? null : Text(_nombre ?? '-'),
-                      ),
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.person_outline),
+                      title: _isEditing
+                          ? TextField(
+                              controller: _nameController,
+                              decoration: const InputDecoration(
+                                labelText: 'Nombre Completo',
+                                border: InputBorder.none,
+                                isDense: true,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            )
+                          : const Text('Nombre'),
+                      subtitle: _isEditing ? null : Text(_nombre ?? '-'),
+                    ),
                     const Divider(height: 1),
                     ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.email_outlined),
-                        title: _isEditing
-                            ? TextField(
-                                controller: _emailController,
-                                decoration: const InputDecoration(labelText: 'Correo Electrónico', border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero),
-                              )
-                            : const Text('Correo'),
-                        subtitle: _isEditing ? null : Text((_email == null || _email!.isEmpty) ? 'No especificado' : _email!),
-                      ),
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.email_outlined),
+                      title: _isEditing
+                          ? TextField(
+                              controller: _emailController,
+                              decoration: const InputDecoration(
+                                labelText: 'Correo Electrónico',
+                                border: InputBorder.none,
+                                isDense: true,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            )
+                          : const Text('Correo'),
+                      subtitle: _isEditing
+                          ? null
+                          : Text(
+                              (_email == null || _email!.isEmpty)
+                                  ? 'No especificado'
+                                  : _email!,
+                            ),
+                    ),
                     const Divider(height: 1),
                     ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.phone_outlined),
-                        title: _isEditing
-                            ? TextField(
-                                controller: _phoneController,
-                                decoration: const InputDecoration(labelText: 'Teléfono', border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero),
-                              )
-                            : const Text('Teléfono'),
-                        subtitle: _isEditing ? null : Text((_telefono == null || _telefono!.isEmpty) ? 'No especificado' : _telefono!),
-                      ),
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.phone_outlined),
+                      title: _isEditing
+                          ? TextField(
+                              controller: _phoneController,
+                              decoration: const InputDecoration(
+                                labelText: 'Teléfono',
+                                border: InputBorder.none,
+                                isDense: true,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            )
+                          : const Text('Teléfono'),
+                      subtitle: _isEditing
+                          ? null
+                          : Text(
+                              (_telefono == null || _telefono!.isEmpty)
+                                  ? 'No especificado'
+                                  : _telefono!,
+                            ),
+                    ),
                   ],
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 20),
-            
+
             if (_isEditing)
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
                       onPressed: () {
                         setState(() {
                           _isEditing = false;
@@ -241,7 +282,9 @@ class _ProfileViewState extends State<ProfileView> {
                   minimumSize: const Size(double.infinity, 50),
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
 
@@ -253,12 +296,16 @@ class _ProfileViewState extends State<ProfileView> {
               builder: (context, currentMode, child) {
                 final isDark = currentMode == ThemeMode.dark;
                 return SwitchListTile(
-                  title: const Text('Modo Oscuro', style: TextStyle(fontWeight: FontWeight.bold)),
+                  title: const Text(
+                    'Modo Oscuro',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   secondary: Icon(isDark ? Icons.dark_mode : Icons.light_mode),
                   value: isDark,
                   onChanged: (value) {
-                    AppTheme.themeNotifier.value = 
-                        value ? ThemeMode.dark : ThemeMode.light;
+                    AppTheme.themeNotifier.value = value
+                        ? ThemeMode.dark
+                        : ThemeMode.light;
                   },
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -270,7 +317,10 @@ class _ProfileViewState extends State<ProfileView> {
 
             const SizedBox(height: 40),
             ElevatedButton.icon(
-              onPressed: () {
+              onPressed: () async {
+                // Cerrar sesión borrando los datos cacheados
+                await AuthService.logout();
+                if (!context.mounted) return;
                 Navigator.pushAndRemoveUntil(
                   context,
                   MaterialPageRoute(builder: (context) => const LoginView()),
@@ -283,7 +333,9 @@ class _ProfileViewState extends State<ProfileView> {
                 backgroundColor: Colors.red.shade600,
                 foregroundColor: Colors.white,
                 minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ],
@@ -292,8 +344,3 @@ class _ProfileViewState extends State<ProfileView> {
     );
   }
 }
-
-
-
-
-

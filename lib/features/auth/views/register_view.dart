@@ -103,20 +103,7 @@ class _RegisterViewState extends State<RegisterView> {
       return;
     }
 
-    final partesEmail = email.split('@');
-    final prefijoEmail = partesEmail.first;
-    final dominioEmail = partesEmail.last.toLowerCase();
-
-    if (prefijoEmail.length < 3) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Por favor ingresa un correo electrónico válido',
-          ),
-        ),
-      );
-      return;
-    }
+    final dominioEmail = email.split('@').last.toLowerCase();
 
     final dominiosPermitidos = [
       'gmail.com',

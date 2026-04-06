@@ -12,7 +12,12 @@ import 'package:sgeo_pp/main.dart';
 void main() {
   testWidgets('Smoke test para LoginView', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(const MyApp(
+      isLoggedIn: false,
+      userId: '',
+      userName: '',
+      userRole: 'ciudadano',
+    ));
 
     // Verifica que la vista de login se muestre.
     expect(find.text('Iniciar Sesión - SGEO'), findsOneWidget);
