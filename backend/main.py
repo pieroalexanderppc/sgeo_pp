@@ -53,6 +53,8 @@ class RegisterRequest(BaseModel):
     nombre: str
     email: EmailStr
     password: str
+    rol: str = "ciudadano"
+    is_active: bool = True
 
 # Funciones de utilidad para constraseñas
 def hash_password(password: str) -> str:
@@ -103,13 +105,18 @@ def register(req: RegisterRequest):
     if existing_user:
         raise HTTPException(status_code=400, detail="Este correo ya está registrado")
     
+    # Verificar si existe el nombre de usuario
+    existing_name = db.usuarios.find_one({"nombre": req.nombre})
+    if existing_name:
+        raise HTTPException(status_code=400, detail="Usuario inválido: ya hay otra cuenta con este nombre")
+    
     # Crear usuario
     nuevo_usuario = {
         "nombre": req.nombre,
         "email": req.email,
         "password_hash": hash_password(req.password),
-        "rol": "ciudadano", # Por defecto todo el que se registra es ciudadano
-        "activo": True,
+        "rol": req.rol,
+        "activo": req.is_active,
         "creado_en": dt.datetime.now(dt.timezone.utc)
     }
     

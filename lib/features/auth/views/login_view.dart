@@ -23,9 +23,9 @@ class _LoginViewState extends State<LoginView> {
     if (email.isEmpty || password.isEmpty) return;
 
     setState(() => _isLoading = true);
-    
+
     final result = await AuthService.login(email, password);
-    
+
     if (!mounted) return;
     setState(() => _isLoading = false);
 
@@ -42,9 +42,9 @@ class _LoginViewState extends State<LoginView> {
         ),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result['message'])),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(result['message'])));
     }
   }
 
@@ -70,7 +70,9 @@ class _LoginViewState extends State<LoginView> {
                 controller: _emailController,
                 decoration: InputDecoration(
                   labelText: 'Correo Electrónico',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   prefixIcon: const Icon(Icons.email),
                   filled: true,
                 ),
@@ -81,10 +83,16 @@ class _LoginViewState extends State<LoginView> {
                 controller: _passwordController,
                 decoration: InputDecoration(
                   labelText: 'Contraseña',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   prefixIcon: const Icon(Icons.lock),
                   suffixIcon: IconButton(
-                    icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                    ),
                     onPressed: () {
                       setState(() {
                         _obscurePassword = !_obscurePassword;
@@ -101,20 +109,53 @@ class _LoginViewState extends State<LoginView> {
                   : ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       onPressed: _login,
-                      child: const Text('Ingresar al Sistema', style: TextStyle(fontSize: 18)),
+                      child: const Text(
+                        'Iniciar sesión',
+                        style: TextStyle(fontSize: 18),
+                      ),
                     ),
               const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    '¿No tienes cuenta?',
+                    style: TextStyle(color: Colors.grey, fontSize: 16),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const RegisterView(),
+                        ),
+                      );
+                    },
+                    child: const Text(
+                      'Regístrate aquí',
+                      style: TextStyle(
+                        color: Colors.blueAccent,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
               TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const RegisterView()),
-                  );
-                },
-                child: const Text('¿No tienes cuenta? Regístrate aquí'),
+                onPressed: () {},
+                child: const Text(
+                  '¿Olvidaste tu contraseña?',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ],
           ),
