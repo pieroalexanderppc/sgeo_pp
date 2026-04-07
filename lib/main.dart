@@ -2,7 +2,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/views/login_view.dart';
-import 'features/home/views/home_view.dart';
+import 'roles/user/home/views/home_view.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

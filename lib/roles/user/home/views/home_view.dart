@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../map/views/map_view.dart';
 import '../../reports/views/my_reports_view.dart';
 import '../../profile/views/profile_view.dart';
@@ -47,7 +47,7 @@ class _HomeViewState extends State<HomeView> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        type: BottomNavigationBarType.fixed, // Esto es muy importante cuando hay mÃ¡s de 3 items
+        type: BottomNavigationBarType.fixed, // Esto es muy importante cuando hay más de 3 items
         onTap: (index) {
           setState(() {
             _currentIndex = index;

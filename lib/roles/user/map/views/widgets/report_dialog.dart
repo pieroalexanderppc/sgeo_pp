@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../core/services/map_service.dart';
+import '../../../../../core/services/map_service.dart';
 
 class ReportDialog extends StatefulWidget {
   final double latitud;

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -6,7 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'dart:async';
 import 'package:sliding_up_panel/sliding_up_panel.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../../../core/services/map_service.dart';
+import '../../../../core/services/map_service.dart';
 import 'widgets/report_dialog.dart';
 
 class MapView extends StatefulWidget {
@@ -83,7 +83,7 @@ class _MapViewState extends State<MapView> {
     if (userForced) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('?? No se pudo obtener ubicaci?n exacta tan r?pido. Esperando actualizaci?n...'),
+          content: Text('?? No se pudo obtener ubicacion exacta tan rapido. Esperando actualizacion...'),
           duration: Duration(seconds: 4),
           backgroundColor: Colors.orange, // Cambiado de error a aviso temporal
         ),

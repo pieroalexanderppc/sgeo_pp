@@ -1,5 +1,5 @@
 ﻿import 'package:flutter/material.dart';
-import 'package:sgeo_pp/features/home/views/home_view.dart';
+import 'package:sgeo_pp/roles/user/home/views/home_view.dart';
 import 'package:sgeo_pp/features/auth/views/register_view.dart';
 import 'package:sgeo_pp/core/services/auth_service.dart';
 
