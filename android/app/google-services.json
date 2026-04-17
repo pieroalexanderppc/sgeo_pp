@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "872534770690",
+    "project_id": "sgeo-7e191",
+    "storage_bucket": "sgeo-7e191.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:872534770690:android:b2f1f8e1347bb1b559131b",
+        "android_client_info": {
+          "package_name": "com.example.sgeo_pp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD8r7WJvdxmmLO2Vhsv4fl4nHe9tK81GM8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -48,6 +48,9 @@ app.*.map.json
 # Nunca subir archivos .env con contraseñas
 .env
 backend/.env
+# Tampoco subir las llaves maestras de Firebase a GitHub
+sgeo-firebase-adminsdk.json
+backend/sgeo-firebase-adminsdk.json
 
 # Entorno virtual y caché de Python
 backend/venv/
