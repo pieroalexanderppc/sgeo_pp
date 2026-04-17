@@ -7,11 +7,13 @@ import 'dart:async';
 import 'package:sliding_up_panel/sliding_up_panel.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../../core/services/map_service.dart';
+import '../../../../core/services/geofence_service.dart'; // PARA EL GPS FALSO
 import 'widgets/report_dialog.dart';
 
 class MapView extends StatefulWidget {
   final String userId;
-  const MapView({super.key, required this.userId});
+  final LatLng? initialLocation;
+  const MapView({super.key, required this.userId, this.initialLocation});
 
   @override
   State<MapView> createState() => _MapViewState();
@@ -32,6 +34,10 @@ class _MapViewState extends State<MapView> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialLocation != null) {
+      _currentPosition = widget.initialLocation;
+      _isLoading = false; // Como ya tenemos ubicación de destino
+    }
     _determinePosition();
     _loadZonasRiesgo();
     _loadPuntosExactos(); // <--- NUEVO
@@ -76,7 +82,11 @@ class _MapViewState extends State<MapView> {
   void _useFallbackLocation({bool userForced = false}) {
     if (!mounted) return;
     setState(() {
-      _currentPosition ??= const LatLng(-18.0146, -70.2536);
+      if (widget.initialLocation != null && !userForced) {
+        _currentPosition = widget.initialLocation;
+      } else {
+        _currentPosition ??= const LatLng(-18.0146, -70.2536);
+      }
       _isLoading = false;
     });
 
@@ -159,14 +169,22 @@ class _MapViewState extends State<MapView> {
         final newPos = LatLng(position.latitude, position.longitude);
         setState(() {
           _realUserPosition = newPos;
-          _currentPosition = newPos;
+          if (widget.initialLocation == null || userForced) {
+            _currentPosition = newPos;
+          }
           _isLoading = false;
         });
         
         // Con una ligera espera para asegurar que el map_controller haya cargado en UI
         Future.delayed(const Duration(milliseconds: 500), () {
           if (!mounted) return;
-          try { _mapController.move(newPos, 16.0); } catch (e) { debugPrint('Error map: $e'); }
+          try { 
+            if (widget.initialLocation == null || userForced) {
+              _mapController.move(newPos, 16.0); 
+            } else {
+              _mapController.move(widget.initialLocation!, 16.0); // Mueve a lugar del incidente
+            }
+          } catch (e) { debugPrint('Error map: $e'); }
         });
       } else if (mounted) {
         // Si el stream de rastreo todavia no obtuvo nada
@@ -253,6 +271,17 @@ class _MapViewState extends State<MapView> {
     });
     _panelController.open();
   }
+
+  // --- HACK TEMPORAL DE GPS (Solo pruebas manuales) ---
+  void _moveFakeGps(double dLat, double dLng) {
+    if (_realUserPosition == null) return;
+    setState(() {
+      _realUserPosition = LatLng(_realUserPosition!.latitude + dLat, _realUserPosition!.longitude + dLng);
+    });
+    _mapController.move(_realUserPosition!, 16.0); // Mover camara tambien
+    GeofenceService.checkManualLocation(_realUserPosition!.latitude, _realUserPosition!.longitude);
+  }
+  // ----------------------------------------------------
 
   Widget _buildPanelContent() {
     if (_selectedZona == null) return const SizedBox.shrink();
@@ -477,6 +506,55 @@ class _MapViewState extends State<MapView> {
                         ),
                       ],
                     ),
+
+          // ====== JOYSTICK FALSO TEMPORAL ======
+          if (_realUserPosition != null)
+            Positioned(
+              bottom: 110, // Subimos el joystick para que no moleste la barra de abajo
+              left: 20,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha(220),
+                  shape: BoxShape.circle, // Hacemos que sea un círculo perfecto
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(50),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    )
+                  ]
+                ),
+                padding: const EdgeInsets.all(12), // Más espacio para que mantenga la forma circular
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_upward),
+                      onPressed: () => _moveFakeGps(0.0005, 0),
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back),
+                          onPressed: () => _moveFakeGps(0, -0.0005),
+                        ),
+                        const Icon(Icons.control_camera, color: Colors.blue),
+                        IconButton(
+                          icon: const Icon(Icons.arrow_forward),
+                          onPressed: () => _moveFakeGps(0, 0.0005),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.arrow_downward),
+                      onPressed: () => _moveFakeGps(-0.0005, 0),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          // =====================================
 
           // -- BOT?N PARA REPORTAR (Esquina Superior Derecha) --
           Positioned(

@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:sgeo_pp/roles/user/home/views/home_view.dart';
 import 'package:sgeo_pp/features/auth/views/register_view.dart';
 import 'package:sgeo_pp/core/services/auth_service.dart';
@@ -31,11 +32,24 @@ class _LoginViewState extends State<LoginView> {
 
     if (result['success']) {
       final userData = result['data']['usuario'];
+      final userRole = userData['rol'] ?? 'ciudadano';
+
+      // 🔔 Suscribir al topic correcto en Firebase según el rol
+      if (userRole == 'policia') {
+        await FirebaseMessaging.instance.subscribeToTopic('alertas_policiales');
+        await FirebaseMessaging.instance.unsubscribeFromTopic('alertas_ciudadanos');
+      } else {
+        // En un futuro podrías sacar el distrito de userData['distrito']
+        await FirebaseMessaging.instance.subscribeToTopic('alertas_ciudadanos');
+        await FirebaseMessaging.instance.unsubscribeFromTopic('alertas_policiales');
+      }
+      
+      if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (context) => HomeView(
-            userRole: userData['rol'],
+            userRole: userRole,
             userName: userData['nombre'],
             userId: userData['id'] ?? userData['_id'] ?? '',
           ),

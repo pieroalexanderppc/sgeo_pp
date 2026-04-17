@@ -4,13 +4,17 @@ import '../../reports/views/my_reports_view.dart';
 import '../../profile/views/profile_view.dart';
 import '../../news/views/news_view.dart';
 import '../../notifications/views/notifications_view.dart';
+import '../../../../core/services/geofence_service.dart';
+
+import 'package:latlong2/latlong.dart';
 
 class HomeView extends StatefulWidget {
   final String userRole; // "admin", "policia", o "ciudadano"
   final String userName;
   final String userId;
+  final LatLng? initialLocation;
 
-  const HomeView({super.key, required this.userRole, required this.userName, required this.userId});
+  const HomeView({super.key, required this.userRole, required this.userName, required this.userId, this.initialLocation});
 
   @override
   State<HomeView> createState() => _HomeViewState();
@@ -25,8 +29,12 @@ class _HomeViewState extends State<HomeView> {
   @override
   void initState() {
     super.initState();
+    
+    // Encender protector de GPS en segundo/primer plano al iniciar el Home de la app
+    GeofenceService.startTracking();
+
     _pages = [
-      MapView(userId: widget.userId),
+      MapView(userId: widget.userId, initialLocation: widget.initialLocation),
       const NewsView(),
       const NotificationsView(),
       MyReportsView(userId: widget.userId),
@@ -36,6 +44,12 @@ class _HomeViewState extends State<HomeView> {
         userRole: widget.userRole,
       ),
     ];
+  }
+
+  @override
+  void dispose() {
+    GeofenceService.stopTracking();
+    super.dispose();
   }
 
   @override
