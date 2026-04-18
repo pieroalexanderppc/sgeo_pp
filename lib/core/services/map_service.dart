@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'report_service.dart';
 
 class MapService {
   /// Enlace base apuntando al entorno de producción hospedado en Railway.
@@ -86,6 +87,7 @@ class MapService {
     );
 
     if (response.statusCode == 200) {
+      ReportService.notifyReportsUpdated();
       return true;
     }
     return false;

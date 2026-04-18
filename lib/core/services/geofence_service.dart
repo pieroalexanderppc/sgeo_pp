@@ -17,10 +17,12 @@ class GeofenceService {
   /// Variables de estado destinadas a la limitación temporal (cooldown) y contención de alertas 
   /// para impedir envíos repetitivos por fluctuación del satélite GPS.
   static DateTime? _lastAlertTime;
-  static const int _alertCooldownMinutes = 30;
+  static const int _alertCooldownMinutes = 15; // Bajado a 1 minuto temporalmente para que puedas realizar tus pruebas
 
   /// Almacén en memoria volátil conteniendo datos de las Zonas de Riesgo actuales
   static List<dynamic> _realRiskZones = [];
+
+  static bool _currentlyInsideZone = false;
 
   static Future<void> startTracking() async {
     if (_isRunning) return;
@@ -71,7 +73,6 @@ class GeofenceService {
   /// Método auxiliar creado con fines de desarrollo para evaluar triggers de notificación local
   /// al sobreescribir y enrutar las coordinadas deseadas a través de flujos manuales.
   static Future<void> checkManualLocation(double lat, double lng) async {
-    _lastAlertTime = null; // Reiniciar iteraciones cronológicas preventivas para fase de testing.
     final fakePosition = Position(
       longitude: lng,
       latitude: lat,
@@ -126,12 +127,18 @@ class GeofenceService {
 
       // Evento de intrusión geográfica detectado, emitir disparador y detener el ciclo condicionado. 
       if (distanceInMeters <= radiusWarning) {
-        String zoneName = zone['nivel_riesgo']?.toString().toUpperCase() ?? 'ALTA';
-        _triggerLocalAlert(zoneName);
-        _lastAlertTime = DateTime.now();
-        break;
+        if (!_currentlyInsideZone) {
+          String zoneName = zone['nivel_riesgo']?.toString().toUpperCase() ?? 'ALTA';
+          _currentlyInsideZone = true;
+          _lastAlertTime = DateTime.now();
+          _triggerLocalAlert(zoneName);
+        }
+        return; // Detenemos la verificación porque ya está dentro de una zona
       }
     }
+    
+    // Si terminó el bucle y no está dentro de ninguna zona, marcamos como que salió
+    _currentlyInsideZone = false;
   }
 
   static Future<void> _triggerLocalAlert(String zoneName) async {

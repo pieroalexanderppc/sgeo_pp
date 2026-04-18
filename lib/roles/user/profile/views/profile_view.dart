@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../features/auth/views/login_view.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/auth_service.dart';
+import '../../../../core/services/tutorial_service.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -9,8 +10,9 @@ class ProfileView extends StatefulWidget {
   final String? userName;
   final String? userRole;
   final String? userId;
+  final VoidCallback? onNavigateToMap;
 
-  const ProfileView({super.key, this.userName, this.userRole, this.userId});
+  const ProfileView({super.key, this.userName, this.userRole, this.userId, this.onNavigateToMap});
 
   @override
   State<ProfileView> createState() => _ProfileViewState();
@@ -39,6 +41,14 @@ class _ProfileViewState extends State<ProfileView> {
     _phoneController = TextEditingController();
 
     _loadProfileData();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadProfileData() async {
@@ -124,6 +134,86 @@ class _ProfileViewState extends State<ProfileView> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  void _mostrarMenuAyuda(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 10),
+              Container(
+                width: 40,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(10)
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text('Centro de Ayuda', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              ListTile(
+                leading: const Icon(Icons.touch_app, color: Colors.blue),
+                title: const Text('Cómo reportar un incidente'),
+                subtitle: const Text('Aprende a ubicar un delito en el mapa interactivo.'),
+                onTap: () {
+                  Navigator.pop(ctx); // Cierra el menú inferior
+                  TutorialService.forceStartTutorial('report'); // Fuerza el flag
+                  if (widget.onNavigateToMap != null) {
+                    widget.onNavigateToMap!(); // Navega al tab del mapa 
+                  }
+                },
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.layers, color: Colors.blue),
+                title: const Text('Cómo usar los filtros del mapa'),
+                subtitle: const Text('Aprende a configurar qué zonas o reportes ver.'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  TutorialService.forceStartTutorial('filter');
+                  if (widget.onNavigateToMap != null) {
+                    widget.onNavigateToMap!();
+                  }
+                },
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.history, color: Colors.blue),
+                title: const Text('Cómo revisar el estado de un reporte'),
+                subtitle: const Text('Sigue el estado de un caso en la pestaña Reportes.'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Este tutorial estará disponible pronto.'))
+                  );
+                },
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.notifications_active, color: Colors.blue),
+                title: const Text('Alertas por zonas de riesgo GPS'),
+                subtitle: const Text('Aprende cómo funciona el geofencing automático.'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Este tutorial estará disponible pronto.'))
+                  );
+                },
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      }
+    );
   }
 
   @override
@@ -313,6 +403,25 @@ class _ProfileViewState extends State<ProfileView> {
                   tileColor: Theme.of(context).cardColor,
                 );
               },
+            ),
+
+            const SizedBox(height: 15),
+
+            // Botón de Ayuda / Tutorial
+            ElevatedButton.icon(
+              onPressed: () => _mostrarMenuAyuda(context),
+              icon: const Icon(Icons.help_outline),
+              label: const Text('Ayuda'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary.withAlpha(50), // Color suave
+                foregroundColor: Theme.of(context).colorScheme.primary,
+                elevation: 0,
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: Theme.of(context).colorScheme.primary.withAlpha(100)),
+                ),
+              ),
             ),
 
             const SizedBox(height: 40),

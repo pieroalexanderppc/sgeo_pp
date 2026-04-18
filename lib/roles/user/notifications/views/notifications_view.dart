@@ -17,6 +17,17 @@ class _NotificationsViewState extends State<NotificationsView> {
   void initState() {
     super.initState();
     _loadNotifications();
+    NotificationsStorageService.updateNotifier.addListener(_onStorageUpdated);
+  }
+
+  void _onStorageUpdated() {
+    if (mounted) _loadNotifications();
+  }
+
+  @override
+  void dispose() {
+    NotificationsStorageService.updateNotifier.removeListener(_onStorageUpdated);
+    super.dispose();
   }
 
   Future<void> _loadNotifications() async {

@@ -23,27 +23,13 @@ class HomeView extends StatefulWidget {
 class _HomeViewState extends State<HomeView> {
   int _currentIndex = 0;
   final Set<int> _visitedPages = {0};
-
-  late final List<Widget> _pages;
+  LatLng? _mapFocusLocation;
 
   @override
   void initState() {
     super.initState();
-    
-    // Encender protector de GPS en segundo/primer plano al iniciar el Home de la app
+    _mapFocusLocation = widget.initialLocation;
     GeofenceService.startTracking();
-
-    _pages = [
-      MapView(userId: widget.userId, initialLocation: widget.initialLocation),
-      const NewsView(),
-      const NotificationsView(),
-      MyReportsView(userId: widget.userId),
-      ProfileView(
-        userId: widget.userId,
-        userName: widget.userName, 
-        userRole: widget.userRole,
-      ),
-    ];
   }
 
   @override
@@ -52,12 +38,42 @@ class _HomeViewState extends State<HomeView> {
     super.dispose();
   }
 
+  List<Widget> _buildPages() {
+    return [
+      MapView(userId: widget.userId, initialLocation: _mapFocusLocation),
+      const NewsView(),
+      const NotificationsView(),
+      MyReportsView(
+        userId: widget.userId,
+        onNavigateToMap: (latLng) {
+          setState(() {
+            _mapFocusLocation = latLng;
+            _currentIndex = 0;
+            _visitedPages.add(0);
+          });
+        },
+      ),
+      ProfileView(
+        userId: widget.userId,
+        userName: widget.userName,
+        userRole: widget.userRole,
+        onNavigateToMap: () {
+          setState(() {
+            _currentIndex = 0;
+            _visitedPages.add(0);
+          });
+        },
+      ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
+    final pages = _buildPages();
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
-        children: List.generate(5, (index) => _visitedPages.contains(index) ? _pages[index] : const SizedBox.shrink()),
+        children: List.generate(5, (index) => _visitedPages.contains(index) ? pages[index] : const SizedBox.shrink()),
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
