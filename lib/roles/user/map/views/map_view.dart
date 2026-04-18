@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -49,7 +49,7 @@ class _MapViewState extends State<MapView> {
     if (widget.initialLocation != null) {
       _currentLocationJump(
         widget.initialLocation!,
-      ); // Como ya tenemos ubicación de destino
+      ); // Como ya tenemos ubicaciÃ³n de destino
     } else {
       _determinePosition();
     }
@@ -96,7 +96,7 @@ class _MapViewState extends State<MapView> {
         });
       }
     } catch (e) {
-      debugPrint('Error cargando mis reportes pendientes: ' + e.toString());
+      debugPrint('Error cargando mis reportes pendientes: $e');
     }
   }
 
@@ -199,7 +199,7 @@ class _MapViewState extends State<MapView> {
     if (userForced && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Buscando ubicación actual, por favor espera...'),
+          content: Text('Buscando ubicaciÃ³n actual, por favor espera...'),
           duration: Duration(seconds: 4),
         ),
       );
@@ -237,7 +237,7 @@ class _MapViewState extends State<MapView> {
 
       Position? position;
 
-      // 1. Obtener la ubicación cacheadísima en celulares (Web crashea con esto)
+      // 1. Obtener la ubicaciÃ³n cacheadÃ­sima en celulares (Web crashea con esto)
       if (!userForced) {
         try {
           if (!kIsWeb) {
@@ -246,14 +246,14 @@ class _MapViewState extends State<MapView> {
         } catch (_) {}
       }
 
-      // 2. Si forzamos, o no hay caché, pedir la ubicación con ALTA precisión y SIN ahogarlo
+      // 2. Si forzamos, o no hay cachÃ©, pedir la ubicaciÃ³n con ALTA precisiÃ³n y SIN ahogarlo
       if (position == null) {
         try {
           position =
               await Geolocator.getCurrentPosition(
                 locationSettings: const LocationSettings(
                   accuracy: LocationAccuracy.best,
-                ), // Mejor precisión satelital
+                ), // Mejor precisiÃ³n satelital
               ).timeout(
                 const Duration(seconds: 15),
               ); // Un margen decente de 15 segundos para el GPS
@@ -358,10 +358,11 @@ class _MapViewState extends State<MapView> {
   void _handleMapTap(TapPosition _, LatLng tapLatLng) {
     const Distance distance = Distance();
 
-    // Buscar si el tap ocurrió dentro de alguna zona de calor
+    // Buscar si el tap ocurriÃ³ dentro de alguna zona de calor
     for (var zona in _zonasRiesgo) {
-      if (zona['centroide'] == null || zona['centroide']['coordinates'] == null)
+      if (zona['centroide'] == null || zona['centroide']['coordinates'] == null) {
         continue;
+      }
 
       final coords = zona['centroide']['coordinates'];
       final lat = (coords[1] as num).toDouble();
@@ -558,7 +559,7 @@ class _MapViewState extends State<MapView> {
                                 ),
                             const SizedBox(height: 16),
                             const Text(
-                              "Ubicando señal GPS...",
+                              "Ubicando seÃ±al GPS...",
                             ).animate().fadeIn(duration: 500.ms),
                           ],
                         ),
@@ -818,7 +819,7 @@ class _MapViewState extends State<MapView> {
                         key: TutorialService.mapFilterBtnKey,
                         title: 'Filtros del Mapa',
                         description:
-                            'Puedes configurar cuáles zonas de riesgo o reportes ver en el mapa.',
+                            'Puedes configurar cuÃ¡les zonas de riesgo o reportes ver en el mapa.',
                         targetPadding: const EdgeInsets.all(8),
                         tooltipBackgroundColor:
                             Theme.of(context).brightness == Brightness.dark
@@ -886,7 +887,7 @@ class _MapViewState extends State<MapView> {
                                 contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 16,
                                 ),
-                                activeColor: Colors.deepPurpleAccent,
+                                activeThumbColor: Colors.deepPurpleAccent,
                                 activeTrackColor: Colors.deepPurple.shade900,
                                 inactiveThumbColor: Colors.grey.shade400,
                                 inactiveTrackColor: Colors.grey.shade800,
@@ -913,7 +914,7 @@ class _MapViewState extends State<MapView> {
                                 contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 16,
                                 ),
-                                activeColor: Colors.deepPurpleAccent,
+                                activeThumbColor: Colors.deepPurpleAccent,
                                 activeTrackColor: Colors.deepPurple.shade900,
                                 inactiveThumbColor: Colors.grey.shade400,
                                 inactiveTrackColor: Colors.grey.shade800,
@@ -941,7 +942,7 @@ class _MapViewState extends State<MapView> {
                                 contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 16,
                                 ),
-                                activeColor: Colors.deepPurpleAccent,
+                                activeThumbColor: Colors.deepPurpleAccent,
                                 activeTrackColor: Colors.deepPurple.shade900,
                                 inactiveThumbColor: Colors.grey.shade400,
                                 inactiveTrackColor: Colors.grey.shade800,
@@ -965,7 +966,7 @@ class _MapViewState extends State<MapView> {
                       decoration: BoxDecoration(
                         color: Colors.white.withAlpha(220),
                         shape: BoxShape
-                            .circle, // Hacemos que sea un círculo perfecto
+                            .circle, // Hacemos que sea un cÃ­rculo perfecto
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withAlpha(50),
@@ -976,7 +977,7 @@ class _MapViewState extends State<MapView> {
                       ),
                       padding: const EdgeInsets.all(
                         12,
-                      ), // Más espacio para que mantenga la forma circular
+                      ), // MÃ¡s espacio para que mantenga la forma circular
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -1019,7 +1020,7 @@ class _MapViewState extends State<MapView> {
                     key: TutorialService.mapReportBtnKey,
                     title: 'Reportar Incidente',
                     description:
-                        'Presiona aquí para reportar un incidente en tu ubicación actual. También puedes mantener presionado cualquier punto del mapa para enviar un reporte allí.',
+                        'Presiona aquÃ­ para reportar un incidente en tu ubicaciÃ³n actual. TambiÃ©n puedes mantener presionado cualquier punto del mapa para enviar un reporte allÃ­.',
                     targetPadding: const EdgeInsets.all(8),
                     tooltipBackgroundColor:
                         Theme.of(context).brightness == Brightness.dark
@@ -1040,7 +1041,7 @@ class _MapViewState extends State<MapView> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text(
-                                'Esperando tu ubicación GPS. Tambien puedes mantener presionado en el mapa para reportar manualmente.',
+                                'Esperando tu ubicaciÃ³n GPS. Tambien puedes mantener presionado en el mapa para reportar manualmente.',
                               ),
                               duration: Duration(seconds: 3),
                               behavior: SnackBarBehavior.floating,
@@ -1068,3 +1069,4 @@ class _MapViewState extends State<MapView> {
     );
   }
 }
+

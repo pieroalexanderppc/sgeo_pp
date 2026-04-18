@@ -16,7 +16,7 @@ class _NewsViewState extends State<NewsView> {
   bool _isLoading = true;
   List<Map<String, String>> _newsList = [];
   String _errorMessage = '';
-  
+
   int _selectedYear = DateTime.now().year;
   int _selectedMonth = DateTime.now().month;
 
@@ -34,26 +34,36 @@ class _NewsViewState extends State<NewsView> {
 
     try {
       final int lastDay = DateTime(_selectedYear, _selectedMonth + 1, 0).day;
-      final String startDateStr = "$_selectedYear-${_selectedMonth.toString().padLeft(2, '0')}-01";
-      final String endDateStr = "$_selectedYear-${_selectedMonth.toString().padLeft(2, '0')}-${lastDay.toString().padLeft(2, '0')}";
+      final String startDateStr =
+          "$_selectedYear-${_selectedMonth.toString().padLeft(2, '0')}-01";
+      final String endDateStr =
+          "$_selectedYear-${_selectedMonth.toString().padLeft(2, '0')}-${lastDay.toString().padLeft(2, '0')}";
 
       final String keywords = "Tacna robo OR delincuencia OR asalto OR policia";
-      final String rssQuery = "$keywords after:$startDateStr before:$endDateStr";
-      final String googleUrl = "https://news.google.com/rss/search?q=${Uri.encodeComponent(rssQuery)}&hl=es-419&gl=PE&ceid=PE:es-419";
-      
+      final String rssQuery =
+          "$keywords after:$startDateStr before:$endDateStr";
+      final String googleUrl =
+          "https://news.google.com/rss/search?q=${Uri.encodeComponent(rssQuery)}&hl=es-419&gl=PE&ceid=PE:es-419";
+
       String rawXml;
-      
+
       if (kIsWeb) {
         // En WEB obligatoriamente usamos al proxy JSON mode "allorigins" para que los navegadores
-        // no bloqueen la conexión cruzada por reglas estrictas anti-CORS. 
-        final Uri proxyUrl = Uri.parse("https://api.allorigins.win/get?url=${Uri.encodeComponent(googleUrl)}");
+        // no bloqueen la conexión cruzada por reglas estrictas anti-CORS.
+        final Uri proxyUrl = Uri.parse(
+          "https://api.allorigins.win/get?url=${Uri.encodeComponent(googleUrl)}",
+        );
         final response = await http.get(proxyUrl);
-        
+
         if (response.statusCode == 200) {
           final jsonResponse = json.decode(response.body);
-          rawXml = jsonResponse['contents'] as String; // Extraer el XML crudo empacado en JSON
+          rawXml =
+              jsonResponse['contents']
+                  as String; // Extraer el XML crudo empacado en JSON
         } else {
-          _setError("Error de servidor web (${response.statusCode}). Reintente más tarde.");
+          _setError(
+            "Error de servidor web (${response.statusCode}). Reintente más tarde.",
+          );
           return;
         }
       } else {
@@ -62,7 +72,9 @@ class _NewsViewState extends State<NewsView> {
         if (response.statusCode == 200) {
           rawXml = utf8.decode(response.bodyBytes);
         } else {
-          _setError("Error conectando con Google News (${response.statusCode}). Reintente más tarde.");
+          _setError(
+            "Error conectando con Google News (${response.statusCode}). Reintente más tarde.",
+          );
           return;
         }
       }
@@ -75,22 +87,30 @@ class _NewsViewState extends State<NewsView> {
       Set<String> seenTitles = {};
 
       for (var item in items) {
-        final title = item.findElements('title').isNotEmpty ? item.findElements('title').single.innerText : 'Titular Desconocido';
-        final link = item.findElements('link').isNotEmpty ? item.findElements('link').single.innerText : '';
-        final pubDate = item.findElements('pubDate').isNotEmpty ? item.findElements('pubDate').single.innerText : '';
-        final source = item.findElements('source').isNotEmpty ? item.findElements('source').single.innerText : 'Diario Local';
-        
+        final title = item.findElements('title').isNotEmpty
+            ? item.findElements('title').single.innerText
+            : 'Titular Desconocido';
+        final link = item.findElements('link').isNotEmpty
+            ? item.findElements('link').single.innerText
+            : '';
+        final pubDate = item.findElements('pubDate').isNotEmpty
+            ? item.findElements('pubDate').single.innerText
+            : '';
+        final source = item.findElements('source').isNotEmpty
+            ? item.findElements('source').single.innerText
+            : 'Diario Local';
+
         // Las noticias a veces incluyen " - NombreDiario" al final, lo cortamos para que quede limpio
-        final String cleanTitle = title.contains(' - ') 
-            ? title.substring(0, title.lastIndexOf(' - ')).trim() 
+        final String cleanTitle = title.contains(' - ')
+            ? title.substring(0, title.lastIndexOf(' - ')).trim()
             : title.trim();
 
         // Si ya procesamos una noticia con el mismo título (evitar repetidas en el feed)
         if (seenTitles.contains(cleanTitle)) {
-           continue; 
+          continue;
         }
         seenTitles.add(cleanTitle);
-        
+
         parsedNews.add({
           'title': cleanTitle,
           'link': link,
@@ -139,8 +159,18 @@ class _NewsViewState extends State<NewsView> {
     final int currentYear = DateTime.now().year;
 
     final List<String> monthNames = [
-      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+      'Enero',
+      'Febrero',
+      'Marzo',
+      'Abril',
+      'Mayo',
+      'Junio',
+      'Julio',
+      'Agosto',
+      'Septiembre',
+      'Octubre',
+      'Noviembre',
+      'Diciembre',
     ];
 
     showDialog(
@@ -148,7 +178,9 @@ class _NewsViewState extends State<NewsView> {
       builder: (context) {
         return AlertDialog(
           title: const Text("Filtrar Noticias"),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
           content: StatefulBuilder(
             builder: (context, setDialogState) {
               return Column(
@@ -157,7 +189,10 @@ class _NewsViewState extends State<NewsView> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text("Mes:", style: TextStyle(fontWeight: FontWeight.bold)),
+                      const Text(
+                        "Mes:",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       DropdownButton<int>(
                         value: tempMonth,
                         items: List.generate(12, (index) {
@@ -167,7 +202,8 @@ class _NewsViewState extends State<NewsView> {
                           );
                         }),
                         onChanged: (val) {
-                          if (val != null) setDialogState(() => tempMonth = val);
+                          if (val != null)
+                            setDialogState(() => tempMonth = val);
                         },
                       ),
                     ],
@@ -176,7 +212,10 @@ class _NewsViewState extends State<NewsView> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text("Año:", style: TextStyle(fontWeight: FontWeight.bold)),
+                      const Text(
+                        "Año:",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       DropdownButton<int>(
                         value: tempYear,
                         items: List.generate(5, (index) {
@@ -199,7 +238,10 @@ class _NewsViewState extends State<NewsView> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text("Cancelar", style: TextStyle(color: Colors.grey)),
+              child: const Text(
+                "Cancelar",
+                style: TextStyle(color: Colors.grey),
+              ),
             ),
             ElevatedButton(
               onPressed: () {
@@ -227,11 +269,14 @@ class _NewsViewState extends State<NewsView> {
   Widget _buildFallbackImage(int index) {
     final List<List<Color>> gradientColors = [
       [Colors.blue.shade900, Colors.blue.shade600], // Estilo Policial
-      [Colors.grey.shade900, Colors.grey.shade600], // Estilo Oscuro/Periodístico
+      [
+        Colors.grey.shade900,
+        Colors.grey.shade600,
+      ], // Estilo Oscuro/Periodístico
       [Colors.indigo.shade900, Colors.indigo.shade500], // Estilo Noche
       [Colors.blueGrey.shade900, Colors.blueGrey.shade600], // Estilo Serio
     ];
-    
+
     final List<IconData> referenceIcons = [
       Icons.local_police_rounded,
       Icons.security_rounded,
@@ -256,7 +301,9 @@ class _NewsViewState extends State<NewsView> {
         child: Icon(
           selectedIcon,
           size: 80,
-          color: Colors.white.withAlpha(50), // Un gris casi transparente para que sea "fondo"
+          color: Colors.white.withAlpha(
+            50,
+          ), // Un gris casi transparente para que sea "fondo"
         ),
       ),
     );
@@ -266,73 +313,110 @@ class _NewsViewState extends State<NewsView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Noticias de Seguridad', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+        title: const Text(
+          'Noticias de Seguridad',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+        ),
         centerTitle: true,
         elevation: 0,
         actions: [
           IconButton(
-             icon: const Icon(Icons.calendar_month_outlined),
-             onPressed: _showDatePickerDialog,
-             tooltip: "Filtrar por fecha",
+            icon: const Icon(Icons.calendar_month_outlined),
+            onPressed: _showDatePickerDialog,
+            tooltip: "Filtrar por fecha",
           ),
           IconButton(
-             icon: const Icon(Icons.sync_rounded),
-             onPressed: _isLoading ? null : _fetchRealNews,
-             tooltip: "Refrescar noticias",
-          )
+            icon: const Icon(Icons.sync_rounded),
+            onPressed: _isLoading ? null : _fetchRealNews,
+            tooltip: "Refrescar noticias",
+          ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.blueAccent))
-          : _errorMessage.isNotEmpty
-              ? _buildErrorView()
-              : _newsList.isEmpty
-                  ? _buildEmptyView()
-                  : _buildNewsList(),
+      body: RefreshIndicator(
+        onRefresh: _fetchRealNews,
+        child: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(color: Colors.blueAccent),
+              )
+            : _errorMessage.isNotEmpty
+            ? _buildErrorView()
+            : _newsList.isEmpty
+            ? _buildEmptyView()
+            : _buildNewsList(),
+      ),
     );
   }
 
   Widget _buildErrorView() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.cloud_off_rounded, size: 80, color: Colors.grey),
-            const SizedBox(height: 24),
-            Text(
-              _errorMessage,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16, color: Colors.black54, fontWeight: FontWeight.w500),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _fetchRealNews,
-              icon: const Icon(Icons.refresh),
-              label: const Text("Reintentar"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blueAccent,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        SizedBox(
+          height: MediaQuery.of(context).size.height * 0.7,
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.cloud_off_rounded,
+                    size: 80,
+                    color: Colors.grey,
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    _errorMessage,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: _fetchRealNews,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text("Reintentar"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            )
-          ],
+            ),
+          ),
         ),
-      ),
+      ],
     );
   }
 
   Widget _buildEmptyView() {
-    return const Center(
-      child: Column(
-         mainAxisAlignment: MainAxisAlignment.center,
-         children: [
-           Icon(Icons.feed_outlined, size: 80, color: Colors.grey),
-           SizedBox(height: 16),
-           Text("No hay noticias relevantes en Tacna por ahora.", style: TextStyle(color: Colors.black54)),
-         ],
-       )
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        SizedBox(
+          height: MediaQuery.of(context).size.height * 0.7,
+          child: const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.feed_outlined, size: 80, color: Colors.grey),
+                SizedBox(height: 16),
+                Text(
+                  "No hay noticias relevantes en Tacna por ahora.",
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -340,11 +424,27 @@ class _NewsViewState extends State<NewsView> {
     if (rawDate.isEmpty) return '';
     // Ejemplo date raw: "Wed, 15 Apr 2026 12:00:00 GMT" -> Cortamos a "Wed, 15 Apr 2026"
     String dateStr = rawDate.length > 16 ? rawDate.substring(0, 16) : rawDate;
-    
+
     final Map<String, String> replacements = {
-      'Mon,': 'Lun,', 'Tue,': 'Mar,', 'Wed,': 'Mié,', 'Thu,': 'Jue,', 'Fri,': 'Vie,', 'Sat,': 'Sáb,', 'Sun,': 'Dom,',
-      'Jan': 'Ene', 'Feb': 'Feb', 'Mar': 'Mar', 'Apr': 'Abr', 'May': 'May', 'Jun': 'Jun',
-      'Jul': 'Jul', 'Aug': 'Ago', 'Sep': 'Sep', 'Oct': 'Oct', 'Nov': 'Nov', 'Dec': 'Dic'
+      'Mon,': 'Lun,',
+      'Tue,': 'Mar,',
+      'Wed,': 'Mié,',
+      'Thu,': 'Jue,',
+      'Fri,': 'Vie,',
+      'Sat,': 'Sáb,',
+      'Sun,': 'Dom,',
+      'Jan': 'Ene',
+      'Feb': 'Feb',
+      'Mar': 'Mar',
+      'Apr': 'Abr',
+      'May': 'May',
+      'Jun': 'Jun',
+      'Jul': 'Jul',
+      'Aug': 'Ago',
+      'Sep': 'Sep',
+      'Oct': 'Oct',
+      'Nov': 'Nov',
+      'Dec': 'Dic',
     };
 
     replacements.forEach((en, es) {
@@ -367,7 +467,7 @@ class _NewsViewState extends State<NewsView> {
           final String source = news['source']!;
           final String link = news['link']!;
           final String pubDateRaw = news['pubDate']!;
-          
+
           // Traducir y formatear la fecha
           final String pubDate = _formatDateToSpanish(pubDateRaw);
 
@@ -375,7 +475,9 @@ class _NewsViewState extends State<NewsView> {
             elevation: 4,
             shadowColor: Colors.black.withAlpha(25),
             margin: const EdgeInsets.only(bottom: 24),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
             color: Theme.of(context).cardColor,
             clipBehavior: Clip.antiAlias,
             child: InkWell(
@@ -389,33 +491,50 @@ class _NewsViewState extends State<NewsView> {
                       _buildFallbackImage(index),
                       // Sombra gradiente inferior para que contraste con las etiquetas
                       Positioned(
-                        bottom: 0, left: 0, right: 0,
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
                         height: 80,
                         child: Container(
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               begin: Alignment.bottomCenter,
                               end: Alignment.topCenter,
-                              colors: [Colors.black.withAlpha(180), Colors.transparent],
-                            )
+                              colors: [
+                                Colors.black.withAlpha(180),
+                                Colors.transparent,
+                              ],
+                            ),
                           ),
                         ),
                       ),
                       // Etiqueta de la Fuente (Radio Uno, Correo, etc)
                       Positioned(
-                        bottom: 12, left: 12,
+                        bottom: 12,
+                        left: 12,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.redAccent.shade700,
                             borderRadius: BorderRadius.circular(6),
                             boxShadow: [
-                              BoxShadow(color: Colors.black.withAlpha(50), blurRadius: 4, offset: const Offset(0, 2))
-                            ]
+                              BoxShadow(
+                                color: Colors.black.withAlpha(50),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.language, color: Colors.white, size: 14),
+                              const Icon(
+                                Icons.language,
+                                color: Colors.white,
+                                size: 14,
+                              ),
                               const SizedBox(width: 6),
                               Text(
                                 source.toUpperCase(),
@@ -429,9 +548,10 @@ class _NewsViewState extends State<NewsView> {
                           ),
                         ),
                       ),
-                       // Etiqueta de Fecha
+                      // Etiqueta de Fecha
                       Positioned(
-                        bottom: 12, right: 12,
+                        bottom: 12,
+                        right: 12,
                         child: Text(
                           pubDate,
                           style: const TextStyle(
@@ -440,10 +560,10 @@ class _NewsViewState extends State<NewsView> {
                             color: Colors.white,
                           ),
                         ),
-                      )
+                      ),
                     ],
                   ),
-                  
+
                   // Cuerpo del texto de la noticia
                   Padding(
                     padding: const EdgeInsets.all(18.0),
@@ -466,17 +586,23 @@ class _NewsViewState extends State<NewsView> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                             Text(
+                            Text(
                               "Toca para leer el artículo completo",
                               style: TextStyle(
                                 fontSize: 13,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                             Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Theme.of(context).colorScheme.primary)
+                            Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              size: 16,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
                           ],
-                        )
+                        ),
                       ],
                     ),
                   ),

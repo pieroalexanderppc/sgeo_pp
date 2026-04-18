@@ -1,6 +1,5 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../../core/models/report_model.dart';
@@ -222,12 +221,25 @@ class _MyReportsViewState extends State<MyReportsView> {
           )
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _reports.isEmpty
-              ? const Center(child: Text('No has realizado ningún reporte aún.'))
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16.0),
+      body: RefreshIndicator(
+        onRefresh: _fetchMyReports,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _reports.isEmpty
+                ? ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.7,
+                        child: const Center(
+                          child: Text('No has realizado ningún reporte aún.'),
+                        ),
+                      )
+                    ],
+                  )
+                : ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16.0),
                   itemCount: _reports.length,
                   itemBuilder: (context, index) {
                     final report = _reports[index];
@@ -302,6 +314,7 @@ class _MyReportsViewState extends State<MyReportsView> {
                     );
                   },
                 ),
+      ),
     );
   }
 }
