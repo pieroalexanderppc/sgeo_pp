@@ -19,7 +19,6 @@ class _ReportDialogState extends State<ReportDialog> {
   final Map<String, String> _tiposDelitoMap = {
     'Robo (Asalto con violencia, armas o arrebato)': 'ROBO',
     'Hurto (Sustracción sin violencia, a escondidas)': 'HURTO',
-    'Extorsión (Amenazas bajo daño a la persona o negocio)': 'EXTORSION',
   };
 
   late String _subTipoSeleccionadoAmigable;

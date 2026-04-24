@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -59,7 +59,6 @@ class _MapViewState extends State<MapView> {
 
     TutorialService.triggerTutorialNotifier.addListener(_tutorialListener);
     ReportService.reportsUpdatedNotifier.addListener(_reportsUpdatedListener);
-    TutorialService.checkFirstTimeTutorial();
   }
 
   @override
@@ -110,13 +109,13 @@ class _MapViewState extends State<MapView> {
             TutorialService.mapReportBtnKey,
           ]);
         } else if (tutorialType == 'report') {
-          ShowCaseWidget.of(showcaseContext!).startShowCase([
-            TutorialService.mapReportBtnKey,
-          ]);
+          ShowCaseWidget.of(
+            showcaseContext!,
+          ).startShowCase([TutorialService.mapReportBtnKey]);
         } else if (tutorialType == 'filter') {
-          ShowCaseWidget.of(showcaseContext!).startShowCase([
-            TutorialService.mapFilterBtnKey,
-          ]);
+          ShowCaseWidget.of(
+            showcaseContext!,
+          ).startShowCase([TutorialService.mapFilterBtnKey]);
         }
       }
     }
@@ -360,7 +359,8 @@ class _MapViewState extends State<MapView> {
 
     // Buscar si el tap ocurriÃ³ dentro de alguna zona de calor
     for (var zona in _zonasRiesgo) {
-      if (zona['centroide'] == null || zona['centroide']['coordinates'] == null) {
+      if (zona['centroide'] == null ||
+          zona['centroide']['coordinates'] == null) {
         continue;
       }
 
@@ -1069,4 +1069,3 @@ class _MapViewState extends State<MapView> {
     );
   }
 }
-

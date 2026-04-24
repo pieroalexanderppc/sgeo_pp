@@ -186,6 +186,36 @@ def setup_db():
     except Exception as e:
         print("⚠️  La colección 'estadisticas_flagrancia' ya existe o hubo un error.")
 
+    # 4.6. ESTADISTICAS_SIDPOL_HISTORICO (NUEVO)
+    try:
+        db.create_collection('estadisticas_sidpol_historico', validator={
+            "$jsonSchema": {
+                "bsonType": "object",
+                "required": ["anio", "mes", "ubigeo", "distrito", "cantidad"],
+                "properties": {
+                    "anio": {"bsonType": "int"},
+                    "mes": {"bsonType": "int", "minimum": 1, "maximum": 12},
+                    "ubigeo": {"bsonType": "string"},
+                    "departamento": {"bsonType": "string"},
+                    "provincia": {"bsonType": "string"},
+                    "distrito": {"bsonType": "string"},
+                    "tipo": {"bsonType": "string"},
+                    "sub_tipo": {"bsonType": "string"},
+                    "modalidad": {"bsonType": "string"},
+                    "cantidad": {"bsonType": "int"},
+                    "importado_en": {"bsonType": "date"}
+                }
+            }
+        })
+        db.estadisticas_sidpol_historico.create_index(
+            [("ubigeo", 1), ("anio", 1), ("mes", 1), ("sub_tipo", 1), ("modalidad", 1)],
+            unique=True,
+            name="unique_sidpol_historico"
+        )
+        print("✅ Colección 'estadisticas_sidpol_historico' creada")
+    except Exception as e:
+        print("⚠️  La colección 'estadisticas_sidpol_historico' ya existe o hubo un error.")
+
     # 5. ZONAS_RIESGO
     try:
         db.create_collection('zonas_riesgo', validator={

@@ -3,12 +3,17 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// Servicio encargado de manejar las operaciones de autenticación de usuarios.
+/// Interactúa directamente con la API del backend para procesos de login,
+/// registro y manejo de sesión local.
 class AuthService {
-  // Enlace directo a tu servidor Railway
   static const String _baseUrl =
       'https://sgeo-backend-production.up.railway.app';
 
-  // --- LOGIN ---
+  /// Autentica a un usuario utilizando su [email] y [password].
+  /// 
+  /// Retorna un [Map] indicando el estado de la petición. En caso de éxito,
+  /// persiste los datos de la sesión del usuario de forma local.
   static Future<Map<String, dynamic>> login(
     String email,
     String password,
@@ -24,7 +29,6 @@ class AuthService {
         final data = jsonDecode(response.body);
         final userData = data['usuario'];
         
-        // Guardar sesión en SharedPreferences
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_id', userData['id'] ?? userData['_id'] ?? '');
         await prefs.setString('user_name', userData['nombre'] ?? '');
@@ -53,7 +57,10 @@ class AuthService {
     }
   }
 
-  // --- REGISTER ---
+  /// Registra una nueva cuenta de usuario en la plataforma.
+  /// 
+  /// Por defecto, el [rol] asignado es 'ciudadano'. Se requiere autorización
+  /// explícita o lógica del backend para asignar roles administrativos o policiales.
   static Future<Map<String, dynamic>> register(
     String nombre,
     String email,
@@ -97,11 +104,11 @@ class AuthService {
     }
   }
 
-  // --- LOGOUT ---
+  /// Finaliza la sesión actual eliminando todas las credenciales almacenadas.
   static Future<void> logout() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.clear(); // Borra todos los datos de sesión
+      await prefs.clear();
     } catch (e) {
       debugPrint('AuthService logout error: $e');
     }
