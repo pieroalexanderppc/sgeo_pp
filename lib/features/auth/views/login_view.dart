@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:sgeo_pp/roles/user/home/views/home_view.dart';
+import 'package:sgeo_pp/roles/police/home/views/home_view.dart';
 import 'package:sgeo_pp/features/auth/views/register_view.dart';
 import 'package:sgeo_pp/core/services/auth_service.dart';
 
@@ -48,11 +49,21 @@ class _LoginViewState extends State<LoginView> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => HomeView(
-            userRole: userRole,
-            userName: userData['nombre'],
-            userId: userData['id'] ?? userData['_id'] ?? '',
-          ),
+          builder: (context) {
+            if (userRole == 'policia') {
+              return PoliceHomeView(
+                userRole: userRole,
+                userName: userData['nombre'] ?? '',
+                userId: userData['id'] ?? userData['_id'] ?? '',
+              );
+            } else {
+              return HomeView(
+                userRole: userRole,
+                userName: userData['nombre'] ?? '',
+                userId: userData['id'] ?? userData['_id'] ?? '',
+              );
+            }
+          },
         ),
       );
     } else {

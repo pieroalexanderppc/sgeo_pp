@@ -8,6 +8,7 @@ import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/views/login_view.dart';
 import 'roles/user/home/views/home_view.dart';
+import 'roles/police/home/views/home_view.dart';
 import 'roles/user/notifications/views/notifications_view.dart';
 import 'core/services/notifications_storage_service.dart';
 import 'core/services/map_service.dart';
@@ -50,14 +51,28 @@ Future<void> _handleNotificationTap(RemoteMessage message) async {
 
     if (lat != null && lng != null) {
       final prefs = await SharedPreferences.getInstance();
+      final userRole = prefs.getString('user_role') ?? 'ciudadano';
       navigatorKey.currentState!.pushReplacement(
         MaterialPageRoute(
-          builder: (context) => HomeView(
-            userId: prefs.getString('user_id') ?? '',
-            userName: prefs.getString('user_name') ?? '',
-            userRole: prefs.getString('user_role') ?? 'ciudadano',
-            initialLocation: LatLng(lat, lng), // Se provee el centroide detectado
-          ),
+          builder: (context) {
+            if (userRole == 'policia') {
+              return PoliceHomeView(
+                userId: prefs.getString('user_id') ?? '',
+                userName: prefs.getString('user_name') ?? '',
+                userRole: userRole,
+                // Si la vista de policía no acepta initialLocation, tal vez requiera ajustes,
+                // Pero por ahora, se enviará a PoliceHomeView sin ello asumiendo que el policía
+                // manejará la posición mediante su propio visor.
+              );
+            } else {
+              return HomeView(
+                userId: prefs.getString('user_id') ?? '',
+                userName: prefs.getString('user_name') ?? '',
+                userRole: userRole,
+                initialLocation: LatLng(lat, lng),
+              );
+            }
+          }
         ),
       );
     } else {
@@ -213,7 +228,9 @@ class MyApp extends StatelessWidget {
           darkTheme: AppTheme.darkTheme,
           themeMode: currentMode,
           home: isLoggedIn 
-                ? HomeView(userId: userId, userName: userName, userRole: userRole) 
+                ? (userRole == 'policia' 
+                    ? PoliceHomeView(userId: userId, userName: userName, userRole: userRole) 
+                    : HomeView(userId: userId, userName: userName, userRole: userRole))
                 : const LoginView(),
         );
       },

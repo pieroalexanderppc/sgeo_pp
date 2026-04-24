@@ -45,6 +45,8 @@ MONGO_URL = os.getenv("MONGO_URL")
 try:
     client = MongoClient(MONGO_URL)
     db = client["geocrimen_tacna"]
+    # Asegurar el índice para consultas geográficas
+    db.reportes_ciudadano.create_index([("ubicacion", "2dsphere")])
     print("Conectado exitosamente a MongoDB en Railway")
 except Exception as e:
     print(f"Error conectando a la base de datos: {e}")
@@ -212,6 +214,7 @@ class ReporteCiudadano(BaseModel):
 def crear_reporte(reporte: ReporteCiudadano):
     """
     Recibe un reporte del ciudadano desde la App y lo guarda como 'pendiente'.
+    Limita a 5 reportes por dia por usuario (si esta logeado).
     """
     try:
         user_id_obj = None
@@ -220,6 +223,18 @@ def crear_reporte(reporte: ReporteCiudadano):
                 from bson.objectid import ObjectId
                 from bson.errors import InvalidId
                 user_id_obj = ObjectId(reporte.usuario_id)
+                
+                # Check rate limit (5 per day)
+                hoy_inicio = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+                reportes_hoy = db.reportes_ciudadano.count_documents({
+                    "usuario_id": user_id_obj,
+                    "creado_en": {"$gte": hoy_inicio}
+                })
+                if reportes_hoy >= 5:
+                    from fastapi import HTTPException
+                    raise HTTPException(status_code=429, detail="Has alcanzado el límite de 5 reportes por día.")
+            except HTTPException:
+                raise
             except Exception:
                 pass
                 
@@ -269,6 +284,34 @@ def confirmar_reporte(reporte_id: str, background_tasks: BackgroundTasks):
             coords = reporte["ubicacion"].get("coordinates", [])
             if len(coords) == 2:
                 lng, lat = coords[0], coords[1]
+                
+                # 1.5. Agrupar reportes pendientes cercanos (radio de 500 metros) del mismo tipo
+                try:
+                    db.reportes_ciudadano.update_many(
+                        {
+                            "_id": {"$ne": ObjectId(reporte_id)},
+                            "estado": "pendiente",
+                            "sub_tipo": reporte.get("sub_tipo"),
+                            "ubicacion": {
+                                "$near": {
+                                    "$geometry": {
+                                        "type": "Point",
+                                        "coordinates": [lng, lat]
+                                    },
+                                    "$maxDistance": 500 # 500 metros a la redonda
+                                }
+                            }
+                        },
+                        {
+                            "$set": {
+                                "estado": "agrupado",
+                                "agrupado_con": reporte_id,
+                                "confirmado_en": datetime.utcnow()
+                            }
+                        }
+                    )
+                except Exception as grouping_err:
+                    print("Aviso: No se pudo agrupar reportes cercanos:", grouping_err)
 
         # 2. Mandar la notificacion a los ciudadanos con el punto GPS exacto
         send_push_notification(
@@ -288,6 +331,63 @@ def confirmar_reporte(reporte_id: str, background_tasks: BackgroundTasks):
         raise HTTPException(status_code=400, detail="ID de reporte invlido")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/reportes/rechazar/{reporte_id}")
+def rechazar_reporte(reporte_id: str):
+    """
+    Ruta para la Policia: Rechaza un reporte ciudadano.
+    """
+    from bson.objectid import ObjectId
+    from bson.errors import InvalidId
+    try:
+        resultado = db.reportes_ciudadano.update_one(
+            {"_id": ObjectId(reporte_id)},
+            {"$set": {"estado": "rechazado"}}
+        )
+        if resultado.modified_count == 0:
+            raise HTTPException(status_code=404, detail="Reporte no encontrado o ya procesado")
+
+        reporte = db.reportes_ciudadano.find_one({"_id": ObjectId(reporte_id)})
+        lat = None
+        lng = None
+        if reporte and "ubicacion" in reporte:
+            coords = reporte["ubicacion"].get("coordinates", [])
+            if len(coords) == 2:
+                lng, lat = coords[0], coords[1]
+                
+                # Agrupar reportes "invalidados/falsos" en radio 500m
+                try:
+                    db.reportes_ciudadano.update_many(
+                        {
+                            "_id": {"$ne": ObjectId(reporte_id)},
+                            "estado": "pendiente",
+                            "sub_tipo": reporte.get("sub_tipo"),
+                            "ubicacion": {
+                                "$near": {
+                                    "$geometry": {
+                                        "type": "Point",
+                                        "coordinates": [lng, lat]
+                                    },
+                                    "$maxDistance": 500
+                                }
+                            }
+                        },
+                        {
+                            "$set": {
+                                "estado": "rechazado",
+                                "rechazado_con": reporte_id
+                            }
+                        }
+                    )
+                except Exception as grouping_err:
+                    print("Aviso: No se pudo rechazar reportes cercanos:", grouping_err)
+        
+        return {"status": "success", "mensaje": "Rechazado correctamente"}
+    except InvalidId:
+        raise HTTPException(status_code=400, detail="ID de reporte invlido")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/reportes/mis_reportes/{user_id}")
 def obtener_mis_reportes(user_id: str):
     try:
@@ -355,7 +455,7 @@ def obtener_puntos_exactos():
         # Filtro muy importante: {"estado": "confirmado"}
         reportes = list(db.reportes_ciudadano.find(
             {"estado": "confirmado"}, 
-            {"_id": 1, "sub_tipo": 1, "ubicacion": 1}
+            {"_id": 1, "sub_tipo": 1, "ubicacion": 1, "estado": 1}
         ))
         for rep in reportes:
             rep["_id"] = str(rep["_id"])
@@ -363,6 +463,23 @@ def obtener_puntos_exactos():
         return {"status": "success", "puntos": reportes}
     except Exception as e:
         raise HTTPException(status_code=500, detail="Error obteniendo los puntos: " + str(e))
+
+@app.get("/api/reportes/policia")
+def obtener_reportes_policia():
+    """
+    Devuelve TODOS los reportes (pendientes y confirmados) para la vista del mapa de policia y validaciones.
+    """
+    try:
+        reportes = list(db.reportes_ciudadano.find(
+            {"estado": {"$in": ["pendiente", "confirmado"]}}, 
+            {"_id": 1, "sub_tipo": 1, "ubicacion": 1, "estado": 1, "descripcion": 1, "direccion": 1, "fecha_hecho": 1, "anonimo": 1, "modalidad": 1}
+        ))
+        for rep in reportes:
+            rep["_id"] = str(rep["_id"])
+        
+        return {"status": "success", "puntos": reportes, "reportes": reportes}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Error obteniendo reportes: " + str(e))
 
 from bson import ObjectId
 

@@ -78,6 +78,22 @@ class MapService {
     }
   }
 
+  // --- OBTENER REPORTES POLICIA (Pendientes y Confirmados) ---
+  static Future<List<dynamic>> fetchPuntosPolicia() async {
+    final response = await http.get(Uri.parse('$_baseUrl/api/reportes/policia'));
+    
+    if (response.statusCode == 200) {
+      final decodedData = json.decode(response.body);
+      if (decodedData['status'] == 'success') {
+        return decodedData['puntos'] ?? [];
+      } else {
+        throw Exception("Error del servidor: ${decodedData['detail']}");
+      }
+    } else {
+      throw Exception('Error al conectar con el servidor (${response.statusCode})');
+    }
+  }
+
   // --- ENVIAR REPORTE CIUDADANO ---
   static Future<bool> crearReporte(Map<String, dynamic> datosReporte) async {
     final response = await http.post(
