@@ -1,5 +1,10 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:sgeo_pp/core/services/auth_service.dart';
+import 'package:sgeo_pp/core/theme/app_theme.dart';
+import 'package:sgeo_pp/core/widgets/safety_layout.dart';
+import 'package:sgeo_pp/core/widgets/safety_card.dart';
+import 'package:sgeo_pp/core/widgets/safety_button.dart';
 
 class RegisterView extends StatefulWidget {
   const RegisterView({super.key});
@@ -41,32 +46,19 @@ class _RegisterViewState extends State<RegisterView> {
   }
 
   Color _getStrengthColor(int strength) {
-    if (strength == 0) {
-      return Colors.grey;
-    }
-    if (strength <= 1) {
-      return Colors.red;
-    }
-    if (strength == 2) {
-      return Colors.orange;
-    }
-    if (strength == 3) {
-      return Colors.yellow;
-    }
-    return Colors.green;
+    if (strength == 0) return AppTheme.textMuted;
+    if (strength <= 1) return AppTheme.alertRed;
+    if (strength == 2) return AppTheme.alertAmber;
+    if (strength == 3) return const Color(0xFFCDDC39);
+    return AppTheme.successGreen;
   }
 
   String _getStrengthText(int strength) {
-    if (strength == 0) {
-      return '';
-    }
-    if (strength <= 1) {
-      return 'Bajo';
-    }
-    if (strength == 2) {
-      return 'Medio';
-    }
-    return 'Alto';
+    if (strength == 0) return '';
+    if (strength <= 1) return 'Débil';
+    if (strength == 2) return 'Medio';
+    if (strength == 3) return 'Bueno';
+    return 'Fuerte';
   }
 
   Future<void> _register() async {
@@ -173,7 +165,13 @@ class _RegisterViewState extends State<RegisterView> {
           context: context,
           barrierDismissible: false,
           builder: (context) => AlertDialog(
-            title: const Text('Registro en verificación'),
+            title: Row(
+              children: [
+                Icon(Icons.verified_user, color: AppTheme.alertAmber, size: 24),
+                const SizedBox(width: 10),
+                const Expanded(child: Text('Registro en verificación')),
+              ],
+            ),
             content: const Text(
               'Te enviaremos un correo donde debes brindar tus datos para verificar si efectivamente eres policía. '
               'El estado de tu cuenta estará desactivado y no podrás iniciar sesión hasta que el administrador la haya activado.',
@@ -204,159 +202,256 @@ class _RegisterViewState extends State<RegisterView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Crea tu cuenta'), centerTitle: true),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final passwordStrength = _calculatePasswordStrength(_passwordController.text);
+    final strengthColor = _getStrengthColor(passwordStrength);
+
+    return SafetyLayout(
+      appBar: AppBar(
+        title: const Text('Crear Cuenta'),
+        centerTitle: true,
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back_ios_new,
+            size: 20,
+            color: isDark ? AppTheme.textPrimary : null,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24),
+          padding: const EdgeInsets.symmetric(horizontal: 28.0, vertical: 16),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(Icons.person_add_alt_1, size: 80, color: Colors.blue),
+              // ── Ícono de registro ──
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      AppTheme.accentBlue.withValues(alpha: 0.15),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+                child: Icon(
+                  Icons.person_add_alt_1,
+                  size: 44,
+                  color: isDark ? AppTheme.accentBlue : const Color(0xFF0061A4),
+                ),
+              )
+                .animate()
+                .fadeIn(duration: 500.ms)
+                .scale(begin: const Offset(0.8, 0.8), end: const Offset(1, 1), duration: 500.ms),
+
               const SizedBox(height: 24),
-              TextField(
-                controller: _nombreController,
-                decoration: InputDecoration(
-                  labelText: 'Nombre de usuario',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  prefixIcon: const Icon(Icons.person),
-                  filled: true,
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _emailController,
-                decoration: InputDecoration(
-                  labelText: 'Correo Electrónico',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  prefixIcon: const Icon(Icons.email),
-                  filled: true,
-                ),
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _passwordController,
-                onChanged: (value) => setState(() {}),
-                decoration: InputDecoration(
-                  labelText: 'Contraseña',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  prefixIcon: const Icon(Icons.lock),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscurePassword
-                          ? Icons.visibility_off
-                          : Icons.visibility,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _obscurePassword = !_obscurePassword;
-                      });
-                    },
-                  ),
-                  filled: true,
-                ),
-                obscureText: _obscurePassword,
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Mínimo 8 caracteres. No se aceptan: _ - | { } & *',
-                style: TextStyle(color: Colors.grey, fontSize: 11),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value:
-                            _calculatePasswordStrength(
-                              _passwordController.text,
-                            ) /
-                            4,
-                        color: _getStrengthColor(
-                          _calculatePasswordStrength(_passwordController.text),
-                        ),
-                        backgroundColor: Colors.grey[300],
-                        minHeight: 8,
+
+              // ── Card del formulario ──
+              SafetyCard(
+                glassEffect: isDark,
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // ── Encabezado ──
+                    Text(
+                      'Datos de Registro',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? AppTheme.textPrimary : null,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    _getStrengthText(
-                      _calculatePasswordStrength(_passwordController.text),
-                    ),
-                    style: TextStyle(
-                      color: _getStrengthColor(
-                        _calculatePasswordStrength(_passwordController.text),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Completa los campos para crear tu cuenta',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? AppTheme.textSecondary : Colors.grey[600],
                       ),
-                      fontWeight: FontWeight.bold,
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _confirmPasswordController,
-                decoration: InputDecoration(
-                  labelText: 'Confirmar Contraseña',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  prefixIcon: const Icon(Icons.lock_outline),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscureConfirmPassword
-                          ? Icons.visibility_off
-                          : Icons.visibility,
+                    const SizedBox(height: 24),
+
+                    // ── Campo: Nombre ──
+                    TextField(
+                      controller: _nombreController,
+                      decoration: const InputDecoration(
+                        labelText: 'Nombre de usuario',
+                        prefixIcon: Icon(Icons.person_outline),
+                        hintText: 'Tu nombre visible',
+                      ),
                     ),
-                    onPressed: () {
-                      setState(() {
-                        _obscureConfirmPassword = !_obscureConfirmPassword;
-                      });
-                    },
-                  ),
-                  filled: true,
-                ),
-                obscureText: _obscureConfirmPassword,
-              ),
-              const SizedBox(height: 16),
-              CheckboxListTile(
-                title: const Text('¿Eres efectivo policial?'),
-                value: _isPolicial,
-                onChanged: (bool? value) {
-                  setState(() {
-                    _isPolicial = value ?? false;
-                  });
-                },
-                controlAffinity: ListTileControlAffinity.leading,
-                contentPadding: EdgeInsets.zero,
-              ),
-              const SizedBox(height: 32),
-              _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                    const SizedBox(height: 16),
+
+                    // ── Campo: Email ──
+                    TextField(
+                      controller: _emailController,
+                      decoration: const InputDecoration(
+                        labelText: 'Correo Electrónico',
+                        prefixIcon: Icon(Icons.email_outlined),
+                        hintText: 'correo@ejemplo.com',
+                      ),
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // ── Campo: Contraseña ──
+                    TextField(
+                      controller: _passwordController,
+                      onChanged: (value) => setState(() {}),
+                      decoration: InputDecoration(
+                        labelText: 'Contraseña',
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
                         ),
                       ),
-                      onPressed: _register,
-                      child: const Text(
-                        'Registrarse',
-                        style: TextStyle(fontSize: 18),
+                      obscureText: _obscurePassword,
+                    ),
+                    const SizedBox(height: 10),
+
+                    // ── Indicador de fortaleza ──
+                    Text(
+                      'Mínimo 8 caracteres. No se aceptan: _ - | { } & *',
+                      style: TextStyle(
+                        color: isDark ? AppTheme.textMuted : Colors.grey,
+                        fontSize: 11,
                       ),
                     ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: passwordStrength / 4,
+                              color: strengthColor,
+                              backgroundColor: isDark
+                                  ? AppTheme.bgDeep
+                                  : Colors.grey[300],
+                              minHeight: 6,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        AnimatedDefaultTextStyle(
+                          duration: const Duration(milliseconds: 200),
+                          style: TextStyle(
+                            color: strengthColor,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                          child: Text(_getStrengthText(passwordStrength)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // ── Campo: Confirmar Contraseña ──
+                    TextField(
+                      controller: _confirmPasswordController,
+                      decoration: InputDecoration(
+                        labelText: 'Confirmar Contraseña',
+                        prefixIcon: const Icon(Icons.lock_reset_outlined),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscureConfirmPassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscureConfirmPassword = !_obscureConfirmPassword;
+                            });
+                          },
+                        ),
+                      ),
+                      obscureText: _obscureConfirmPassword,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // ── Switch policial (reemplaza CheckboxListTile genérico) ──
+                    SafetyCard(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      margin: EdgeInsets.zero,
+                      shadowBlur: 0,
+                      borderColor: _isPolicial 
+                        ? AppTheme.alertAmber.withValues(alpha: 0.4) 
+                        : AppTheme.borderTactical,
+                      backgroundColor: _isPolicial
+                        ? AppTheme.alertAmber.withValues(alpha: 0.06)
+                        : null,
+                      animateEntry: false,
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.local_police_outlined,
+                            size: 22,
+                            color: _isPolicial
+                                ? AppTheme.alertAmber
+                                : (isDark ? AppTheme.textMuted : Colors.grey),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '¿Eres efectivo policial?',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    color: isDark ? AppTheme.textPrimary : null,
+                                  ),
+                                ),
+                                if (_isPolicial)
+                                  Text(
+                                    'Requiere verificación del administrador',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: AppTheme.alertAmber.withValues(alpha: 0.8),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          Switch(
+                            value: _isPolicial,
+                            onChanged: (value) {
+                              setState(() => _isPolicial = value);
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 28),
+
+                    // ── Botón de Registro ──
+                    SafetyButton(
+                      label: _isLoading ? 'Registrando...' : 'Crear Cuenta',
+                      icon: _isLoading ? null : Icons.how_to_reg,
+                      isLoading: _isLoading,
+                      onPressed: _isLoading ? null : _register,
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
