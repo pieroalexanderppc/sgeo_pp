@@ -1,53 +1,63 @@
-﻿# Documentación Scrum: Proyecto SGEO (Geolocalización de Inseguridad Ciudadana)
+# Documentación Scrum: Proyecto SGEO (Sistema de Geolocalización de Inseguridad Ciudadana)
 
 ## Visión del Proyecto
-Crear una aplicación móvil para registrar y consultar zonas de inseguridad ciudadana en tiempo real (enfocado en geocrimen). Integrar un motor de Inteligencia Artificial Espacial para agrupar y visualizar zonas de riesgo mediante mapas de calor basados en datos de MongoDB.
+Crear una plataforma táctica móvil (iOS/Android) que prevenga el crimen mediante geolocalización cívico-policial y analítica avanzada. El sistema integra Machine Learning (Scikit-Learn) para mapear clústeres espaciales (DBSCAN) y predecir tendencias criminalísticas (Regresión Lineal) utilizando Big Data del Estado (SIDPOL).
 
 ## Arquitectura del Proyecto
-- **Frontend App:** Flutter (Patrón Clean Architecture).
-- **Backend API:** Python con FastAPI (con ejecución de IA en segundo plano).
-- **Base de Datos:** MongoDB en Railway (geocrimen_tacna).
+- **Frontend Móvil:** Flutter (Dart) con enfoque de diseño "Premium Tactical Dark".
+- **Backend API:** Python 3.11 con FastAPI y Scikit-Learn.
+- **Base de Datos:** MongoDB Atlas (M10 Cluster) con soporte `2dsphere`.
+- **Integraciones:** Firebase Cloud Messaging (FCM) para Geofencing.
 
 ---
 
 ## Product Backlog (Pila del Producto)
 
-### Épica 1: Autenticación y Perfil de Usuario
-- [ ] **Historia de Usuario 1.1:** Registro de usuarios con correo y contraseña. *(En progreso)*
-- [x] **Historia de Usuario 1.2:** Inicio de sesión para acceder al mapa. *(Login endpoint listo en backend)*
-- [ ] **Historia de Usuario 1.3:** Visualizar el perfil del usuario activo y cerrar sesión.
+### Épica 1: Autenticación y Control de Accesos (RBAC)
+- [x] **Historia 1.1:** Registro y login de usuarios con encriptación Bcrypt.
+- [x] **Historia 1.2:** Crear 3 roles diferenciados: Ciudadano, Policía y Administrador.
+- [x] **Historia 1.3:** Enrutador dinámico en Flutter que aísla las interfaces para prevenir acceso no autorizado (Redirección estricta).
 
-### Épica 2: Geolocalización, Mapas y Reportes
-- [x] **Historia de Usuario 2.1:** Solicitar permisos de ubicación al dispositivo.
-- [x] **Historia de Usuario 2.2:** Ver un mapa con ubicación exacta mediante GPS.
-- [x] **Historia de Usuario 2.3:** Mitigar los errores de timeout del GPS. *(Corregido)*
-- [x] **Historia de Usuario 2.4:** Crear un reporte de incidencia asociando automáticamente las coordenadas GPS sin escribir la dirección.
+### Épica 2: UX Táctica y Reportes Geográficos
+- [x] **Historia 2.1:** Implementar el diseño visual *Premium Tactical Dark* con acentos rojos.
+- [x] **Historia 2.2:** Permisos de ubicación y captura de lat/lon en milisegundos sin depender de direcciones manuales.
+- [x] **Historia 2.3:** Creación de reportes civiles con categorización de delitos.
 
-### Épica 3: Backend, Historial y Base de Datos
-- [x] **Historia de Usuario 3.1:** Crear y conectar base de datos MongoDB.
-- [x] **Historia de Usuario 3.2:** Guardar reportes asociando el usuario_id y las coordenadas.
-- [x] **Historia de Usuario 3.3:** Crear API para listado histórico (GET /mis_reportes/{user_id}) y conectarlo en Flutter.
-- [ ] **Historia de Usuario 3.4:** Mantener e importar la data de SIDPOL mediante los scripts de limpieza y llenado.
+### Épica 3: Validación Policial y Zonas de Riesgo
+- [x] **Historia 3.1:** Crear interfaz especial para el Policía con botón "Validar" / "Rechazar".
+- [x] **Historia 3.2:** Restringir al policía auditar solo incidentes en un radio táctico de 3 km a la redonda.
+- [x] **Historia 3.3:** Sancionar a los ciudadanos civiles con "Strikes" (baneos temporales) si hacen reportes falsos o *troll*.
 
-### Épica 4: Inteligencia Artificial y Mapas de Calor
-- [x] **Historia de Usuario 4.1:** Ejecutar el modelo (motor_ia_espacial.py) al encender el backend (startup_event) para generar clusters de riesgo.
-- [ ] **Historia de Usuario 4.2:** Integrar y exponer endpoints para que el frontend dibuje las coordenadas del mapa del calor gráficamente.
+### Épica 4: Inteligencia Artificial y Dashboards
+- [x] **Historia 4.1:** Algoritmo espacial **DBSCAN** que agrupa reportes validados para dibujar polígonos rojos de peligro.
+- [x] **Historia 4.2:** Importación del Big Data oficial policial (SIDPOL/Flagrancia).
+- [x] **Historia 4.3:** Dashboards Administrativos en Flutter utilizando `fl_chart` para estadísticas visuales.
+- [x] **Historia 4.4:** Endpoint `/predict` de **Regresión Lineal** que cruza el histórico mensual para pronosticar incidentes futuros.
 
 ---
 
-## Sprint 1: Localización, UX y Backend de Reportes (Completado)
-**Objetivo:** Consolidar el entorno GPS, refinar la interfaz (Nav Bar, Reportes directos por GPS sin dirección manual) y establecer conexión con FastAPI.
+## Historial de Sprints
 
-**Completado:**
-- [x] Solución de caídas por geolocator timeout.
-- [x] Exclusión del campo "Dirección" a favor de coordenadas en los reportes.
-- [x] Estado de "Mantenimiento" a las pestañas de noticias y notificaciones.
-- [x] Refactor de base de datos y endpoints para asociar reportes a su creador y leerlos mediante mis_reportes/{user_id}.
+### Sprint 1: Fundación, GPS y Arquitectura Base (Completado)
+**Objetivo:** Consolidar el entorno de desarrollo, mitigar errores nativos de GPS y armar los esquemas NoSQL en MongoDB.
+**Entregables:**
+- [x] Solución definitiva a caídas por `geolocator timeout`.
+- [x] Exclusión del campo "Dirección manual" a favor de coordenadas geoespaciales.
+- [x] Script `setup_db.py` con validadores `$jsonSchema` estrictos.
 
-## Sprint 2: Autenticación Final, Data SIDPOL y Mapeo IA (Actual)
-**Objetivo:** Terminar de enganchar el frontend del login con el backend de FastAPI, cargar datos voluminosos a Mongo y visualizar el mapa de calor de inseguridad.
+### Sprint 2: Roles (RBAC), UI Táctica y Validaciones (Completado)
+**Objetivo:** Desarrollar el sistema de login seguro y aislar las vistas por Rol para evitar deuda técnica, implementando el diseño Premium.
+**Entregables:**
+- [x] Diseño UI *Tactical Dark* implementado en todos los componentes.
+- [x] Separación de carpetas `lib/roles/admin`, `lib/roles/police` y `lib/roles/citizen`.
+- [x] Lógica de validación policial a 3km operativa en FastAPI.
 
-**Backlog del Sprint:**
-- [ ] Tarea 1: Finalizar conexión de los formularios de Flutter (Login/Signup) con la API REST de FastAPI y sus rutas /login.
-- [ ] Tarea 2: Depurar e importar datos de incidentes reales (SIDPOL/DATOS.txt) en Railway con los scripts de la BD.
-- [ ] Tarea 3: Enganchar la lectura visual de los puntos de calor del modelo de IA sobre la pantalla de mapa en Flutter.
+### Sprint 3: Machine Learning, Analítica y Despliegue (Completado)
+**Objetivo:** Darle "inteligencia" al sistema procesando Big Data, dibujando gráficas financieras y redactando la documentación universitaria.
+**Entregables:**
+- [x] Pantalla *Dual Tab* para el Administrador (Métricas en Tiempo Real vs Big Data).
+- [x] Endpoints asíncronos para DBSCAN y Regresión Lineal funcionando.
+- [x] Reformateo total de los Documentos Universitarios (`FD01`, `FD02`, `FD03`, `FD04`).
+
+---
+**Estado General del Proyecto:** Listo para pase a Producción / Presentación Académica Final.
