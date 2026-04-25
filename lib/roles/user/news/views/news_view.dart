@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:xml/xml.dart' as xml;
 import 'dart:convert';
+
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/safety_layout.dart';
+import '../../../../core/widgets/safety_button.dart';
 
 class NewsView extends StatefulWidget {
   const NewsView({super.key});
@@ -157,29 +162,23 @@ class _NewsViewState extends State<NewsView> {
     int tempYear = _selectedYear;
     int tempMonth = _selectedMonth;
     final int currentYear = DateTime.now().year;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final List<String> monthNames = [
-      'Enero',
-      'Febrero',
-      'Marzo',
-      'Abril',
-      'Mayo',
-      'Junio',
-      'Julio',
-      'Agosto',
-      'Septiembre',
-      'Octubre',
-      'Noviembre',
-      'Diciembre',
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
     ];
 
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text("Filtrar Noticias"),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
+          title: Row(
+            children: [
+              Icon(Icons.calendar_month, color: AppTheme.accentBlue, size: 22),
+              const SizedBox(width: 10),
+              const Text("Filtrar Noticias"),
+            ],
           ),
           content: StatefulBuilder(
             builder: (context, setDialogState) {
@@ -189,12 +188,16 @@ class _NewsViewState extends State<NewsView> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         "Mes:",
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? AppTheme.textSecondary : null,
+                        ),
                       ),
                       DropdownButton<int>(
                         value: tempMonth,
+                        dropdownColor: isDark ? AppTheme.bgElevated : null,
                         items: List.generate(12, (index) {
                           return DropdownMenuItem(
                             value: index + 1,
@@ -202,8 +205,9 @@ class _NewsViewState extends State<NewsView> {
                           );
                         }),
                         onChanged: (val) {
-                          if (val != null)
+                          if (val != null) {
                             setDialogState(() => tempMonth = val);
+                          }
                         },
                       ),
                     ],
@@ -212,12 +216,16 @@ class _NewsViewState extends State<NewsView> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         "Año:",
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? AppTheme.textSecondary : null,
+                        ),
                       ),
                       DropdownButton<int>(
                         value: tempYear,
+                        dropdownColor: isDark ? AppTheme.bgElevated : null,
                         items: List.generate(5, (index) {
                           int year = currentYear - index;
                           return DropdownMenuItem(
@@ -226,7 +234,9 @@ class _NewsViewState extends State<NewsView> {
                           );
                         }),
                         onChanged: (val) {
-                          if (val != null) setDialogState(() => tempYear = val);
+                          if (val != null) {
+                            setDialogState(() => tempYear = val);
+                          }
                         },
                       ),
                     ],
@@ -238,12 +248,12 @@ class _NewsViewState extends State<NewsView> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text(
+              child: Text(
                 "Cancelar",
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: isDark ? AppTheme.textSecondary : Colors.grey),
               ),
             ),
-            ElevatedButton(
+            TextButton(
               onPressed: () {
                 Navigator.pop(context);
                 setState(() {
@@ -252,11 +262,13 @@ class _NewsViewState extends State<NewsView> {
                 });
                 _fetchRealNews();
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+              child: Text(
+                "Buscar",
+                style: TextStyle(
+                  color: AppTheme.accentBlue,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-              child: const Text("Buscar"),
             ),
           ],
         );
@@ -264,17 +276,13 @@ class _NewsViewState extends State<NewsView> {
     );
   }
 
-  // Portadas generadas con código para que simulen una imagen
-  // de fondo bonita y abstracta de seguridad sin depender de internet.
+  // Portadas generadas con código — gradientes tácticos
   Widget _buildFallbackImage(int index) {
     final List<List<Color>> gradientColors = [
-      [Colors.blue.shade900, Colors.blue.shade600], // Estilo Policial
-      [
-        Colors.grey.shade900,
-        Colors.grey.shade600,
-      ], // Estilo Oscuro/Periodístico
-      [Colors.indigo.shade900, Colors.indigo.shade500], // Estilo Noche
-      [Colors.blueGrey.shade900, Colors.blueGrey.shade600], // Estilo Serio
+      [const Color(0xFF0D1B2A), const Color(0xFF1B2838)],  // Táctico profundo
+      [const Color(0xFF1A1A2E), const Color(0xFF16213E)],  // Noche índigo
+      [const Color(0xFF0F0E17), const Color(0xFF1A1F36)],  // Oscuro premium
+      [const Color(0xFF141E30), const Color(0xFF243B55)],  // Naval
     ];
 
     final List<IconData> referenceIcons = [
@@ -289,7 +297,7 @@ class _NewsViewState extends State<NewsView> {
 
     return Container(
       width: double.infinity,
-      height: 190,
+      height: 180,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -297,26 +305,44 @@ class _NewsViewState extends State<NewsView> {
           colors: colorPair,
         ),
       ),
-      child: Center(
-        child: Icon(
-          selectedIcon,
-          size: 80,
-          color: Colors.white.withAlpha(
-            50,
-          ), // Un gris casi transparente para que sea "fondo"
-        ),
+      child: Stack(
+        children: [
+          // Patrón de glow sutil
+          Positioned(
+            right: -20,
+            top: -20,
+            child: Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    AppTheme.accentBlue.withValues(alpha: 0.08),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Center(
+            child: Icon(
+              selectedIcon,
+              size: 72,
+              color: Colors.white.withValues(alpha: 0.06),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SafetyLayout(
+      showGradientBackground: true,
       appBar: AppBar(
-        title: const Text(
-          'Noticias de Seguridad',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-        ),
+        title: const Text('Noticias de Seguridad'),
         centerTitle: true,
         elevation: 0,
         actions: [
@@ -335,9 +361,7 @@ class _NewsViewState extends State<NewsView> {
       body: RefreshIndicator(
         onRefresh: _fetchRealNews,
         child: _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(color: Colors.blueAccent),
-              )
+            ? const Center(child: CircularProgressIndicator())
             : _errorMessage.isNotEmpty
             ? _buildErrorView()
             : _newsList.isEmpty
@@ -348,6 +372,8 @@ class _NewsViewState extends State<NewsView> {
   }
 
   Widget _buildErrorView() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       children: [
@@ -359,33 +385,34 @@ class _NewsViewState extends State<NewsView> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.cloud_off_rounded,
-                    size: 80,
-                    color: Colors.grey,
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isDark ? AppTheme.bgSurface : Colors.grey.shade100,
+                    ),
+                    child: Icon(
+                      Icons.cloud_off_rounded,
+                      size: 56,
+                      color: isDark ? AppTheme.textMuted : Colors.grey.shade400,
+                    ),
                   ),
                   const SizedBox(height: 24),
                   Text(
                     _errorMessage,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey,
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: isDark ? AppTheme.textSecondary : Colors.grey,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                   const SizedBox(height: 24),
-                  ElevatedButton.icon(
+                  SafetyButton(
+                    label: 'Reintentar',
+                    icon: Icons.refresh,
+                    expand: false,
                     onPressed: _fetchRealNews,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text("Reintentar"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
                   ),
                 ],
               ),
@@ -397,23 +424,51 @@ class _NewsViewState extends State<NewsView> {
   }
 
   Widget _buildEmptyView() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       children: [
         SizedBox(
           height: MediaQuery.of(context).size.height * 0.7,
-          child: const Center(
+          child: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.feed_outlined, size: 80, color: Colors.grey),
-                SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isDark ? AppTheme.bgSurface : Colors.grey.shade100,
+                  ),
+                  child: Icon(
+                    Icons.feed_outlined,
+                    size: 56,
+                    color: isDark ? AppTheme.textMuted : Colors.grey.shade400,
+                  ),
+                ),
+                const SizedBox(height: 20),
                 Text(
-                  "No hay noticias relevantes en Tacna por ahora.",
-                  style: TextStyle(color: Colors.grey),
+                  "No hay noticias relevantes",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? AppTheme.textSecondary : Colors.grey,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  "Intenta con otra fecha o actualiza",
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                  ),
                 ),
               ],
-            ),
+            )
+            .animate()
+            .fadeIn(duration: 500.ms)
+            .scale(begin: const Offset(0.9, 0.9), end: const Offset(1, 1), duration: 500.ms),
           ),
         ),
       ],
@@ -426,25 +481,11 @@ class _NewsViewState extends State<NewsView> {
     String dateStr = rawDate.length > 16 ? rawDate.substring(0, 16) : rawDate;
 
     final Map<String, String> replacements = {
-      'Mon,': 'Lun,',
-      'Tue,': 'Mar,',
-      'Wed,': 'Mié,',
-      'Thu,': 'Jue,',
-      'Fri,': 'Vie,',
-      'Sat,': 'Sáb,',
-      'Sun,': 'Dom,',
-      'Jan': 'Ene',
-      'Feb': 'Feb',
-      'Mar': 'Mar',
-      'Apr': 'Abr',
-      'May': 'May',
-      'Jun': 'Jun',
-      'Jul': 'Jul',
-      'Aug': 'Ago',
-      'Sep': 'Sep',
-      'Oct': 'Oct',
-      'Nov': 'Nov',
-      'Dec': 'Dic',
+      'Mon,': 'Lun,', 'Tue,': 'Mar,', 'Wed,': 'Mié,', 'Thu,': 'Jue,',
+      'Fri,': 'Vie,', 'Sat,': 'Sáb,', 'Sun,': 'Dom,',
+      'Jan': 'Ene', 'Feb': 'Feb', 'Mar': 'Mar', 'Apr': 'Abr',
+      'May': 'May', 'Jun': 'Jun', 'Jul': 'Jul', 'Aug': 'Ago',
+      'Sep': 'Sep', 'Oct': 'Oct', 'Nov': 'Nov', 'Dec': 'Dic',
     };
 
     replacements.forEach((en, es) {
@@ -455,11 +496,13 @@ class _NewsViewState extends State<NewsView> {
   }
 
   Widget _buildNewsList() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return RefreshIndicator(
       onRefresh: _fetchRealNews,
       child: ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         itemCount: _newsList.length,
         itemBuilder: (context, index) {
           final news = _newsList[index];
@@ -471,16 +514,19 @@ class _NewsViewState extends State<NewsView> {
           // Traducir y formatear la fecha
           final String pubDate = _formatDateToSpanish(pubDateRaw);
 
-          return Card(
-            elevation: 4,
-            shadowColor: Colors.black.withAlpha(25),
-            margin: const EdgeInsets.only(bottom: 24),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
+          return Container(
+            margin: const EdgeInsets.only(bottom: 18),
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.bgSurface : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppTheme.borderTactical, width: 0.5),
+              boxShadow: isDark
+                  ? [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4), spreadRadius: -2)]
+                  : [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, 2))],
             ),
-            color: Theme.of(context).cardColor,
             clipBehavior: Clip.antiAlias,
             child: InkWell(
+              borderRadius: BorderRadius.circular(20),
               onTap: () => _launchURL(link),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -501,7 +547,7 @@ class _NewsViewState extends State<NewsView> {
                               begin: Alignment.bottomCenter,
                               end: Alignment.topCenter,
                               colors: [
-                                Colors.black.withAlpha(180),
+                                Colors.black.withValues(alpha: 0.7),
                                 Colors.transparent,
                               ],
                             ),
@@ -513,35 +559,22 @@ class _NewsViewState extends State<NewsView> {
                         bottom: 12,
                         left: 12,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
-                            color: Colors.redAccent.shade700,
-                            borderRadius: BorderRadius.circular(6),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withAlpha(50),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
+                            color: AppTheme.alertRed.withValues(alpha: 0.9),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
                             children: [
-                              const Icon(
-                                Icons.language,
-                                color: Colors.white,
-                                size: 14,
-                              ),
-                              const SizedBox(width: 6),
+                              const Icon(Icons.language, color: Colors.white, size: 12),
+                              const SizedBox(width: 5),
                               Text(
                                 source.toUpperCase(),
                                 style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
                                   color: Colors.white,
+                                  letterSpacing: 0.5,
                                 ),
                               ),
                             ],
@@ -554,10 +587,10 @@ class _NewsViewState extends State<NewsView> {
                         right: 12,
                         child: Text(
                           pubDate,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w500,
-                            color: Colors.white,
+                            color: Colors.white.withValues(alpha: 0.8),
                           ),
                         ),
                       ),
@@ -573,33 +606,31 @@ class _NewsViewState extends State<NewsView> {
                         Text(
                           title,
                           style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w800,
-                            height: 1.3,
-                            color: Theme.of(context).colorScheme.onSurface,
-                            letterSpacing: -0.3,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            height: 1.35,
+                            color: isDark ? AppTheme.textPrimary : null,
+                            letterSpacing: -0.2,
                           ),
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 14),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              "Toca para leer el artículo completo",
+                              "Toca para leer el artículo",
                               style: TextStyle(
-                                fontSize: 13,
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurfaceVariant,
+                                fontSize: 12,
+                                color: isDark ? AppTheme.textMuted : Colors.grey,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
                             Icon(
                               Icons.arrow_forward_ios_rounded,
-                              size: 16,
-                              color: Theme.of(context).colorScheme.primary,
+                              size: 14,
+                              color: isDark ? AppTheme.accentBlueLight : AppTheme.accentBlue,
                             ),
                           ],
                         ),
@@ -609,7 +640,10 @@ class _NewsViewState extends State<NewsView> {
                 ],
               ),
             ),
-          );
+          )
+          .animate()
+          .fadeIn(delay: Duration(milliseconds: 60 * index), duration: 350.ms)
+          .slideY(begin: 0.05, end: 0, duration: 350.ms, curve: Curves.easeOut);
         },
       ),
     );

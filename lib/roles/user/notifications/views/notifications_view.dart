@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../../../core/services/notifications_storage_service.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/safety_layout.dart';
 
 class NotificationsView extends StatefulWidget {
   const NotificationsView({super.key});
@@ -57,49 +60,64 @@ class _NotificationsViewState extends State<NotificationsView> {
     await _loadNotifications();
   }
 
-  Icon _getIconForType(String type) {
+  // ── Ícono y color según tipo de notificación ──
+  IconData _getIconForType(String type) {
     switch (type) {
       case 'risk_zone':
-        return const Icon(Icons.warning_rounded, color: Colors.deepOrange, size: 28);
+        return Icons.warning_rounded;
       case 'incident':
-        return const Icon(Icons.local_police_rounded, color: Colors.blue, size: 28);
+        return Icons.local_police_rounded;
       case 'update':
-        return const Icon(Icons.map_rounded, color: Colors.green, size: 28);
+        return Icons.map_rounded;
       default:
-        return const Icon(Icons.notifications_rounded, color: Colors.grey, size: 28);
+        return Icons.notifications_rounded;
     }
   }
 
-  Color _getBackgroundColor(String type, bool isRead, BuildContext context) {
-    if (isRead) return Theme.of(context).cardColor;
-    
-    // Si no está leída, le damos un tono muy suave dependiendo del tipo
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+  Color _getIconColor(String type) {
     switch (type) {
       case 'risk_zone':
-        return isDark ? Colors.deepOrange.withAlpha(30) : Colors.deepOrange.withAlpha(15);
+        return AppTheme.alertRed;
       case 'incident':
-        return isDark ? Colors.blue.withAlpha(30) : Colors.blue.withAlpha(15);
+        return AppTheme.accentBlue;
+      case 'update':
+        return AppTheme.successGreen;
       default:
-        return isDark ? Colors.white10 : Colors.grey.shade100;
+        return AppTheme.textSecondary;
+    }
+  }
+
+  Color _getIconBgColor(String type, bool isDark) {
+    switch (type) {
+      case 'risk_zone':
+        return AppTheme.alertRedBg;
+      case 'incident':
+        return AppTheme.accentBlue.withValues(alpha: 0.15);
+      case 'update':
+        return AppTheme.successGreen.withValues(alpha: 0.15);
+      default:
+        return isDark ? AppTheme.bgElevated : Colors.grey.shade100;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return SafetyLayout(
+      showGradientBackground: true,
       appBar: AppBar(
-        title: const Text('Notificaciones', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+        title: const Text('Notificaciones'),
         centerTitle: true,
         elevation: 0,
         actions: [
           IconButton(
-             icon: const Icon(Icons.delete_outline),
+             icon: Icon(Icons.delete_outline, color: isDark ? AppTheme.textSecondary : null),
              onPressed: _clearAll,
              tooltip: "Borrar todas",
           ),
           IconButton(
-             icon: const Icon(Icons.done_all_rounded),
+             icon: Icon(Icons.done_all_rounded, color: isDark ? AppTheme.accentBlueLight : null),
              onPressed: _markAllAsRead,
              tooltip: "Marcar todas como leídas",
           ),
@@ -108,121 +126,157 @@ class _NotificationsViewState extends State<NotificationsView> {
       body: _isLoading 
           ? const Center(child: CircularProgressIndicator())
           : _notifications.isEmpty
-            ? _buildEmptyView()
+            ? _buildEmptyView(isDark)
             : RefreshIndicator(
                 onRefresh: _loadNotifications,
-                child: ListView.separated(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: _notifications.length,
-              separatorBuilder: (context, index) => Divider(
-                height: 1, 
-                thickness: 1, 
-                color: Theme.of(context).dividerColor.withAlpha(50)
-              ),
-              itemBuilder: (context, index) {
-                final notif = _notifications[index];
-                final bool isRead = notif['isRead'];
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                  itemCount: _notifications.length,
+                  itemBuilder: (context, index) {
+                    final notif = _notifications[index];
+                    final bool isRead = notif['isRead'];
+                    final String type = notif['type'] ?? '';
+                    final iconColor = _getIconColor(type);
+                    final iconBg = _getIconBgColor(type, isDark);
 
-                return InkWell(
-                  onTap: () => _markAsRead(index),
-                  child: Container(
-                    color: _getBackgroundColor(notif['type'], isRead, context),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Icono
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).cardColor,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(color: Colors.black.withAlpha(isDark(context) ? 50 : 10), blurRadius: 5)
-                            ]
-                          ),
-                          child: _getIconForType(notif['type']),
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: isRead
+                            ? (isDark ? AppTheme.bgSurface : Theme.of(context).cardColor)
+                            : (isDark ? AppTheme.bgElevated : Colors.blue.withValues(alpha: 0.05)),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isRead ? AppTheme.borderTactical : iconColor.withValues(alpha: 0.2),
+                          width: 0.5,
                         ),
-                        const SizedBox(width: 16),
-                        
-                        // Textos
-                        Expanded(
-                          child: Column(
+                      ),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () => _markAsRead(index),
+                        child: Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      notif['title'],
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: isRead ? FontWeight.w600 : FontWeight.bold,
-                                        color: Theme.of(context).colorScheme.onSurface,
-                                      ),
-                                    ),
-                                  ),
-                                  if (!isRead)
-                                    Container(
-                                      width: 10,
-                                      height: 10,
-                                      margin: const EdgeInsets.only(left: 8),
-                                      decoration: const BoxDecoration(
-                                        color: Colors.redAccent,
-                                        shape: BoxShape.circle,
-                                      ),
-                                    )
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                notif['message'],
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                  height: 1.4,
+                              // Ícono con fondo circular
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: iconBg,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  _getIconForType(type),
+                                  color: iconColor,
+                                  size: 22,
                                 ),
                               ),
-                              const SizedBox(height: 8),
-                              Text(
-                                notif['time'],
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  color: Theme.of(context).colorScheme.primary,
+                              const SizedBox(width: 14),
+                              
+                              // Textos
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            notif['title'],
+                                            style: TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: isRead ? FontWeight.w500 : FontWeight.w700,
+                                              color: isDark ? AppTheme.textPrimary : null,
+                                            ),
+                                          ),
+                                        ),
+                                        if (!isRead)
+                                          Container(
+                                            width: 8,
+                                            height: 8,
+                                            margin: const EdgeInsets.only(left: 8),
+                                            decoration: BoxDecoration(
+                                              color: iconColor,
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      notif['message'],
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: isDark ? AppTheme.textSecondary : Colors.grey[600],
+                                        height: 1.4,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      notif['time'],
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                        color: isDark ? AppTheme.accentBlueLight : Theme.of(context).colorScheme.primary,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
+                      ),
+                    )
+                      .animate()
+                      .fadeIn(delay: Duration(milliseconds: 50 * index), duration: 300.ms)
+                      .slideX(begin: 0.05, end: 0, duration: 300.ms, curve: Curves.easeOut);
+                  },
+                ),
+              ),
     );
   }
 
-  bool isDark(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.dark;
-  }
-
-  Widget _buildEmptyView() {
+  Widget _buildEmptyView(bool isDark) {
     return Center(
       child: Column(
          mainAxisAlignment: MainAxisAlignment.center,
          children: [
-           Icon(Icons.notifications_off_outlined, size: 80, color: Theme.of(context).colorScheme.onSurfaceVariant.withAlpha(100)),
-           const SizedBox(height: 16),
+           Container(
+             padding: const EdgeInsets.all(24),
+             decoration: BoxDecoration(
+               shape: BoxShape.circle,
+               color: isDark ? AppTheme.bgSurface : Colors.grey.shade100,
+             ),
+             child: Icon(
+               Icons.notifications_off_outlined,
+               size: 56,
+               color: isDark ? AppTheme.textMuted : Colors.grey.shade400,
+             ),
+           ),
+           const SizedBox(height: 20),
            Text(
-             "No tienes notificaciones nuevas", 
-             style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)
+             "No tienes notificaciones", 
+             style: TextStyle(
+               fontSize: 16,
+               fontWeight: FontWeight.w600,
+               color: isDark ? AppTheme.textSecondary : Colors.grey,
+             ),
+           ),
+           const SizedBox(height: 6),
+           Text(
+             "Las alertas de seguridad aparecerán aquí",
+             style: TextStyle(
+               fontSize: 13,
+               color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+             ),
            ),
          ],
        )
+       .animate()
+       .fadeIn(duration: 500.ms)
+       .scale(begin: const Offset(0.9, 0.9), end: const Offset(1, 1), duration: 500.ms),
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:sgeo_pp/roles/user/home/views/home_view.dart';
 import 'package:sgeo_pp/roles/police/home/views/home_view.dart';
+import 'package:sgeo_pp/roles/admin/home/views/home_view.dart';
 import 'package:sgeo_pp/features/auth/views/register_view.dart';
 import 'package:sgeo_pp/core/services/auth_service.dart';
 import 'package:sgeo_pp/core/theme/app_theme.dart';
@@ -57,6 +58,12 @@ class _LoginViewState extends State<LoginView> {
           builder: (context) {
             if (userRole == 'policia') {
               return PoliceHomeView(
+                userRole: userRole,
+                userName: userData['nombre'] ?? '',
+                userId: userData['id'] ?? userData['_id'] ?? '',
+              );
+            } else if (userRole == 'admin' || userRole == 'administrador') {
+              return AdminHomeView(
                 userRole: userRole,
                 userName: userData['nombre'] ?? '',
                 userId: userData['id'] ?? userData['_id'] ?? '',

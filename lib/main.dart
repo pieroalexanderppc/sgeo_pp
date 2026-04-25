@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -9,6 +9,7 @@ import 'core/theme/app_theme.dart';
 import 'features/auth/views/login_view.dart';
 import 'roles/user/home/views/home_view.dart';
 import 'roles/police/home/views/home_view.dart';
+import 'roles/admin/home/views/home_view.dart';
 import 'roles/user/notifications/views/notifications_view.dart';
 import 'core/services/notifications_storage_service.dart';
 import 'core/services/map_service.dart';
@@ -230,7 +231,9 @@ class MyApp extends StatelessWidget {
           home: isLoggedIn 
                 ? (userRole == 'policia' 
                     ? PoliceHomeView(userId: userId, userName: userName, userRole: userRole) 
-                    : HomeView(userId: userId, userName: userName, userRole: userRole))
+                    : (userRole == 'admin' || userRole == 'administrador')
+                        ? AdminHomeView(userId: userId, userName: userName, userRole: userRole)
+                        : HomeView(userId: userId, userName: userName, userRole: userRole))
                 : const LoginView(),
         );
       },

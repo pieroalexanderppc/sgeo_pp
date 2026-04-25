@@ -515,5 +515,151 @@ def actualizar_usuario(user_id: str, data: UpdateUser):
         return {"status": "success", "message": "Datos actualizados"}
     except Exception as e:
         raise HTTPException(status_code=400, detail="Error actualizando: " + str(e))
+@app.get("/api/admin/dashboard_stats")
+def obtener_dashboard_stats(filtro_tiempo: str = 'Todos'):
+    try:
+        from datetime import datetime, timedelta
+        import pytz
 
+        # Configurar filtro de tiempo
+        query = {}
+        now = datetime.now(pytz.utc)
+        if filtro_tiempo == 'Mes Actual':
+            inicio = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            query["creado_en"] = {"$gte": inicio}
+        elif filtro_tiempo == 'Ultimos 3 Meses':
+            inicio = now - timedelta(days=90)
+            query["creado_en"] = {"$gte": inicio}
+        elif filtro_tiempo == 'Ultimos 6 Meses':
+            inicio = now - timedelta(days=180)
+            query["creado_en"] = {"$gte": inicio}
 
+        # Realizar agregaciones
+        pipeline_total = [{"$match": query}, {"$count": "total"}]
+        pipeline_estado = [{"$match": query}, {"$group": {"_id": "$estado", "count": {"$sum": 1}}}]
+        pipeline_tipo = [{"$match": query}, {"$group": {"_id": "$sub_tipo", "count": {"$sum": 1}}}]
+
+        total_cursor = list(db.reportes_ciudadano.aggregate(pipeline_total))
+        total = total_cursor[0]["total"] if total_cursor else 0
+
+        estado_cursor = list(db.reportes_ciudadano.aggregate(pipeline_estado))
+        por_estado = {doc["_id"] or "desconocido": doc["count"] for doc in estado_cursor}
+
+        tipo_cursor = list(db.reportes_ciudadano.aggregate(pipeline_tipo))
+        por_tipo = {doc["_id"] or "desconocido": doc["count"] for doc in tipo_cursor}
+
+        return {
+            "status": "success",
+            "stats": {
+                "total": total,
+                "por_estado": por_estado,
+                "por_tipo": por_tipo
+            }
+        }
+    except Exception as e:
+        print("Error dashboard stats:", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/admin/sidpol_stats")
+def obtener_sidpol_stats():
+    try:
+        pipeline_distrito = [
+            {"$group": {"_id": "$distrito", "total": {"$sum": "$cantidad"}}},
+            {"$sort": {"total": -1}},
+            {"$limit": 5}
+        ]
+        
+        pipeline_tipo = [
+            {"$group": {"_id": "$sub_tipo", "total": {"$sum": "$cantidad"}}},
+            {"$sort": {"total": -1}},
+            {"$limit": 5}
+        ]
+        
+        pipeline_tiempo = [
+            {"$group": {"_id": {"anio": "$anio", "mes": "$mes"}, "total": {"$sum": "$cantidad"}}},
+            {"$sort": {"_id.anio": 1, "_id.mes": 1}}
+        ]
+
+        distritos = list(db.estadisticas_sidpol_historico.aggregate(pipeline_distrito))
+        tipos = list(db.estadisticas_sidpol_historico.aggregate(pipeline_tipo))
+        tiempo = list(db.estadisticas_sidpol_historico.aggregate(pipeline_tiempo))
+
+        return {
+            "status": "success",
+            "stats": {
+                "por_distrito": {d["_id"] if d["_id"] else "Desconocido": d["total"] for d in distritos},
+                "por_tipo": {t["_id"] if t["_id"] else "Desconocido": t["total"] for t in tipos},
+                "linea_tiempo": [{"anio": t["_id"]["anio"], "mes": t["_id"]["mes"], "total": t["total"]} for t in tiempo]
+            }
+        }
+    except Exception as e:
+        print("Error sidpol stats:", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/admin/sidpol_predict")
+def obtener_sidpol_prediccion():
+    try:
+        import pandas as pd
+        import numpy as np
+        from sklearn.linear_model import LinearRegression
+
+        pipeline = [
+            {"$group": {"_id": {"distrito": "$distrito", "anio": "$anio", "mes": "$mes"}, "total": {"$sum": "$cantidad"}}}
+        ]
+        data = list(db.estadisticas_sidpol_historico.aggregate(pipeline))
+        if not data:
+            return {"status": "success", "predicciones_globales": [], "distrito_riesgo": "Sin datos", "valor_riesgo": 0}
+
+        df = pd.DataFrame([
+            {"distrito": d["_id"]["distrito"], "anio": d["_id"]["anio"], "mes": d["_id"]["mes"], "total": d["total"]}
+            for d in data
+        ])
+        
+        df['indice_tiempo'] = df['anio'] * 12 + df['mes']
+        
+        # General Prediction
+        df_global = df.groupby('indice_tiempo')['total'].sum().reset_index().sort_values('indice_tiempo')
+        if len(df_global) < 2:
+            return {"status": "success", "predicciones_globales": [], "distrito_riesgo": "Insuficientes datos", "valor_riesgo": 0}
+            
+        X_global = df_global[['indice_tiempo']].values
+        y_global = df_global['total'].values
+        
+        model_global = LinearRegression()
+        model_global.fit(X_global, y_global)
+        
+        last_index = df_global['indice_tiempo'].max()
+        predicciones_globales = []
+        for i in range(1, 4):
+            futuro_idx = last_index + i
+            pred_val = max(0, int(model_global.predict([[futuro_idx]])[0]))
+            anio_f = futuro_idx // 12
+            mes_f = futuro_idx % 12
+            if mes_f == 0:
+                mes_f = 12
+                anio_f -= 1
+            predicciones_globales.append({"anio": int(anio_f), "mes": int(mes_f), "prediccion": pred_val})
+
+        # Predict District Risk
+        distritos_pred = {}
+        for dist in df['distrito'].unique():
+            df_dist = df[df['distrito'] == dist].sort_values('indice_tiempo')
+            if len(df_dist) < 3:
+                continue
+            X_dist = df_dist[['indice_tiempo']].values
+            y_dist = df_dist['total'].values
+            model_dist = LinearRegression().fit(X_dist, y_dist)
+            pred_dist = model_dist.predict([[last_index + 1]])[0]
+            distritos_pred[dist] = max(0, int(pred_dist))
+            
+        distrito_peligro = max(distritos_pred, key=distritos_pred.get) if distritos_pred else "Desconocido"
+
+        return {
+            "status": "success",
+            "predicciones_globales": predicciones_globales,
+            "distrito_riesgo": distrito_peligro,
+            "valor_riesgo": distritos_pred.get(distrito_peligro, 0)
+        }
+    except Exception as e:
+        print("Error sidpol predict:", e)
+        raise HTTPException(status_code=500, detail=str(e))

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -11,6 +11,7 @@ import '../../../../core/services/map_service.dart';
 import '../../../../core/services/report_service.dart';
 import '../../../../core/services/geofence_service.dart';
 import '../../../../core/services/tutorial_service.dart';
+import '../../../../core/theme/app_theme.dart';
 
 class PoliceMapView extends StatefulWidget {
   final String userId;
@@ -33,7 +34,6 @@ class _PoliceMapViewState extends State<PoliceMapView> {
   List<dynamic> _zonasRiesgo = [];
   List<dynamic> _puntosExactos = [];
 
-  // Opciones de visualizacion (Filtros de mapa)
   bool _showZonasRiesgo = true;
   bool _showReportesValidados = true;
   bool _isFilterMenuOpen = false;
@@ -122,15 +122,30 @@ class _PoliceMapViewState extends State<PoliceMapView> {
   Color _getColorForNivel(String nivel) {
     switch (nivel.toLowerCase()) {
       case 'bajo':
-        return Colors.green.withAlpha(76);
+        return AppTheme.successGreen.withValues(alpha: 0.3);
       case 'medio':
-        return Colors.orange.withAlpha(102);
+        return AppTheme.alertAmber.withValues(alpha: 0.4);
       case 'alto':
-        return Colors.redAccent.withAlpha(127);
+        return Colors.redAccent.withValues(alpha: 0.5);
       case 'critico':
-        return Colors.red.withAlpha(178);
+        return AppTheme.alertRed.withValues(alpha: 0.7);
       default:
-        return Colors.grey.withAlpha(127);
+        return Colors.grey.withValues(alpha: 0.5);
+    }
+  }
+
+  Color _getSolidColorForNivel(String nivel) {
+    switch (nivel.toLowerCase()) {
+      case 'bajo':
+        return AppTheme.successGreen;
+      case 'medio':
+        return AppTheme.alertAmber;
+      case 'alto':
+        return Colors.redAccent;
+      case 'critico':
+        return AppTheme.alertRed;
+      default:
+        return Colors.grey;
     }
   }
 
@@ -147,10 +162,10 @@ class _PoliceMapViewState extends State<PoliceMapView> {
 
     if (userForced) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No se pudo obtener ubicacion exacta tan rapido.'),
-          duration: Duration(seconds: 4),
-          backgroundColor: Colors.orange,
+        SnackBar(
+          content: const Text('No se pudo obtener ubicación exacta tan rapido.'),
+          duration: const Duration(seconds: 4),
+          backgroundColor: AppTheme.alertAmber,
         ),
       );
     }
@@ -327,14 +342,16 @@ class _PoliceMapViewState extends State<PoliceMapView> {
   Widget _buildPanelContent() {
     if (_selectedZona == null) return const SizedBox.shrink();
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final zona = _selectedZona;
     final nivel = zona['nivel_riesgo'].toString().toUpperCase();
-    Color colorNivel = Colors.grey;
-    if (nivel == 'CRITICO' || nivel == 'ALTO') colorNivel = Colors.red;
-    if (nivel == 'MEDIO') colorNivel = Colors.orange;
-    if (nivel == 'BAJO') colorNivel = Colors.green;
+    final colorNivel = _getSolidColorForNivel(nivel);
 
-    return Padding(
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.bgSurface : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       padding: const EdgeInsets.all(24.0),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -343,81 +360,127 @@ class _PoliceMapViewState extends State<PoliceMapView> {
           Center(
             child: Container(
               width: 40,
-              height: 5,
+              height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey[400],
+                color: isDark ? AppTheme.textMuted : Colors.grey.shade300,
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Row(
             children: [
-              Icon(Icons.whatshot, color: colorNivel, size: 28)
-                  .animate(
-                    onPlay: (controller) => controller.repeat(reverse: true),
-                  )
-                  .scale(
-                    duration: 800.ms,
-                    curve: Curves.easeInOut,
-                    begin: const Offset(1, 1),
-                    end: const Offset(1.2, 1.2),
-                  ),
-              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: colorNivel.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.whatshot, color: colorNivel, size: 28),
+              )
+                  .animate(onPlay: (controller) => controller.repeat(reverse: true))
+                  .scale(duration: 800.ms, curve: Curves.easeInOut, begin: const Offset(1, 1), end: const Offset(1.1, 1.1)),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Zona de Riesgo $nivel',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w800,
+                        color: isDark ? AppTheme.textPrimary : null,
                       ),
-                    ).animate().fadeIn(duration: 400.ms).slideX(begin: -0.1),
+                    ).animate().fadeIn(duration: 400.ms).slideX(begin: -0.05),
                     if (zona['distrito'] != null)
                       Text(
                         zona['distrito'].toString().toUpperCase(),
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isDark ? AppTheme.textSecondary : Colors.grey[600],
                           fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5,
                         ),
-                      ).animate().fadeIn(delay: 100.ms).slideX(begin: -0.1),
+                      ).animate().fadeIn(delay: 100.ms).slideX(begin: -0.05),
                   ],
                 ),
               ),
             ],
           ),
           const SizedBox(height: 24),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const CircleAvatar(
-              backgroundColor: Colors.blueAccent,
-              child: Icon(Icons.security, color: Colors.white),
-            ),
-            title: Text(
-              'Incidentes registrados: ${zona['total_incidentes'] ?? "Varios"}',
-            ),
-            subtitle: const Text('Basado en denuncias y reportes policiales.'),
-          ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2),
+          _buildPanelTile(
+            icon: Icons.security,
+            iconColor: AppTheme.accentBlue,
+            title: 'Incidentes registrados: ${zona['total_incidentes'] ?? "Varios"}',
+            subtitle: 'Basado en denuncias y reportes policiales.',
+            isDark: isDark,
+          ).animate().fadeIn(delay: 150.ms).slideY(begin: 0.1),
           if (zona['delito_predominante'] != null)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const CircleAvatar(
-                backgroundColor: Colors.redAccent,
-                child: Icon(Icons.warning, color: Colors.white),
-              ),
-              title: Text('Delito frecuente: ${zona['delito_predominante']}'),
-            ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.2),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const CircleAvatar(
-              backgroundColor: Colors.orangeAccent,
-              child: Icon(Icons.trending_up, color: Colors.white),
+            _buildPanelTile(
+              icon: Icons.warning_rounded,
+              iconColor: AppTheme.alertRed,
+              title: 'Delito frecuente: ${zona['delito_predominante']}',
+              isDark: isDark,
+            ).animate().fadeIn(delay: 250.ms).slideY(begin: 0.1),
+          _buildPanelTile(
+            icon: Icons.trending_up,
+            iconColor: AppTheme.alertAmber,
+            title: 'Tendencia: ${zona['tendencia'] ?? "Desconocida"}',
+            isDark: isDark,
+          ).animate().fadeIn(delay: 350.ms).slideY(begin: 0.1),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPanelTile({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    String? subtitle,
+    required bool isDark,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.bgDeep : Colors.grey.shade100,
+              shape: BoxShape.circle,
             ),
-            title: Text('Tendencia: ${zona['tendencia'] ?? "Desconocida"}'),
-          ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.2),
+            child: Icon(icon, color: iconColor, size: 20),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 8),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? AppTheme.textPrimary : null,
+                  ),
+                ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? AppTheme.textSecondary : Colors.grey[600],
+                    ),
+                  ),
+                ]
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -428,15 +491,15 @@ class _PoliceMapViewState extends State<PoliceMapView> {
   @override
   void dispose() {
     TutorialService.triggerTutorialNotifier.removeListener(_tutorialListener);
-    ReportService.reportsUpdatedNotifier.removeListener(
-      _reportsUpdatedListener,
-    );
+    ReportService.reportsUpdatedNotifier.removeListener(_reportsUpdatedListener);
     _positionStreamSubscription?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return ShowCaseWidget(
       builder: (ctx) {
         showcaseContext = ctx;
@@ -447,12 +510,10 @@ class _PoliceMapViewState extends State<PoliceMapView> {
             minHeight: 0,
             maxHeight: 380,
             backdropEnabled: true,
-            backdropOpacity: 0.3,
-            color: Theme.of(context).scaffoldBackgroundColor,
+            backdropOpacity: 0.4,
+            backdropColor: Colors.black,
+            color: Colors.transparent,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            boxShadow: [
-              BoxShadow(blurRadius: 10, color: Colors.black.withAlpha(25)),
-            ],
             panel: _buildPanelContent(),
             body: Stack(
               children: [
@@ -461,26 +522,28 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(
-                                  Icons.location_on,
-                                  size: 60,
-                                  color: Colors.blue,
-                                )
-                                .animate(
-                                  onPlay: (controller) =>
-                                      controller.repeat(reverse: true),
-                                )
-                                .scale(
-                                  duration: 800.ms,
-                                  curve: Curves.easeInOut,
-                                )
-                                .tint(
-                                  color: Colors.lightBlueAccent,
-                                  duration: 800.ms,
-                                ),
-                            const SizedBox(height: 16),
-                            const Text(
+                            Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppTheme.accentBlue.withValues(alpha: 0.1),
+                              ),
+                              child: Icon(
+                                Icons.location_on,
+                                size: 40,
+                                color: AppTheme.accentBlue,
+                              ),
+                            )
+                                .animate(onPlay: (controller) => controller.repeat(reverse: true))
+                                .scale(duration: 800.ms, curve: Curves.easeInOut)
+                                .tint(color: AppTheme.accentBlueLight, duration: 800.ms),
+                            const SizedBox(height: 24),
+                            Text(
                               "Ubicando señal GPS...",
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? AppTheme.textSecondary : Colors.grey[700],
+                              ),
                             ).animate().fadeIn(duration: 500.ms),
                           ],
                         ),
@@ -502,8 +565,7 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                         ),
                         children: [
                           TileLayer(
-                            urlTemplate:
-                                'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+                            urlTemplate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
                             subdomains: const ['a', 'b', 'c', 'd'],
                             userAgentPackageName: 'com.example.sgeo_pp',
                           ),
@@ -518,8 +580,8 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                                 return CircleMarker(
                                   point: LatLng(lat, lng),
                                   color: _getColorForNivel(zona['nivel_riesgo']),
-                                  borderStrokeWidth: 2,
-                                  borderColor: _getColorForNivel(zona['nivel_riesgo']).withAlpha(204),
+                                  borderStrokeWidth: isDark ? 1 : 2,
+                                  borderColor: _getColorForNivel(zona['nivel_riesgo']).withValues(alpha: isDark ? 0.4 : 0.8),
                                   useRadiusInMeter: true,
                                   radius: radius,
                                 );
@@ -540,15 +602,14 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                                       lat,
                                       lng,
                                     );
-                                    // Mostrar reportes si estÃ¡n a 3km o menos (proximidad)
+                                    // Mostrar reportes si están a 3km o menos
                                     return distance <= 3000;
                                   }).map((punto) {
                                   final coords = punto['ubicacion']['coordinates'];
                                   final estadoStr = (punto['estado'] ?? '').toString().toLowerCase();
                                   final isPending = estadoStr.contains('pendiente');
                                   
-                                  // Color rojo y titilante si es pendiente, si no negro.
-                                  final colorPunto = isPending ? Colors.redAccent : Colors.black;
+                                  final colorPunto = isPending ? AppTheme.alertAmber : (isDark ? Colors.white : Colors.black);
                                   final subTipo = punto['sub_tipo'] ?? 'Incidente';
 
                                   return Marker(
@@ -564,6 +625,8 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                                         showDialog(
                                           context: context,
                                           builder: (ctx) => AlertDialog(
+                                            backgroundColor: isDark ? AppTheme.bgSurface : Colors.white,
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                                             title: Row(
                                               children: [
                                                 Icon(
@@ -572,12 +635,13 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                                                   size: 28,
                                                 ),
                                                 const SizedBox(width: 10),
-                                                const Expanded(
+                                                Expanded(
                                                   child: Text(
                                                     'Atención Inmediata',
                                                     style: TextStyle(
                                                       fontSize: 18,
                                                       fontWeight: FontWeight.bold,
+                                                      color: isDark ? AppTheme.textPrimary : Colors.black87,
                                                     ),
                                                   ),
                                                 ),
@@ -589,22 +653,23 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                                               children: [
                                                 Text(
                                                   'Delito: $subTipo',
-                                                  style: const TextStyle(
+                                                  style: TextStyle(
                                                     fontWeight: FontWeight.bold,
                                                     fontSize: 15,
+                                                    color: isDark ? AppTheme.textPrimary : Colors.black87,
                                                   ),
                                                 ),
                                                 const SizedBox(height: 10),
                                                 Text(
-                                                    punto['direccion'] ?? 'Dirección no especificada.',
-                                                  style: const TextStyle(fontSize: 14),
+                                                  punto['direccion'] ?? 'Dirección no especificada.',
+                                                  style: TextStyle(fontSize: 14, color: isDark ? AppTheme.textSecondary : Colors.grey[700]),
                                                 ),
                                               ],
                                             ),
                                             actions: [
                                               TextButton(
                                                 onPressed: () => Navigator.of(ctx).pop(),
-                                                child: const Text('Cerrar'),
+                                                child: Text('Cerrar', style: TextStyle(color: isDark ? AppTheme.textSecondary : Colors.grey)),
                                               ),
                                             ],
                                           ),
@@ -614,6 +679,9 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                                         Icons.warning_amber_rounded,
                                         color: colorPunto,
                                         size: 36.0,
+                                        shadows: [
+                                          Shadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 4),
+                                        ],
                                       )
                                       .animate(
                                         onPlay: (controller) => isPending ? controller.repeat(reverse: true) : null,
@@ -622,7 +690,7 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                                         duration: 600.ms,
                                         curve: Curves.easeInOut,
                                         begin: const Offset(1, 1),
-                                        end: const Offset(1.3, 1.3),
+                                        end: const Offset(1.2, 1.2),
                                       ),
                                     ),
                                   );
@@ -641,7 +709,7 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                                         height: 45,
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
-                                          color: Colors.blue.withAlpha(50),
+                                          color: AppTheme.accentBlue.withValues(alpha: 0.2),
                                         ),
                                       ),
                                       Container(
@@ -649,7 +717,7 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                                         height: 28,
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
-                                          color: Colors.blue.withAlpha(100),
+                                          color: AppTheme.accentBlue.withValues(alpha: 0.4),
                                         ),
                                       ),
                                       Container(
@@ -657,14 +725,11 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                                         height: 16,
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
-                                          color: Colors.blue,
-                                          border: Border.all(
-                                            color: Colors.white,
-                                            width: 2.5,
-                                          ),
+                                          color: AppTheme.accentBlue,
+                                          border: Border.all(color: Colors.white, width: 2.5),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: Colors.black.withAlpha(80),
+                                              color: Colors.black.withValues(alpha: 0.3),
                                               blurRadius: 4,
                                               offset: const Offset(0, 2),
                                             ),
@@ -680,8 +745,8 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                       ),
 
                 Positioned(
-                  top: 40,
-                  left: 20,
+                  top: 50,
+                  left: 16,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -690,69 +755,60 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                         title: 'Filtros Operativos',
                         description: 'Filtra zonas y reportes ciudadanos.',
                         targetPadding: const EdgeInsets.all(8),
-                        tooltipBackgroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E1E1E) : Colors.white,
-                        textColor: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
+                        tooltipBackgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                        textColor: isDark ? Colors.white : Colors.black87,
                         child: FloatingActionButton(
                           heroTag: 'map_filter_btn_police',
+                          mini: true,
+                          elevation: 4,
                           onPressed: () {
                             setState(() {
                               _isFilterMenuOpen = !_isFilterMenuOpen;
                             });
                           },
-                          backgroundColor: _isFilterMenuOpen ? Colors.blue.shade100 : Colors.blue.shade200,
+                          backgroundColor: isDark ? AppTheme.bgSurface : Colors.white,
                           child: Icon(
                             Icons.layers,
-                            color: _isFilterMenuOpen ? Colors.indigo : Colors.indigo.shade900,
+                            color: _isFilterMenuOpen ? AppTheme.accentBlue : (isDark ? Colors.white : Colors.black87),
+                            size: 20,
                           ),
                         ),
                       ),
                       if (_isFilterMenuOpen)
                         Container(
                           margin: const EdgeInsets.only(top: 10),
-                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1A1D24),
+                            color: isDark ? AppTheme.bgSurface.withValues(alpha: 0.95) : Colors.white.withValues(alpha: 0.95),
                             borderRadius: BorderRadius.circular(16),
-                            boxShadow: const [
-                              BoxShadow(color: Colors.black45, blurRadius: 10, spreadRadius: 2, offset: Offset(0, 4)),
+                            border: Border.all(color: isDark ? AppTheme.borderTactical : Colors.grey.shade200, width: 0.5),
+                            boxShadow: [
+                              BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 10, spreadRadius: 2, offset: const Offset(0, 4)),
                             ],
                           ),
-                          width: 250,
+                          width: 220,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              SwitchListTile(
-                                title: const Text(
-                                  'Zonas de Riesgo',
-                                  style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
-                                ),
+                              _buildFilterSwitch(
+                                title: 'Zonas de Riesgo',
                                 value: _showZonasRiesgo,
-                                dense: true,
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                                activeThumbColor: Colors.deepPurpleAccent,
-                                activeTrackColor: Colors.deepPurple.shade900,
-                                inactiveThumbColor: Colors.grey.shade400,
-                                inactiveTrackColor: Colors.grey.shade800,
                                 onChanged: (val) => setState(() => _showZonasRiesgo = val),
+                                isDark: isDark,
                               ),
-                              Divider(height: 8, color: Colors.grey.shade800, indent: 16, endIndent: 16),
-                              SwitchListTile(
-                                title: const Text(
-                                  'Reportes Ciudadanos',
-                                  style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
-                                ),
+                              Divider(height: 1, color: isDark ? AppTheme.borderSubtle : Colors.grey.shade200, indent: 16, endIndent: 16),
+                              _buildFilterSwitch(
+                                title: 'Reportes Ciudadanos',
                                 value: _showReportesValidados,
-                                dense: true,
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                                activeThumbColor: Colors.deepPurpleAccent,
-                                activeTrackColor: Colors.deepPurple.shade900,
-                                inactiveThumbColor: Colors.grey.shade400,
-                                inactiveTrackColor: Colors.grey.shade800,
                                 onChanged: (val) => setState(() => _showReportesValidados = val),
+                                isDark: isDark,
                               ),
                             ],
                           ),
-                        ),
+                        )
+                        .animate()
+                        .fadeIn(duration: 200.ms)
+                        .scaleXY(begin: 0.9, end: 1.0, alignment: Alignment.topLeft, duration: 200.ms),
                     ],
                   ),
                 ),
@@ -763,26 +819,47 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                     left: 20,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.white.withAlpha(220),
+                        color: isDark ? AppTheme.bgSurface.withValues(alpha: 0.9) : Colors.white.withValues(alpha: 0.9),
                         shape: BoxShape.circle,
+                        border: Border.all(color: isDark ? AppTheme.borderTactical : Colors.transparent),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withAlpha(50), blurRadius: 8, offset: const Offset(0, 4)),
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 4)),
                         ],
                       ),
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(8),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          IconButton(icon: const Icon(Icons.arrow_upward), onPressed: () => _moveFakeGps(0.0005, 0)),
+                          IconButton(
+                            icon: Icon(Icons.keyboard_arrow_up, color: isDark ? Colors.white : Colors.black87),
+                            onPressed: () => _moveFakeGps(0.0005, 0),
+                            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                            padding: EdgeInsets.zero,
+                          ),
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => _moveFakeGps(0, -0.0005)),
-                              const Icon(Icons.control_camera, color: Colors.blue),
-                              IconButton(icon: const Icon(Icons.arrow_forward), onPressed: () => _moveFakeGps(0, 0.0005)),
+                              IconButton(
+                                icon: Icon(Icons.keyboard_arrow_left, color: isDark ? Colors.white : Colors.black87),
+                                onPressed: () => _moveFakeGps(0, -0.0005),
+                                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                                padding: EdgeInsets.zero,
+                              ),
+                              Icon(Icons.control_camera, color: AppTheme.accentBlue, size: 20),
+                              IconButton(
+                                icon: Icon(Icons.keyboard_arrow_right, color: isDark ? Colors.white : Colors.black87),
+                                onPressed: () => _moveFakeGps(0, 0.0005),
+                                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                                padding: EdgeInsets.zero,
+                              ),
                             ],
                           ),
-                          IconButton(icon: const Icon(Icons.arrow_downward), onPressed: () => _moveFakeGps(-0.0005, 0)),
+                          IconButton(
+                            icon: Icon(Icons.keyboard_arrow_down, color: isDark ? Colors.white : Colors.black87),
+                            onPressed: () => _moveFakeGps(-0.0005, 0),
+                            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                            padding: EdgeInsets.zero,
+                          ),
                         ],
                       ),
                     ),
@@ -792,13 +869,35 @@ class _PoliceMapViewState extends State<PoliceMapView> {
           ),
           floatingActionButton: FloatingActionButton(
             heroTag: 'map_location_police',
-            onPressed: () {
-              _determinePosition(userForced: true);
-            },
-            child: const Icon(Icons.my_location),
+            mini: true,
+            backgroundColor: isDark ? AppTheme.bgSurface : Colors.white,
+            foregroundColor: isDark ? AppTheme.textPrimary : Colors.black87,
+            elevation: 4,
+            onPressed: () => _determinePosition(userForced: true),
+            child: const Icon(Icons.my_location, size: 20),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildFilterSwitch({required String title, required bool value, required ValueChanged<bool> onChanged, required bool isDark}) {
+    return SwitchListTile(
+      title: Text(
+        title,
+        style: TextStyle(
+          color: isDark ? AppTheme.textPrimary : Colors.black87,
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      value: value,
+      dense: true,
+      activeTrackColor: Colors.white,
+      activeThumbColor: AppTheme.accentBlue,
+      inactiveThumbColor: isDark ? Colors.grey.shade400 : Colors.grey.shade300,
+      inactiveTrackColor: isDark ? AppTheme.bgDeep : Colors.grey.shade400,
+      onChanged: onChanged,
     );
   }
 }

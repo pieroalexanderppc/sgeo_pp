@@ -4,6 +4,7 @@ import '../../map/views/map_view.dart';
 import '../../validations/views/validations_view.dart';
 import '../../profile/views/profile_view.dart';
 import '../../../../roles/user/notifications/views/notifications_view.dart';
+import '../../../../core/theme/app_theme.dart';
 
 class PoliceHomeView extends StatefulWidget {
   final String userName;
@@ -53,7 +54,9 @@ class _PoliceHomeViewState extends State<PoliceHomeView> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final pages = _buildPages();
+
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
@@ -64,27 +67,47 @@ class _PoliceHomeViewState extends State<PoliceHomeView> {
               : const SizedBox.shrink(),
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        type: BottomNavigationBarType.fixed,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-            _visitedPages.add(index);
-          });
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Mapa'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.verified_user),
-            label: 'Validar',
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(
+              color: isDark ? AppTheme.borderTactical : Colors.grey.shade200,
+              width: 0.5,
+            ),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.notifications),
-            label: 'Alertas',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
-        ],
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _currentIndex,
+          type: BottomNavigationBarType.fixed,
+          onTap: (index) {
+            setState(() {
+              _currentIndex = index;
+              _visitedPages.add(index);
+            });
+          },
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.map_outlined),
+              activeIcon: Icon(Icons.map),
+              label: 'Mapa',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.verified_user_outlined),
+              activeIcon: Icon(Icons.verified_user),
+              label: 'Validar',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.notifications_outlined),
+              activeIcon: Icon(Icons.notifications),
+              label: 'Alertas',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              activeIcon: Icon(Icons.person),
+              label: 'Perfil',
+            ),
+          ],
+        ),
       ),
     );
   }

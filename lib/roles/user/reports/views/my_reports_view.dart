@@ -1,9 +1,14 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../../core/models/report_model.dart';
 import '../../../../core/services/report_service.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/safety_layout.dart';
+import '../../../../core/widgets/safety_card.dart';
+import '../../../../core/widgets/safety_button.dart';
 
 class MyReportsView extends StatefulWidget {
   final String userId;
@@ -39,20 +44,27 @@ class _MyReportsViewState extends State<MyReportsView> {
   }
 
   Future<void> _deleteReport(ReportModel report) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Eliminar reporte'),
+        title: Row(
+          children: [
+            Icon(Icons.delete_outline, color: AppTheme.alertRed, size: 24),
+            const SizedBox(width: 10),
+            const Expanded(child: Text('Eliminar reporte')),
+          ],
+        ),
         content: const Text('¿Estás seguro de que deseas eliminar permanentemente este reporte? Esta acción no se puede deshacer.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+            child: Text('Cancelar', style: TextStyle(color: isDark ? AppTheme.textSecondary : Colors.grey)),
           ),
-          ElevatedButton(
+          TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Eliminar', style: TextStyle(color: Colors.white)),
+            child: Text('Eliminar', style: TextStyle(color: AppTheme.alertRed, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -69,10 +81,20 @@ class _MyReportsViewState extends State<MyReportsView> {
     
     if (mounted) {
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Reporte eliminado con éxito.'), backgroundColor: Colors.green));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Reporte eliminado con éxito.'),
+            backgroundColor: AppTheme.successGreen,
+          ),
+        );
         _fetchMyReports(); // Reload list
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Hubo un error al eliminar el reporte.'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Hubo un error al eliminar el reporte.'),
+            backgroundColor: AppTheme.alertRed,
+          ),
+        );
       }
     }
   }
@@ -85,132 +107,178 @@ class _MyReportsViewState extends State<MyReportsView> {
     widget.onNavigateToMap(latLng);
   }
 
+  // ── Color del acento según estado del reporte ──
+  Color _getStatusColor(String estado) {
+    switch (estado.toLowerCase()) {
+      case 'pendiente':
+        return AppTheme.alertAmber;
+      case 'confirmado':
+        return AppTheme.successGreen;
+      case 'rechazado':
+        return AppTheme.alertRed;
+      case 'agrupado':
+        return AppTheme.accentBlue;
+      default:
+        return AppTheme.textMuted;
+    }
+  }
+
+  IconData _getStatusIcon(String estado) {
+    switch (estado.toLowerCase()) {
+      case 'pendiente':
+        return Icons.schedule;
+      case 'confirmado':
+        return Icons.check_circle;
+      case 'rechazado':
+        return Icons.cancel;
+      case 'agrupado':
+        return Icons.layers;
+      default:
+        return Icons.help_outline;
+    }
+  }
+
   void _showReportDetails(BuildContext context, ReportModel report, String formattedDate, String direccionStr) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isPending = report.estado.toLowerCase() == 'pendiente';
+    final statusColor = _getStatusColor(report.estado);
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Head
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      report.subTipo,
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppTheme.bgSurface : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            border: Border.all(color: AppTheme.borderTactical, width: 0.5),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Handle bar ──
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isDark ? AppTheme.textMuted : Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: isPending ? Colors.orange.shade100 : Colors.green.shade100,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      report.estado.toUpperCase(),
-                      style: TextStyle(
-                        color: isPending ? Colors.orange.shade900 : Colors.green.shade900,
-                        fontWeight: FontWeight.bold,
+                ),
+                const SizedBox(height: 20),
+
+                // Head
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        report.subTipo,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? AppTheme.textPrimary : null,
+                        ),
                       ),
                     ),
-                  )
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              // Details
-              Row(
-                children: [
-                  Icon(Icons.calendar_today, size: 20, color: isDark ? Colors.white70 : Colors.black54),
-                  const SizedBox(width: 10),
-                  Text(formattedDate, style: TextStyle(color: isDark ? Colors.white70 : Colors.black87)),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.location_on, size: 20, color: isDark ? Colors.white70 : Colors.black54),
-                  const SizedBox(width: 10),
-                  Expanded(child: Text(direccionStr, style: TextStyle(color: isDark ? Colors.white70 : Colors.black87))),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.comment, size: 20, color: isDark ? Colors.white70 : Colors.black54),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      report.descripcion != null && report.descripcion!.isNotEmpty 
-                          ? report.descripcion! 
-                          : "Sin descripción", 
-                      style: TextStyle(color: isDark ? Colors.white70 : Colors.black87, fontStyle: report.descripcion == null ? FontStyle.italic : FontStyle.normal)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: statusColor.withValues(alpha: 0.3), width: 0.5),
+                      ),
+                      child: Text(
+                        report.estado.toUpperCase(),
+                        style: TextStyle(
+                          color: statusColor,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      ),
                     )
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
+                  ],
+                ),
+                const SizedBox(height: 20),
 
-              // Buttons
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.map),
-                  label: const Text('Ver zona en el Mapa'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue.shade600,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
+                // Details
+                _buildDetailRow(Icons.calendar_today, formattedDate, isDark),
+                const SizedBox(height: 12),
+                _buildDetailRow(Icons.location_on_outlined, direccionStr, isDark),
+                const SizedBox(height: 12),
+                _buildDetailRow(
+                  Icons.comment_outlined,
+                  report.descripcion != null && report.descripcion!.isNotEmpty 
+                      ? report.descripcion! 
+                      : "Sin descripción",
+                  isDark,
+                  isItalic: report.descripcion == null || report.descripcion!.isEmpty,
+                ),
+                const SizedBox(height: 24),
+
+                // Buttons
+                SafetyButton(
+                  label: 'Ver zona en el Mapa',
+                  icon: Icons.map_outlined,
                   onPressed: () {
                     Navigator.pop(ctx);
                     _showMapPreview(report);
                   },
                 ),
-              ),
-              
-              if (isPending) ...[
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.delete),
-                    label: const Text('Eliminar Mi Reporte'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red,
-                      side: const BorderSide(color: Colors.red),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
+                
+                if (isPending) ...[
+                  const SizedBox(height: 12),
+                  SafetyButton.outline(
+                    label: 'Eliminar Mi Reporte',
+                    icon: Icons.delete_outline,
+                    isDanger: true,
+                    foregroundColor: AppTheme.alertRed,
                     onPressed: () {
                       Navigator.pop(ctx);
                       _deleteReport(report);
                     },
                   ),
-                ),
+                ],
+                const SizedBox(height: 20), // Bottom safe space
               ],
-              const SizedBox(height: 20), // Bottom safe space
-            ],
+            ),
           ),
         );
       },
     );
   }
 
+  Widget _buildDetailRow(IconData icon, String text, bool isDark, {bool isItalic = false}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: isDark ? AppTheme.textMuted : Colors.grey),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              color: isDark ? AppTheme.textSecondary : Colors.grey[700],
+              fontStyle: isItalic ? FontStyle.italic : FontStyle.normal,
+              height: 1.4,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return SafetyLayout(
       appBar: AppBar(
         title: const Text('Mis Reportes'),
         centerTitle: true,
@@ -231,19 +299,56 @@ class _MyReportsViewState extends State<MyReportsView> {
                     children: [
                       SizedBox(
                         height: MediaQuery.of(context).size.height * 0.7,
-                        child: const Center(
-                          child: Text('No has realizado ningún reporte aún.'),
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(24),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: isDark ? AppTheme.bgSurface : Colors.grey.shade100,
+                                ),
+                                child: Icon(
+                                  Icons.description_outlined,
+                                  size: 48,
+                                  color: isDark ? AppTheme.textMuted : Colors.grey.shade400,
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              Text(
+                                'No has realizado ningún reporte',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark ? AppTheme.textSecondary : Colors.grey,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Tus reportes de seguridad aparecerán aquí',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                                ),
+                              ),
+                            ],
+                          )
+                          .animate()
+                          .fadeIn(duration: 500.ms)
+                          .scale(begin: const Offset(0.9, 0.9), end: const Offset(1, 1), duration: 500.ms),
                         ),
                       )
                     ],
                   )
                 : ListView.builder(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.all(14.0),
                   itemCount: _reports.length,
                   itemBuilder: (context, index) {
                     final report = _reports[index];
-                    final isPending = report.estado.toLowerCase() == 'pendiente';
+                    final statusColor = _getStatusColor(report.estado);
+                    final statusIcon = _getStatusIcon(report.estado);
                     
                     DateTime? date;
                     if (report.creadoEn != null) {
@@ -266,52 +371,93 @@ class _MyReportsViewState extends State<MyReportsView> {
                       }
                     }
 
-                    return Card(
-                      elevation: 2,
-                      margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: () => _showReportDetails(context, report, formattedDate, direccionStr),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-                          child: ListTile(
-                            leading: Icon(
-                              isPending ? Icons.access_time_filled : Icons.check_circle,
-                              color: isPending ? Colors.orange : Colors.green,
-                              size: 32,
+                    return SafetyCard(
+                      accentColor: statusColor,
+                      margin: const EdgeInsets.only(bottom: 10),
+                      onTap: () => _showReportDetails(context, report, formattedDate, direccionStr),
+                      child: Row(
+                        children: [
+                          // ── Ícono de estado ──
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: statusColor.withValues(alpha: 0.12),
+                              shape: BoxShape.circle,
                             ),
-                            title: Text(
-                              report.subTipo,
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            subtitle: Padding(
-                              padding: const EdgeInsets.only(top: 6.0),
-                              child: Text(
-                                '$direccionStr\n$formattedDate',
-                                style: const TextStyle(height: 1.4),
-                              ),
-                            ),
-                            isThreeLine: true,
-                            trailing: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                            child: Icon(statusIcon, color: statusColor, size: 22),
+                          ),
+                          const SizedBox(width: 14),
+
+                          // ── Contenido ──
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  report.estado.toUpperCase(),
+                                  report.subTipo,
                                   style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: isPending ? Colors.orange.shade800 : Colors.green.shade800,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 15,
+                                    color: isDark ? AppTheme.textPrimary : null,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
-                                const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+                                Text(
+                                  direccionStr,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isDark ? AppTheme.textSecondary : Colors.grey[600],
+                                    height: 1.3,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  formattedDate,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: isDark ? AppTheme.textMuted : Colors.grey,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
-                        ),
+
+                          // ── Estado badge + flecha ──
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: statusColor.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  report.estado.toUpperCase(),
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w700,
+                                    color: statusColor,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Icon(
+                                Icons.chevron_right,
+                                size: 18,
+                                color: isDark ? AppTheme.textMuted : Colors.grey,
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                    );
+                    )
+                      .animate()
+                      .fadeIn(delay: Duration(milliseconds: 40 * index), duration: 300.ms)
+                      .slideX(begin: 0.03, end: 0, duration: 300.ms, curve: Curves.easeOut);
                   },
                 ),
       ),
