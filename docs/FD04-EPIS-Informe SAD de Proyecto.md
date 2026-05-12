@@ -107,6 +107,19 @@ Se ha documentado el sistema utilizando un **Enfoque de Arquitectura en Capas (L
 ### 4.1. Diagrama de Casos de Uso General
 ```plantuml
 @startuml
+skinparam shadowing false
+skinparam roundcorner 10
+skinparam dpi 150
+skinparam defaultFontName Segoe UI
+skinparam backgroundColor #F8FAFC
+skinparam ArrowColor #6D28D9
+skinparam UsecaseBackgroundColor #F3E8FF
+skinparam UsecaseBorderColor #7C3AED
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ActorBorderColor #8B5CF6
+skinparam PackageBackgroundColor #FFFFFF
+skinparam PackageBorderColor #334155
+
 left to right direction
 actor "Ciudadano" as C
 actor "Policía" as P
@@ -148,6 +161,16 @@ UC7 .> UC8 : "Consume Data"
 ### 5.1. Arquitectura de Alto Nivel
 ```plantuml
 @startuml
+skinparam shadowing false
+skinparam roundcorner 10
+skinparam dpi 150
+skinparam defaultFontName Segoe UI
+skinparam backgroundColor #F8FAFC
+skinparam ArrowColor #334155
+skinparam PackageBackgroundColor #EEF2FF
+skinparam PackageBorderColor #4F46E5
+skinparam ComponentBackgroundColor #FFFFFF
+skinparam ComponentBorderColor #6366F1
 skinparam componentStyle rectangle
 
 package "Capa de Presentación (Flutter)" {
@@ -181,6 +204,16 @@ package "Capa de Datos" {
 ### 5.2. Modelo de Base de Datos (Diagrama de Clases)
 ```plantuml
 @startuml
+skinparam shadowing false
+skinparam roundcorner 10
+skinparam dpi 150
+skinparam defaultFontName Segoe UI
+skinparam backgroundColor #FFFBF5
+skinparam ArrowColor #6D28D9
+skinparam ClassBackgroundColor #FFFFFF
+skinparam ClassBorderColor #8B5CF6
+skinparam ClassFontColor #2E1065
+
 class Usuario {
   +ObjectId id
   +String nombre
@@ -247,6 +280,17 @@ backend/
 ### 6.2. Diagrama de Componentes
 ```plantuml
 @startuml
+skinparam shadowing false
+skinparam roundcorner 10
+skinparam dpi 150
+skinparam defaultFontName Segoe UI
+skinparam backgroundColor #F8FAFC
+skinparam ArrowColor #334155
+skinparam ComponentBackgroundColor #EEF2FF
+skinparam ComponentBorderColor #4F46E5
+skinparam DatabaseBackgroundColor #ECFDF5
+skinparam DatabaseBorderColor #047857
+
 component "App Móvil (iOS/Android)" as App {
   [Dio HTTP Client]
   [Geolocator]
@@ -276,6 +320,17 @@ component "Database (MongoDB Atlas)" as DB {
 El procesamiento espacial corre en background para no interrumpir al oficial de policía que acaba de validar un incidente.
 ```plantuml
 @startuml
+skinparam shadowing false
+skinparam roundcorner 10
+skinparam dpi 150
+skinparam defaultFontName Segoe UI
+skinparam backgroundColor #F8FAFC
+skinparam ArrowColor #0F766E
+skinparam ActivityBackgroundColor #ECFEFF
+skinparam ActivityBorderColor #0F766E
+skinparam ActivityDiamondBackgroundColor #FFFFFF
+skinparam ActivityDiamondBorderColor #0F766E
+
 |Oficial de Policía|
 start
 :Presiona "Validar Incidente";
@@ -292,7 +347,6 @@ fork again
   if (Hubo un cambio severo de zona?) then (Sí)
     |Firebase|
     :Emitir Push Notification "Peligro en zona";
-  else (No)
   endif
 end fork
 |Oficial de Policía|
@@ -307,6 +361,21 @@ stop
 ### 8.1. Arquitectura Cloud e Infraestructura
 ```plantuml
 @startuml
+skinparam shadowing false
+skinparam roundcorner 10
+skinparam dpi 150
+skinparam defaultFontName Segoe UI
+skinparam backgroundColor #F8FAFC
+skinparam ArrowColor #334155
+skinparam NodeBackgroundColor #EEF2FF
+skinparam NodeBorderColor #4F46E5
+skinparam ComponentBackgroundColor #FFFFFF
+skinparam ComponentBorderColor #6366F1
+skinparam DatabaseBackgroundColor #ECFDF5
+skinparam DatabaseBorderColor #047857
+skinparam CloudBackgroundColor #FEF3C7
+skinparam CloudBorderColor #B45309
+
 node "Dispositivos Móviles" {
   [Smartphone Android (APK)]
   [Smartphone iPhone (IPA)]

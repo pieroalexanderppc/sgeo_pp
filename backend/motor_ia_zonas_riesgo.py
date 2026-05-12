@@ -62,50 +62,54 @@ def ejecutar_ia_zonas_riesgo():
     db = client['geocrimen_tacna']
     hoy = datetime.utcnow()
 
-    print("🧠 Iniciando Procesamiento Analítico Espacial (Híbrido)...")
+    print("🧠 Iniciando Procesamiento Analítico Espacial (Híbrido) usando el Historial de Delitos...")
     
     # Limpiamos las zonas de riesgo previas para recalcularlas todas
     db.zonas_riesgo.delete_many({})
     nuevas_zonas = []
 
     # =========================================================================
-    # FASE 1: ANÁLISIS MACRO (Basado en SIDPOL y UNIDAD DE FLAGRANCIA)
+    # FASE 1: ANÁLISIS MACRO (Niveles de distrito extraídos del historial)
     # =========================================================================
-    estadisticas_sidpol = list(db.estadisticas_sidpol.find({}))
-    estadisticas_flagrancia = list(db.estadisticas_flagrancia.find({}))
+    # Usamos una agregación de MongoDB para no saturar la memoria RAM del backend con los miles de datos
+    pipeline_agrupacion = [
+        {
+            "$group": {
+                "_id": {
+                    "distrito": "$distrito",
+                    "sub_tipo": "$sub_tipo"
+                },
+                "cantidad": {"$sum": 1}
+            }
+        }
+    ]
     
+    resultados_agrupados = db.historial_delitos.aggregate(pipeline_agrupacion)
     agrupacion_distrital = {}
-    
-    # ---- 1.1 Procesar datos de SIDPOL ----
-    for est in estadisticas_sidpol:
-        distrito = limpiar_distrito(est.get("distrito", "TACNA"))
-        if distrito not in agrupacion_distrital:
-            agrupacion_distrital[distrito] = {"total_delitos": 0, "tipos": []}
-            
-        agrupacion_distrital[distrito]["total_delitos"] += est.get("cantidad", 0)
-        agrupacion_distrital[distrito]["tipos"].append(str(est.get("sub_tipo", "DESCONOCIDO")))
 
-    # ---- 1.2 Procesar datos de FLAGRANCIA ----
-    for est in estadisticas_flagrancia:
-        distrito = limpiar_distrito(est.get("distrito", "TACNA"))
+    for doc in resultados_agrupados:
+        distrito_bruto = doc["_id"].get("distrito")
+        distrito = limpiar_distrito(distrito_bruto)
+        tipo = str(doc["_id"].get("sub_tipo", "DESCONOCIDO"))
+        cantidad = doc["cantidad"]
+
         if distrito not in agrupacion_distrital:
-            agrupacion_distrital[distrito] = {"total_delitos": 0, "tipos": []}
-            
-        # Flagrancia a veces trae la cantidad o es 1 por caso
-        cantidad = est.get("cantidad", 1)
+             agrupacion_distrital[distrito] = {"total_delitos": 0, "frecuencias_tipos": {}}
+             
         agrupacion_distrital[distrito]["total_delitos"] += cantidad
-        agrupacion_distrital[distrito]["tipos"].append(str(est.get("delito", "DESCONOCIDO")))
+        agrupacion_distrital[distrito]["frecuencias_tipos"][tipo] = agrupacion_distrital[distrito]["frecuencias_tipos"].get(tipo, 0) + cantidad
 
     for distrito, data in agrupacion_distrital.items():
         total = data["total_delitos"]
         if total == 0: continue
         
-        # Moda matemática para hallar el delito más concurrente
-        delito_principal = max(set(data["tipos"]), key=data["tipos"].count) if data["tipos"] else "DESCONOCIDO"
+        # Hallar el delito más concurrente matemáticamente
+        delito_principal = max(data["frecuencias_tipos"], key=data["frecuencias_tipos"].get) if data["frecuencias_tipos"] else "DESCONOCIDO"
         
-        if total > 50: nivel_riesgo = "critico"
-        elif total > 20: nivel_riesgo = "alto"
-        elif total > 5: nivel_riesgo = "medio"
+        # Ajustamos los umbrales porque ahora tenemos más datos historicos
+        if total > 500: nivel_riesgo = "critico"
+        elif total > 150: nivel_riesgo = "alto"
+        elif total > 50: nivel_riesgo = "medio"
         else: nivel_riesgo = "bajo"
             
         centro = COORDENADAS_DISTRITOS.get(distrito, COORDENADAS_DISTRITOS["TACNA"])
@@ -115,23 +119,33 @@ def ejecutar_ia_zonas_riesgo():
                 "type": "Point",
                 "coordinates": [centro["lng"], centro["lat"]]
             },
-            # Las zonas MACRO son distritales, radios de 1 a 2 kilómetros adaptativos
-            "radio_metros": int(1000 + (total * 5)), 
+            # Las zonas MACRO son distritales, radios de 1 a 2 kilómetros
+            "radio_metros": int(1000 + (total * 0.5)), 
             "distrito": distrito,
             "nivel_riesgo": nivel_riesgo,
             "total_incidentes": total,
             "delito_predominante": delito_principal,
             "tendencia": "estable",
             "calculado_en": hoy,
-            "origen": "ESTADISTICAS_GUBERNAMENTALES"
+            "origen": "ANALISIS_DISTRITAL"
         })
 
-
     # =========================================================================
-    # FASE 2: ANÁLISIS MICRO (Machine Learning DBSCAN sobre los Incidentes de la APP)
+    # FASE 2: ANÁLISIS MICRO (Machine Learning DBSCAN para encontrar Hotspots)
     # =========================================================================
-    incidentes_cursor = db.incidentes.find({"ubicacion": {"$exists": True}})
+    # Filtramos la data de ArcGIS ignorando intencionalmente las que tienen "SIN COORDENADA"
+    # ya que distorsionarian el mapa de calor amontonándose en las comisarias.
     puntos_reales = []
+    
+    # Para la fase Micro (Hotspots) para no saturar memoria limitamos el análisis a 
+    # incidentes que posean coordenadas reales (tanto oficiales como de ciudadanos)
+    incidentes_cursor = db.historial_delitos.find(
+        {
+            "ubicacion": {"$exists": True},
+            "estado_coord": {"$ne": "SIN COORDENADA"}
+        }, 
+        {"ubicacion": 1, "sub_tipo": 1}
+    )
     
     for inc in incidentes_cursor:
         coords = inc.get("ubicacion", {}).get("coordinates", [])
@@ -142,15 +156,15 @@ def ejecutar_ia_zonas_riesgo():
                 "sub_tipo": inc.get("sub_tipo", "DESCONOCIDO")
             })
     
-    # DBSCAN solo necesita operar si existen suficientes reportes geolocalizados
-    # por usuarios/policías. Configuramos mínimo 3 reportes cercanos para formar un clúster.
-    if len(puntos_reales) >= 3:
+    # Configuramos mínimo de reportes cercanos para formar un clúster. 
+    # Al tener una base gigante, aumentamos la muestra mínima a 10 incidentes para evitar micro-alertas basura.
+    if len(puntos_reales) >= 10:
         df = pd.DataFrame(puntos_reales)
         coords_rad = np.radians(df[['lat', 'lng']].values)
         
-        # eps = ~400 metros de búsqueda en radianes 
-        epsilon = 0.4 / 6371.0 
-        min_samples = 3 
+        # eps = ~300 metros de búsqueda en radianes 
+        epsilon = 0.3 / 6371.0 
+        min_samples = 10 
         
         dbscan = DBSCAN(eps=epsilon, min_samples=min_samples, algorithm='ball_tree', metric='haversine')
         df['cluster'] = dbscan.fit_predict(coords_rad)
@@ -165,9 +179,9 @@ def ejecutar_ia_zonas_riesgo():
             centro_lng = grupo['lng'].mean()
             delito_ml = grupo['sub_tipo'].mode()[0]
 
-            if total_ml >= 10: nivel_riesgo = "critico"
-            elif total_ml >= 6: nivel_riesgo = "alto"
-            elif total_ml >= 3: nivel_riesgo = "medio"
+            if total_ml >= 50: nivel_riesgo = "critico"
+            elif total_ml >= 25: nivel_riesgo = "alto"
+            elif total_ml >= 10: nivel_riesgo = "medio"
             else: nivel_riesgo = "bajo"
 
             nuevas_zonas.append({
@@ -175,15 +189,15 @@ def ejecutar_ia_zonas_riesgo():
                     "type": "Point",
                     "coordinates": [float(centro_lng), float(centro_lat)]
                 },
-                # Las zonas MICRO (Hotspots) son alertas específicas, radios de 150 a 400 metros
-                "radio_metros": int(max(200, (total_ml * 30))), 
-                "distrito": f"Punto Crítico Detectado (App) #{cluster_id}",
+                # Las zonas MICRO (Hotspots específicas), radios de 150 a 400 metros
+                "radio_metros": int(max(200, min(500, total_ml * 5))), 
+                "distrito": f"Punto Crítico Detectado (Hotspot) #{cluster_id}",
                 "nivel_riesgo": nivel_riesgo,
                 "total_incidentes": int(total_ml),
                 "delito_predominante": delito_ml,
                 "tendencia": "subiendo",
                 "calculado_en": hoy,
-                "origen": "APP_INCIDENTES"
+                "origen": "APP_HOTSPOT_ML"
             })
 
     # Guardado de la data fusionada
@@ -192,23 +206,24 @@ def ejecutar_ia_zonas_riesgo():
         zonas_macro = len(agrupacion_distrital)
         zonas_micro = len(nuevas_zonas) - zonas_macro
         
-        print(f"✅ Análisis completado. Guardadas {zonas_macro} Zonas (SIDPOL+FLAGRANCIA) y {zonas_micro} Hotspots detectados de la App.")
-        for z in nuevas_zonas:
-            icono = "🏢" if z["origen"] == "ESTADISTICAS_GUBERNAMENTALES" else "🚨"
+        print(f"✅ Análisis completado. Guardadas {zonas_macro} macro-zonas distritales y {zonas_micro} Hotspots generados por Machine Learning.")
+        for z in nuevas_zonas[:15]:  # Imprimimos solo las 15 primeras para no saturar la consola
+            icono = "🏢" if z["origen"] == "ANALISIS_DISTRITAL" else "🚨"
             print(f"   {icono} {z['distrito']} | {z['total_incidentes']} casos | Riesgo: {z['nivel_riesgo'].upper()} | {z['delito_predominante']}")
+        if len(nuevas_zonas) > 15: print("   ...")
             
         try:
             from firebase_service import send_push_notification
             send_push_notification(
                 title="🗺️ Mapa de Zonas Actualizado",
-                body="La inteligencia artificial acaba de recalcular los puntos calientes y las áreas de peligro en la ciudad en base a nuevos reportes confirmados.",
+                body="La inteligencia artificial acaba de recalcular los puntos calientes en Tacna en base a la nueva data histórica confirmada.",
                 tipo_alerta="update",
                 topic="alertas_ciudadanos"
             )
         except Exception as e:
             print("No se pudo enviar la alerta de actualización de mapas:", e)
     else:
-        print("ℹ️ No hay datos suficientes (ni SIDPOL, ni Flagrancia, ni en la App) para generar zonas.")
+        print("ℹ️ No hay datos suficientes para generar zonas.")
 
 if __name__ == "__main__":
     ejecutar_ia_zonas_riesgo()

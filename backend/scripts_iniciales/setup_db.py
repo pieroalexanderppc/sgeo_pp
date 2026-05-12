@@ -62,12 +62,12 @@ def setup_db():
         db.create_collection('reportes_ciudadano', validator={
             "$jsonSchema": {
                 "bsonType": "object",
-                "required": ["sub_tipo", "modalidad", "ubicacion", "distrito", "fecha_hecho", "estado"],
+                "required": ["tipo", "sub_tipo", "ubicacion", "departamento", "provincia", "distrito", "fecha_hecho", "estado"],
                 "properties": {
                     "usuario_id": {"bsonType": ["objectId", "null"]},
                     "anonimo": {"bsonType": "bool"},
                     "tipo": {"enum": ["PATRIMONIO (DELITO)"]},
-                    "sub_tipo": {"enum": ["HURTO", "ROBO", "EXTORSION"]},
+                    "sub_tipo": {"enum": ["HURTO", "ROBO"]},
                     "modalidad": {"bsonType": "string"},
                     "ubicacion": {
                         "bsonType": "object",
@@ -78,6 +78,8 @@ def setup_db():
                         }
                     },
                     "direccion": {"bsonType": "string"},
+                    "departamento": {"bsonType": "string"},
+                    "provincia": {"bsonType": "string"},
                     "distrito": {"bsonType": "string"},
                     "relacion_incidente": {"enum": ["Fui testigo presencial", "Familiar / Conocido"]},
                     "ubigeo": {"bsonType": "string"},
@@ -94,19 +96,14 @@ def setup_db():
     except Exception as e:
         print("⚠️  La colección 'reportes_ciudadano' ya existe o hubo un error.")
 
-    # 3. INCIDENTES
+    # 3. HISTORIAL_DELITOS 
+    # Almacena de forma estandarizada los delitos (ArcGIS y Reportes Ciudadanos validados)
     try:
-        db.create_collection('incidentes', validator={
+        db.create_collection('historial_delitos', validator={
             "$jsonSchema": {
                 "bsonType": "object",
-                "required": ["fuente", "sub_tipo", "modalidad", "ubicacion", "distrito", "fecha_hecho", "anio", "mes"],
+                "required": ["ubicacion", "departamento", "provincia", "distrito", "fecha_hecho", "tipo", "sub_tipo"],
                 "properties": {
-                    "fuente": {"enum": ["ciudadano", "policia", "sidpol"]},
-                    "reporte_id": {"bsonType": ["objectId", "null"]},
-                    "verificado_por": {"bsonType": ["objectId", "null"]},
-                    "tipo": {"enum": ["PATRIMONIO (DELITO)"]},
-                    "sub_tipo": {"enum": ["HURTO", "ROBO", "EXTORSION"]},
-                    "modalidad": {"bsonType": "string"},
                     "ubicacion": {
                         "bsonType": "object",
                         "required": ["type", "coordinates"],
@@ -115,108 +112,29 @@ def setup_db():
                             "coordinates": {"bsonType": "array"}
                         }
                     },
-                    "direccion": {"bsonType": "string"},
-                    "distrito": {"bsonType": "string"},
-                    "ubigeo": {"bsonType": "string"},
+                    "direccion": {"bsonType": ["string", "null"]},
+                    "tipo_via": {"bsonType": ["string", "null"]},
+                    "departamento": {"bsonType": ["string", "null"]},
+                    "provincia": {"bsonType": ["string", "null"]},
+                    "distrito": {"bsonType": ["string", "null"]},
+                    "ubigeo": {"bsonType": ["string", "null"]},
                     "fecha_hecho": {"bsonType": "date"},
-                    "anio": {"bsonType": "int"},
-                    "mes": {"bsonType": "int", "minimum": 1, "maximum": 12},
-                    "descripcion": {"bsonType": "string"},
-                    "fotos": {"bsonType": "array"},
+                    "turno": {"bsonType": ["string", "null"]},
+                    "tipo": {"bsonType": ["string", "null"]},
+                    "sub_tipo": {"bsonType": ["string", "null"]},
+                    "modalidad": {"bsonType": ["string", "null"]},
+                    "estado_coord": {"bsonType": ["string", "null"]}, 
+                    "fuente": {"enum": ["arcgis_sidpol", "ciudadano"]},
                     "creado_en": {"bsonType": "date"}
                 }
             }
         })
-        db.incidentes.create_index([("ubicacion", "2dsphere")])
-        print("✅ Colección 'incidentes' creada")
+        db.historial_delitos.create_index([("ubicacion", "2dsphere")])
+        print("✅ Colección 'historial_delitos' creada")
     except Exception as e:
-        print("⚠️  La colección 'incidentes' ya existe o hubo un error.")
+        print("⚠️  La colección 'historial_delitos' ya existe o hubo un error.")
 
-    # 4. ESTADISTICAS_SIDPOL
-    try:
-        db.create_collection('estadisticas_sidpol', validator={
-            "$jsonSchema": {
-                "bsonType": "object",
-                "required": ["anio", "mes", "ubigeo", "distrito", "cantidad"],
-                "properties": {
-                    "anio": {"bsonType": "int"},
-                    "mes": {"bsonType": "int", "minimum": 1, "maximum": 12},
-                    "ubigeo": {"bsonType": "string"},
-                    "departamento": {"bsonType": "string"},
-                    "provincia": {"bsonType": "string"},
-                    "distrito": {"bsonType": "string"},
-                    "tipo": {"bsonType": "string"},
-                    "sub_tipo": {"bsonType": "string"},
-                    "modalidad": {"bsonType": "string"},
-                    "cantidad": {"bsonType": "int"},
-                    "importado_en": {"bsonType": "date"}
-                }
-            }
-        })
-        db.estadisticas_sidpol.create_index(
-            [("ubigeo", 1), ("anio", 1), ("mes", 1), ("sub_tipo", 1), ("modalidad", 1)],
-            unique=True,
-            name="unique_sidpol"
-        )
-        print("✅ Colección 'estadisticas_sidpol' creada")
-    except Exception as e:
-        print("⚠️  La colección 'estadisticas_sidpol' ya existe o hubo un error.")
-
-    # 4.5. ESTADISTICAS_FLAGRANCIA (NUEVO)
-    try:
-        db.create_collection('estadisticas_flagrancia', validator={
-            "$jsonSchema": {
-                "bsonType": "object",
-                "required": ["anio", "mes", "distrito", "cantidad"], # Ajustado a lo mínimo probable
-                "properties": {
-                    "anio": {"bsonType": "int"},
-                    "mes": {"bsonType": "int", "minimum": 1, "maximum": 12},
-                    "distrito": {"bsonType": "string"},
-                    "provincia": {"bsonType": "string"},
-                    "departamento": {"bsonType": "string"},
-                    "delito": {"bsonType": "string"},
-                    "juzgado": {"bsonType": "string"},
-                    "dependencia_policial": {"bsonType": "string"},
-                    "cantidad": {"bsonType": "int"},
-                    "importado_en": {"bsonType": "date"}
-                }
-            }
-        })
-        print("✅ Colección 'estadisticas_flagrancia' creada")
-    except Exception as e:
-        print("⚠️  La colección 'estadisticas_flagrancia' ya existe o hubo un error.")
-
-    # 4.6. ESTADISTICAS_SIDPOL_HISTORICO (NUEVO)
-    try:
-        db.create_collection('estadisticas_sidpol_historico', validator={
-            "$jsonSchema": {
-                "bsonType": "object",
-                "required": ["anio", "mes", "ubigeo", "distrito", "cantidad"],
-                "properties": {
-                    "anio": {"bsonType": "int"},
-                    "mes": {"bsonType": "int", "minimum": 1, "maximum": 12},
-                    "ubigeo": {"bsonType": "string"},
-                    "departamento": {"bsonType": "string"},
-                    "provincia": {"bsonType": "string"},
-                    "distrito": {"bsonType": "string"},
-                    "tipo": {"bsonType": "string"},
-                    "sub_tipo": {"bsonType": "string"},
-                    "modalidad": {"bsonType": "string"},
-                    "cantidad": {"bsonType": "int"},
-                    "importado_en": {"bsonType": "date"}
-                }
-            }
-        })
-        db.estadisticas_sidpol_historico.create_index(
-            [("ubigeo", 1), ("anio", 1), ("mes", 1), ("sub_tipo", 1), ("modalidad", 1)],
-            unique=True,
-            name="unique_sidpol_historico"
-        )
-        print("✅ Colección 'estadisticas_sidpol_historico' creada")
-    except Exception as e:
-        print("⚠️  La colección 'estadisticas_sidpol_historico' ya existe o hubo un error.")
-
-    # 5. ZONAS_RIESGO
+    # 4. ZONAS_RIESGO
     try:
         db.create_collection('zonas_riesgo', validator={
             "$jsonSchema": {
@@ -253,28 +171,6 @@ def setup_db():
         print("✅ Colección 'zonas_riesgo' creada")
     except Exception as e:
         print("⚠️  La colección 'zonas_riesgo' ya existe o hubo un error.")
-
-    # 6. ALERTAS
-    try:
-        db.create_collection('alertas', validator={
-            "$jsonSchema": {
-                "bsonType": "object",
-                "required": ["usuario_id", "tipo", "mensaje"],
-                "properties": {
-                    "usuario_id": {"bsonType": "objectId"},
-                    "incidente_id": {"bsonType": ["objectId", "null"]},
-                    "zona_id": {"bsonType": ["objectId", "null"]},
-                    "tipo": {"enum": ["nuevo_incidente", "zona_peligrosa", "zona_actualizada"]},
-                    "mensaje": {"bsonType": "string"},
-                    "leida": {"bsonType": "bool"},
-                    "push_enviado": {"bsonType": "bool"},
-                    "creado_en": {"bsonType": "date"}
-                }
-            }
-        })
-        print("✅ Colección 'alertas' creada")
-    except Exception as e:
-        print("⚠️  La colección 'alertas' ya existe o hubo un error.")
 
     # Crear Usuarios Iniciales
     print("\n--- CREANDO USUARIOS DE PRUEBA Y ADMIN ---")

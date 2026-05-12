@@ -1,0 +1,117 @@
+@startuml entidad_relacion
+hide circle
+
+top to bottom direction
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam dpi 150
+skinparam defaultFontName Segoe UI
+skinparam backgroundColor #F8FAFC
+skinparam ArrowColor #0F766E
+skinparam ArrowThickness 1
+skinparam nodesep 55
+skinparam ranksep 55
+skinparam EntityBackgroundColor #FFFFFF
+skinparam EntityBorderColor #0F766E
+skinparam EntityFontColor #134E4A
+skinparam NoteBackgroundColor #ECFEFF
+skinparam NoteBorderColor #0F766E
+
+entity "USUARIOS" as usuarios {
+  * _id : ObjectId
+  --
+  email : string <<unique>>
+  nombre : string
+  password_hash : string
+  rol : ciudadano|policia|admin
+  telefono : string
+  activo : bool
+  creado_en : date
+}
+
+entity "REPORTES_CIUDADANO" as reportes {
+  * _id : ObjectId
+  --
+  usuario_id : ObjectId?
+  sub_tipo : HURTO|ROBO|EXTORSION
+  modalidad : string
+  ubicacion : Point
+  estado : pendiente|confirmado|rechazado
+  relacion_incidente : string
+  fecha_hecho : date
+  creado_en : date
+}
+
+entity "INCIDENTES" as incidentes {
+  * _id : ObjectId
+  --
+  fuente : ciudadano|policia|sidpol
+  reporte_id : ObjectId?
+  verificado_por : ObjectId?
+  sub_tipo : HURTO|ROBO|EXTORSION
+  ubicacion : Point
+  distrito : string
+  anio : int
+  mes : int
+}
+
+entity "ESTADISTICAS_SIDPOL" as sidpol {
+  * _id : ObjectId
+  --
+  ubigeo : string
+  distrito : string
+  anio : int
+  mes : int
+  sub_tipo : string
+  modalidad : string
+  cantidad : int
+}
+
+entity "ZONAS_RIESGO" as zonas {
+  * _id : ObjectId
+  --
+  centroide : Point
+  radio_metros : int
+  distrito : string
+  nivel_riesgo : bajo|medio|alto|critico
+  total_incidentes : int
+  delito_predominante : string
+  tendencia : subiendo|estable|bajando
+  origen : SIDPOL|APP_INCIDENTES
+  calculado_en : date
+}
+
+entity "ALERTAS" as alertas {
+  * _id : ObjectId
+  --
+  usuario_id : ObjectId
+  incidente_id : ObjectId?
+  zona_id : ObjectId?
+  tipo : nuevo_incidente|zona_peligrosa|zona_actualizada
+  leida : bool
+  push_enviado : bool
+  creado_en : date
+}
+
+usuarios ||--o{ reportes : crea
+usuarios ||--o{ incidentes : verifica
+reportes ||--o| incidentes : se_convierte_en
+sidpol ||--o{ zonas : alimenta_macro
+incidentes ||--o{ zonas : alimenta_micro
+usuarios ||--o{ alertas : recibe
+incidentes ||--o{ alertas : genera
+zonas ||--o{ alertas : genera
+
+note right of reportes
+API de mapa usa reportes confirmados
+para puntos exactos.
+end note
+
+note right of zonas
+Motor IA calcula zonas con:
+1) estadisticas_sidpol
+2) clustering DBSCAN en incidentes
+end note
+
+@enduml

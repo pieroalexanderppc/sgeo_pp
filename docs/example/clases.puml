@@ -1,0 +1,109 @@
+@startuml clases
+title SGEO - Diagrama de Clases
+
+top to bottom direction
+skinparam shadowing false
+skinparam roundcorner 10
+skinparam linetype ortho
+skinparam dpi 150
+skinparam defaultFontName Segoe UI
+skinparam backgroundColor #FFFBF5
+skinparam ArrowColor #6D28D9
+skinparam ArrowThickness 1
+skinparam nodesep 55
+skinparam ranksep 50
+skinparam PackageBackgroundColor #F3E8FF
+skinparam PackageBorderColor #7C3AED
+skinparam PackageFontStyle bold
+skinparam ClassBackgroundColor #FFFFFF
+skinparam ClassBorderColor #8B5CF6
+skinparam ClassFontColor #2E1065
+skinparam NoteBackgroundColor #FEF3C7
+skinparam NoteBorderColor #B45309
+
+package "Flutter UI" {
+  class MyApp {
+    +build(context): Widget
+  }
+  class LoginView
+  class RegisterView
+  class HomeView {
+    +userRole: String
+    +userName: String
+    +userId: String
+  }
+  class MapView {
+    +userId: String
+  }
+  class ReportDialog {
+    +latitud: double
+    +longitud: double
+    +userId: String
+  }
+  class MyReportsView {
+    +userId: String
+  }
+  class ProfileView {
+    +userId: String?
+  }
+}
+
+package "Flutter Services" {
+  class AuthService <<static>> {
+    +login(email, password)
+    +register(nombre, email, password)
+  }
+  class MapService <<static>> {
+    +fetchZonasRiesgo()
+    +fetchPuntosExactos()
+    +crearReporte(data)
+  }
+}
+
+package "Backend Models (Pydantic)" {
+  class LoginRequest {
+    +email: EmailStr
+    +password: str
+  }
+  class RegisterRequest {
+    +nombre: str
+    +email: EmailStr
+    +password: str
+  }
+  class ReporteCiudadano {
+    +sub_tipo: str
+    +latitud: float
+    +longitud: float
+    +usuario_id: Optional[str]
+  }
+  class UpdateUser {
+    +nombre: str
+    +email: EmailStr
+    +telefono: str
+  }
+}
+
+MyApp --> LoginView : home inicial
+LoginView --> AuthService : login
+RegisterView --> AuthService : register
+LoginView --> HomeView : exito
+
+HomeView --> MapView
+HomeView --> MyReportsView
+HomeView --> ProfileView
+
+MapView --> ReportDialog
+MapView --> MapService : zonas y puntos
+ReportDialog --> MapService : crear reporte
+
+AuthService ..> LoginRequest : payload
+AuthService ..> RegisterRequest : payload
+MapService ..> ReporteCiudadano : payload
+ProfileView ..> UpdateUser : PUT /api/usuarios
+
+note bottom
+Diagrama enfocado en clases de dominio y colaboracion.
+Las clases internas de estado de Flutter se omitieron para legibilidad.
+end note
+
+@enduml

@@ -66,8 +66,16 @@ Prestar protección y ayuda a las personas y a la comunidad, investigar los deli
 **4. Organigrama (Contexto del Proyecto)**
 ```plantuml
 @startuml
-skinparam handwritten false
-skinparam monochrome true
+skinparam shadowing false
+skinparam roundcorner 10
+skinparam dpi 150
+skinparam defaultFontName Segoe UI
+skinparam backgroundColor #F8FAFC
+skinparam ArrowColor #334155
+skinparam NodeBackgroundColor #EEF2FF
+skinparam NodeBorderColor #4F46E5
+skinparam ComponentBackgroundColor #FFFFFF
+skinparam ComponentBorderColor #6366F1
 node "Comando Policial Tacna" {
   [Jefatura de Operaciones] --> [Central de Emergencias 105]
   [Jefatura de Operaciones] --> [Unidades de Patrullaje]
@@ -108,6 +116,17 @@ Técnica y económicamente viable (VAN = S/ 1,501, TIR > 13%). Uso de tecnologí
 ### a) Diagrama del Proceso Actual (Reactivo)
 ```plantuml
 @startuml
+skinparam shadowing false
+skinparam roundcorner 10
+skinparam dpi 150
+skinparam defaultFontName Segoe UI
+skinparam backgroundColor #F8FAFC
+skinparam ArrowColor #0F766E
+skinparam ActivityBackgroundColor #ECFEFF
+skinparam ActivityBorderColor #0F766E
+skinparam ActivityDiamondBackgroundColor #FFFFFF
+skinparam ActivityDiamondBorderColor #0F766E
+
 |Ciudadano|
 start
 :Sufre o presencia un delito;
@@ -127,6 +146,17 @@ stop
 ### b) Diagrama del Proceso Propuesto (SGEO Predictivo y Preventivo)
 ```plantuml
 @startuml
+skinparam shadowing false
+skinparam roundcorner 10
+skinparam dpi 150
+skinparam defaultFontName Segoe UI
+skinparam backgroundColor #F8FAFC
+skinparam ArrowColor #0F766E
+skinparam ActivityBackgroundColor #ECFEFF
+skinparam ActivityBorderColor #0F766E
+skinparam ActivityDiamondBackgroundColor #FFFFFF
+skinparam ActivityDiamondBorderColor #0F766E
+
 |Motor ML (SGEO)|
 start
 :Extrae Data SIDPOL Mensual;
@@ -201,6 +231,21 @@ stop
 #### a) Diagrama de Paquetes (Arquitectura General SGEO)
 ```plantuml
 @startuml
+skinparam shadowing false
+skinparam roundcorner 10
+skinparam dpi 150
+skinparam defaultFontName Segoe UI
+skinparam backgroundColor #F8FAFC
+skinparam ArrowColor #334155
+skinparam PackageBackgroundColor #EEF2FF
+skinparam PackageBorderColor #4F46E5
+skinparam ComponentBackgroundColor #FFFFFF
+skinparam ComponentBorderColor #6366F1
+skinparam DatabaseBackgroundColor #ECFDF5
+skinparam DatabaseBorderColor #047857
+skinparam CloudBackgroundColor #FEF3C7
+skinparam CloudBorderColor #B45309
+
 package "Frontend Flutter (Móvil)" {
   [Auth Module]
   [Map Module (flutter_map)]
@@ -235,6 +280,19 @@ cloud "Firebase" {
 #### b) Diagrama de Casos de Uso (General)
 ```plantuml
 @startuml
+skinparam shadowing false
+skinparam roundcorner 10
+skinparam dpi 150
+skinparam defaultFontName Segoe UI
+skinparam backgroundColor #F8FAFC
+skinparam ArrowColor #6D28D9
+skinparam UsecaseBackgroundColor #F3E8FF
+skinparam UsecaseBorderColor #7C3AED
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ActorBorderColor #8B5CF6
+skinparam RectangleBackgroundColor #FFFFFF
+skinparam RectangleBorderColor #334155
+
 left to right direction
 actor Ciudadano as C
 actor Policia as P
@@ -293,6 +351,18 @@ A --> UC7
 #### a) Diagrama de Actividades (Algoritmo de Validación)
 ```plantuml
 @startuml
+skinparam shadowing false
+skinparam roundcorner 10
+skinparam dpi 150
+skinparam defaultFontName Segoe UI
+skinparam backgroundColor #F8FAFC
+skinparam ArrowColor #0F766E
+skinparam ActivityBackgroundColor #ECFEFF
+skinparam ActivityBorderColor #0F766E
+skinparam ActivityDiamondBackgroundColor #FFFFFF
+skinparam ActivityDiamondBorderColor #0F766E
+
+|Ciudadano|
 start
 :Ciudadano emite Reporte;
 :Guardar en MongoDB (Estado = Pendiente);
@@ -307,7 +377,7 @@ if (Es verídico?) then (Sí)
   :Ejecutar algoritmo DBSCAN;
   if (Genera nuevo cluster rojo?) then (Sí)
     :Disparar Push Notification a ciudadanos cercanos;
-  else (No)
+
   endif
 else (No)
   |App Policía|
@@ -322,6 +392,23 @@ stop
 #### b) Diagrama de Secuencia (Predicción Machine Learning)
 ```plantuml
 @startuml
+skinparam shadowing false
+skinparam roundcorner 10
+skinparam dpi 150
+skinparam defaultFontName Segoe UI
+skinparam backgroundColor #F8FAFC
+skinparam ArrowColor #4F46E5
+skinparam SequenceParticipantBackgroundColor #EEF2FF
+skinparam SequenceParticipantBorderColor #4F46E5
+skinparam SequenceLifeLineBackgroundColor #4F46E5
+skinparam SequenceLifeLineBorderColor #334155
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ActorBorderColor #4F46E5
+skinparam DatabaseBackgroundColor #ECFDF5
+skinparam DatabaseBorderColor #047857
+skinparam NoteBackgroundColor #FEF3C7
+skinparam NoteBorderColor #B45309
+
 actor Administrador
 participant "Flutter App" as App
 participant "FastAPI (Router)" as API
@@ -343,6 +430,20 @@ App -> Administrador : Renderiza Gráfica (fl_chart)
 #### c) Diagrama de Clases (Arquitectura de Base de Datos y Modelos)
 ```plantuml
 @startuml
+skinparam shadowing false
+skinparam roundcorner 10
+skinparam dpi 150
+skinparam defaultFontName Segoe UI
+skinparam backgroundColor #FFFBF5
+skinparam ArrowColor #6D28D9
+skinparam ClassBackgroundColor #FFFFFF
+skinparam ClassBorderColor #8B5CF6
+skinparam ClassFontColor #2E1065
+skinparam ClassAttributeFontColor #4C1D95
+skinparam ClassStereotypeFontColor #6D28D9
+skinparam PackageBackgroundColor #F3E8FF
+skinparam PackageBorderColor #7C3AED
+
 class Usuario {
   +ObjectId id
   +String nombre

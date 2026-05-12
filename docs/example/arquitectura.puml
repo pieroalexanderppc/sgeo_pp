@@ -1,0 +1,83 @@
+@startuml arquitectura
+title SGEO - Diagrama de Arquitectura
+
+top to bottom direction
+skinparam shadowing false
+skinparam roundcorner 10
+skinparam linetype ortho
+skinparam dpi 150
+skinparam defaultFontName Segoe UI
+skinparam backgroundColor #F8FAFC
+skinparam ArrowColor #334155
+skinparam ArrowThickness 1
+skinparam nodesep 60
+skinparam ranksep 60
+skinparam PackageBackgroundColor #EEF2FF
+skinparam PackageBorderColor #4F46E5
+skinparam PackageFontStyle bold
+skinparam ComponentBackgroundColor #FFFFFF
+skinparam ComponentBorderColor #6366F1
+skinparam ComponentFontColor #0F172A
+skinparam DatabaseBackgroundColor #ECFDF5
+skinparam DatabaseBorderColor #047857
+skinparam NoteBackgroundColor #FEF3C7
+skinparam NoteBorderColor #B45309
+
+actor "Usuario" as User
+
+package "Aplicacion Movil (Flutter)" {
+  component "Capa UI\nLogin, Home, Map,\nReportes, Perfil" as UI
+  component "AuthService\n(core/services)" as AuthSvc
+  component "MapService\n(core/services)" as MapSvc
+  component "HTTP directo\n(ProfileView, MyReportsView)" as DirectHttp
+}
+
+package "Backend (FastAPI)" {
+  component "API REST\nbackend/main.py" as API
+  component "Motor IA Espacial\nbackend/motor_ia_espacial.py" as IA
+}
+
+database "MongoDB\ngeocrimen_tacna" as Mongo
+
+package "Colecciones" {
+  component "usuarios" as CUsuarios
+  component "reportes_ciudadano" as CReportes
+  component "incidentes" as CIncidentes
+  component "estadisticas_sidpol" as CSidpol
+  component "zonas_riesgo" as CZonas
+  component "alertas" as CAlertas
+}
+
+User --> UI : uso de la app
+UI --> AuthSvc : login, register
+UI --> MapSvc : zonas, puntos, crear reporte
+UI --> DirectHttp : perfil, mis reportes
+
+AuthSvc --> API
+MapSvc --> API
+DirectHttp --> API
+
+API --> Mongo : CRUD y consultas
+API ..> IA : startup y trigger manual
+IA --> Mongo : recalculo de zonas
+
+Mongo --> CUsuarios
+Mongo --> CReportes
+Mongo --> CIncidentes
+Mongo --> CSidpol
+Mongo --> CZonas
+Mongo --> CAlertas
+
+note right of API
+Rutas activas:
+1) POST /api/auth/login
+2) POST /api/auth/register
+3) POST /api/reportes
+4) GET /api/reportes/mis_reportes/{user_id}
+5) GET /api/map/zonas_riesgo
+6) GET /api/map/puntos_exactos
+7) POST /api/map/generar_zonas_ia
+8) GET|PUT /api/usuarios/{user_id}
+end note
+
+@enduml
