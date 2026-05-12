@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'report_service.dart';
+import 'geofence_service.dart';
 
 class MapService {
   /// Enlace base apuntando al entorno de producción hospedado en Railway.
@@ -18,6 +19,7 @@ class MapService {
     _cachedZonas = null;
     _lastZonasFetch = null;
     _ongoingFetchZonas = null;
+    GeofenceService.refreshZones(); // Sincronizar el motor de alertas en tiempo real
   }
 
   /// Recupera de forma asíncrona la lista de Zonas de Riesgo procesadas por 
@@ -54,6 +56,22 @@ class MapService {
       final decodedData = json.decode(response.body);
       if (decodedData['status'] == 'success') {
         return decodedData['zonas'] ?? [];
+      } else {
+        throw Exception("Error del servidor: ${decodedData['detail']}");
+      }
+    } else {
+      throw Exception('Error al conectar con el servidor (${response.statusCode})');
+    }
+  }
+
+  // --- OBTENER TODOS LOS PUNTOS HISTORICOS (Zoom in detallado) ---
+  static Future<List<dynamic>> fetchPuntosHistorial() async {
+    final response = await http.get(Uri.parse('$_baseUrl/api/map/historial_puntos'));
+    
+    if (response.statusCode == 200) {
+      final decodedData = json.decode(response.body);
+      if (decodedData['status'] == 'success') {
+        return decodedData['puntos'] ?? [];
       } else {
         throw Exception("Error del servidor: ${decodedData['detail']}");
       }

@@ -35,12 +35,14 @@ class _MapViewState extends State<MapView> {
   bool _isLoading = true;
   List<dynamic> _zonasRiesgo = [];
   List<dynamic> _puntosExactos = [];
+  List<dynamic> _puntosHistorial = [];
   List<ReportModel> _misReportesPendientes = [];
 
   bool _showZonasRiesgo = true;
   bool _showReportesValidados = true;
   bool _showMisReportes = true;
   bool _isFilterMenuOpen = false;
+  double _currentZoom = 15.0;
 
   @override
   void initState() {
@@ -52,10 +54,24 @@ class _MapViewState extends State<MapView> {
     }
     _loadZonasRiesgo();
     _loadPuntosExactos();
+    _loadPuntosHistorial();
     _loadMisReportes();
 
     TutorialService.triggerTutorialNotifier.addListener(_tutorialListener);
     ReportService.reportsUpdatedNotifier.addListener(_reportsUpdatedListener);
+  }
+
+  Future<void> _loadPuntosHistorial() async {
+    try {
+      final puntos = await MapService.fetchPuntosHistorial();
+      if (mounted) {
+        setState(() {
+          _puntosHistorial = puntos;
+        });
+      }
+    } catch (e) {
+      debugPrint("❌ Error cargando puntos historiales: $e");
+    }
   }
 
   @override
@@ -609,6 +625,13 @@ class _MapViewState extends State<MapView> {
                         options: MapOptions(
                           initialCenter: _currentPosition!,
                           initialZoom: 15.0,
+                          onPositionChanged: (position, hasGesture) {
+                            if (mounted) {
+                              setState(() {
+                                _currentZoom = position.zoom;
+                              });
+                            }
+                          },
                           onTap: (tapPosition, latLng) {
                             _handleMapTap(tapPosition, latLng);
                           },
@@ -642,6 +665,84 @@ class _MapViewState extends State<MapView> {
                             ),
                           MarkerLayer(
                             markers: [
+                              // 0. Puntos históricos (SIDPOL + Ciudadanos) al hacer zoom
+                              if (_currentZoom > 15.5 && _showZonasRiesgo)
+                                ..._puntosHistorial.map((punto) {
+                                  final coords = punto['ubicacion']['coordinates'];
+                                  final subTipo = punto['sub_tipo'] ?? 'Desconocido';
+                                  final fuente = punto['fuente'] ?? 'sidpol';
+                                  final fechaHecho = punto['fecha_hecho'] ?? 'Fecha no disponible';
+                                  final modalidad = punto['modalidad'] ?? 'No especificada';
+                                  final isCitizen = fuente == 'ciudadano';
+
+                                  return Marker(
+                                    point: LatLng(
+                                      (coords[1] as num).toDouble(),
+                                      (coords[0] as num).toDouble(),
+                                    ),
+                                    width: 16,
+                                    height: 16,
+                                    alignment: Alignment.center,
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        showDialog(
+                                          context: context,
+                                          builder: (ctx) => AlertDialog(
+                                            backgroundColor: isDark ? AppTheme.bgSurface : Colors.white,
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                            title: Row(
+                                              children: [
+                                                Icon(
+                                                  isCitizen ? Icons.person_pin_circle : Icons.local_police,
+                                                  color: isCitizen ? AppTheme.accentBlue : AppTheme.alertRed,
+                                                  size: 24,
+                                                ),
+                                                const SizedBox(width: 10),
+                                                const Expanded(
+                                                  child: Text(
+                                                    'Detalle Histórico',
+                                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            content: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text('Delito: $subTipo', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                                                const SizedBox(height: 8),
+                                                Text('Modalidad: $modalidad', style: TextStyle(fontSize: 13, color: isDark ? AppTheme.textSecondary : Colors.grey[800])),
+                                                const SizedBox(height: 8),
+                                                Text('Fecha: $fechaHecho', style: TextStyle(fontSize: 13, color: isDark ? AppTheme.textSecondary : Colors.grey[800])),
+                                                const SizedBox(height: 8),
+                                                Text('Origen: ${isCitizen ? "Reporte validado (App)" : "Registro Policial SIDPOL"}', 
+                                                    style: TextStyle(fontSize: 13, color: isDark ? AppTheme.textSecondary : Colors.grey[800])),
+                                              ],
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.of(ctx).pop(),
+                                                child: Text('Cerrar', style: TextStyle(color: isDark ? AppTheme.textSecondary : Colors.grey)),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: isCitizen ? AppTheme.accentBlue : AppTheme.alertRed,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: Colors.white, width: 2),
+                                          boxShadow: [
+                                            BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 3),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }),
+
                               // 1. Puntos exactos reportados
                               if (_showReportesValidados)
                                 ..._puntosExactos.map((punto) {

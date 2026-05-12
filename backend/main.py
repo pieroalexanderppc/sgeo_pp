@@ -168,7 +168,7 @@ _cache_time = 0
 @app.get("/api/map/zonas_riesgo")
 def obtner_zonas_riesgo():
     global _cache_zonas, _cache_time
-    if _cache_zonas is not None and (time.time() - _cache_time) < 600:
+    if _cache_zonas is not None and (time.time() - _cache_time) < 60: # Bajado a 60 segundos para pruebas y menor delay
         return {"status": "success", "zonas": _cache_zonas, "cached": True}
         
     try:
@@ -486,6 +486,30 @@ def obtener_puntos_exactos():
         return {"status": "success", "puntos": reportes}
     except Exception as e:
         raise HTTPException(status_code=500, detail="Error obteniendo los puntos: " + str(e))
+
+@app.get("/api/map/historial_puntos")
+def obtener_historial_puntos():
+    """
+    Devuelve todos los puntos del historial de delitos (ArcGIS + Ciudadanos confirmados) 
+    para mostrarlos en el mapa cuando el usuario hace zoom a detalle.
+    """
+    try:
+        # Traemos solo los campos necesarios para el mapa
+        puntos = list(db.historial_delitos.find(
+            {"estado_coord": {"$ne": "SIN COORDENADA"}},
+            {"_id": 1, "sub_tipo": 1, "ubicacion": 1, "fuente": 1, "fecha_hecho": 1, "modalidad": 1, "turno": 1}
+        ))
+        for p in puntos:
+            p["_id"] = str(p["_id"])
+            if "fecha_hecho" in p and p["fecha_hecho"] is not None:
+                try:
+                    p["fecha_hecho"] = p["fecha_hecho"].isoformat()
+                except:
+                    p["fecha_hecho"] = str(p["fecha_hecho"])
+        
+        return {"status": "success", "puntos": puntos}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Error obteniendo historial: " + str(e))
 
 @app.get("/api/reportes/policia")
 def obtener_reportes_policia():

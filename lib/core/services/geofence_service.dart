@@ -17,12 +17,21 @@ class GeofenceService {
   /// Variables de estado destinadas a la limitación temporal (cooldown) y contención de alertas 
   /// para impedir envíos repetitivos por fluctuación del satélite GPS.
   static DateTime? _lastAlertTime;
-  static const int _alertCooldownMinutes = 15; // Bajado a 1 minuto temporalmente para que puedas realizar tus pruebas
+  static const int _alertCooldownMinutes = 1; // Bajado a 1 minuto temporalmente para que puedas realizar tus pruebas
 
   /// Almacén en memoria volátil conteniendo datos de las Zonas de Riesgo actuales
   static List<dynamic> _realRiskZones = [];
 
   static bool _currentlyInsideZone = false;
+
+  static Future<void> refreshZones() async {
+    try {
+      _realRiskZones = await MapService.fetchZonasRiesgo(forceRefresh: true);
+      debugPrint("Geocercas (Riesgo) recargadas exitosamente: ${_realRiskZones.length}");
+    } catch (e) {
+      debugPrint("Excepción al recargar Geocercas: $e");
+    }
+  }
 
   static Future<void> startTracking() async {
     if (_isRunning) return;
