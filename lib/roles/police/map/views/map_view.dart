@@ -38,6 +38,8 @@ class _PoliceMapViewState extends State<PoliceMapView> {
   bool _showZonasRiesgo = true;
   bool _showReportesValidados = true;
   bool _isFilterMenuOpen = false;
+  int? _filterYear;
+  int? _filterMonth;
   double _currentZoom = 15.0;
 
   @override
@@ -127,6 +129,7 @@ class _PoliceMapViewState extends State<PoliceMapView> {
   Future<void> _loadZonasRiesgo() async {
     try {
       final zonas = await MapService.fetchZonasRiesgo();
+      if (!mounted) return;
       setState(() {
         _zonasRiesgo = zonas;
       });
@@ -579,9 +582,17 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                           initialZoom: 15.0,
                           onPositionChanged: (position, hasGesture) {
                             if (mounted) {
-                              setState(() {
-                                _currentZoom = position.zoom;
-                              });
+                              // Optimización Fase 3: Solo redibujar la vista si el zoom cruza el umbral de 15.5
+                              // para evitar agotar batería llamando a setState en cada frame al arrastrar el mapa.
+                              bool wasThresh = _currentZoom > 15.5;
+                              bool isThresh = position.zoom > 15.5;
+                              if (wasThresh != isThresh) {
+                                setState(() {
+                                  _currentZoom = position.zoom;
+                                });
+                              } else {
+                                _currentZoom = position.zoom; // Actualizar valor silente
+                              }
                             }
                           },
                           onTap: (tapPosition, latLng) {
@@ -614,8 +625,23 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                             ),
                           MarkerLayer(
                             markers: [                              // 0. Puntos históricos (SIDPOL + Ciudadanos) al hacer zoom
-                              if (_currentZoom > 15.5 && _showZonasRiesgo)
-                                ..._puntosHistorial.map((punto) {
+                              if (_currentZoom > 15.5)
+                                ..._puntosHistorial.where((punto) {
+                                  final fuente = punto['fuente'] ?? 'sidpol';
+                                  if (fuente == 'ciudadano' && !_showReportesValidados) return false;
+                                  
+                                  if (_filterYear != null || _filterMonth != null) {
+                                    final fechaRaw = punto['fecha_hecho'] as String?;
+                                    if (fechaRaw != null) {
+                                      try {
+                                        final dt = DateTime.parse(fechaRaw);
+                                        if (_filterYear != null && dt.year != _filterYear) return false;
+                                        if (_filterMonth != null && dt.month != _filterMonth) return false;
+                                      } catch (_) {}
+                                    }
+                                  }
+                                  return true;
+                                }).map((punto) {
                                   final coords = punto['ubicacion']['coordinates'];
                                   final subTipo = punto['sub_tipo'] ?? 'Desconocido';
                                   final fuente = punto['fuente'] ?? 'sidpol';
@@ -693,6 +719,16 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                                 // Puntos exactos (reportes ciudadanos) con animación y filtro de proximidad
                                 if (_showReportesValidados)
                                   ..._puntosExactos.where((punto) {
+                                    if (_filterYear != null || _filterMonth != null) {
+                                      final fechaRaw = punto['fecha'] as String?;
+                                      if (fechaRaw != null) {
+                                        try {
+                                          final dt = DateTime.parse(fechaRaw);
+                                          if (_filterYear != null && dt.year != _filterYear) return false;
+                                          if (_filterMonth != null && dt.month != _filterMonth) return false;
+                                        } catch (_) {}
+                                      }
+                                    }
                                     if (_realUserPosition == null) return true;
                                     final coords = punto['ubicacion']['coordinates'];
                                     final lat = (coords[1] as num).toDouble();
@@ -904,6 +940,8 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                                 onChanged: (val) => setState(() => _showReportesValidados = val),
                                 isDark: isDark,
                               ),
+                              Divider(height: 1, color: isDark ? AppTheme.borderSubtle : Colors.grey.shade200, indent: 16, endIndent: 16),
+                              _buildDateFilters(isDark),
                             ],
                           ),
                         )
@@ -999,6 +1037,67 @@ class _PoliceMapViewState extends State<PoliceMapView> {
       inactiveThumbColor: isDark ? Colors.grey.shade400 : Colors.grey.shade300,
       inactiveTrackColor: isDark ? AppTheme.bgDeep : Colors.grey.shade400,
       onChanged: onChanged,
+    );
+  }
+
+  Widget _buildDateFilters(bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Filtro por Fecha',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: isDark ? AppTheme.textSecondary : Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 8.0),
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<int?>(
+                  decoration: InputDecoration(
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  value: _filterYear,
+                  hint: const Text('Año', style: TextStyle(fontSize: 12)),
+                  items: [
+                    const DropdownMenuItem<int?>(value: null, child: Text('Todos', style: TextStyle(fontSize: 12))),
+                    ...[2022, 2023, 2024, 2025].map((y) => DropdownMenuItem<int?>(value: y, child: Text(y.toString(), style: const TextStyle(fontSize: 12)))),
+                  ],
+                  onChanged: (val) => setState(() => _filterYear = val),
+                  style: TextStyle(fontSize: 12, color: isDark ? Colors.white : Colors.black),
+                  dropdownColor: isDark ? AppTheme.bgSurface : Colors.white,
+                ),
+              ),
+              const SizedBox(width: 8.0),
+              Expanded(
+                child: DropdownButtonFormField<int?>(
+                  decoration: InputDecoration(
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  value: _filterMonth,
+                  hint: const Text('Mes', style: TextStyle(fontSize: 12)),
+                  items: [
+                    const DropdownMenuItem<int?>(value: null, child: Text('Todos', style: TextStyle(fontSize: 12))),
+                    ...List.generate(12, (i) => i + 1).map((m) => DropdownMenuItem<int?>(value: m, child: Text(m.toString().padLeft(2, '0'), style: const TextStyle(fontSize: 12)))),
+                  ],
+                  onChanged: (val) => setState(() => _filterMonth = val),
+                  style: TextStyle(fontSize: 12, color: isDark ? Colors.white : Colors.black),
+                  dropdownColor: isDark ? AppTheme.bgSurface : Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

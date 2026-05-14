@@ -53,6 +53,7 @@ class _DashboardViewState extends State<DashboardView> with SingleTickerProvider
       if (res.statusCode == 200) {
         final data = json.decode(res.body);
         if (data['status'] == 'success') {
+          if (!mounted) return;
           setState(() {
             _liveStats = data['stats'];
           });
@@ -76,6 +77,7 @@ class _DashboardViewState extends State<DashboardView> with SingleTickerProvider
         final dPred = json.decode(resPred.body);
         
         if (dStats['status'] == 'success' && dPred['status'] == 'success') {
+          if (!mounted) return;
           setState(() {
             _sidpolStats = dStats['stats'];
             _sidpolPred = dPred;

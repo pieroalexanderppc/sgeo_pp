@@ -17,7 +17,7 @@ class GeofenceService {
   /// Variables de estado destinadas a la limitación temporal (cooldown) y contención de alertas 
   /// para impedir envíos repetitivos por fluctuación del satélite GPS.
   static DateTime? _lastAlertTime;
-  static const int _alertCooldownMinutes = 1; // Bajado a 1 minuto temporalmente para que puedas realizar tus pruebas
+  static const int _alertCooldownMinutes = 30; // Evita el spam aumentando el cooldown de alertas locales
 
   /// Almacén en memoria volátil conteniendo datos de las Zonas de Riesgo actuales
   static List<dynamic> _realRiskZones = [];

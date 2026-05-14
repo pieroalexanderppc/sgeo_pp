@@ -1,7 +1,16 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'report_service.dart';
 import 'geofence_service.dart';
+
+// --- FUNCIÓN TOP-LEVEL PARA ISOLATE ---
+// Al sacar el parseo del Hilo Principal (Main UI Thread) usando compute, 
+// evitamos que la interfaz crashee o se congele durante milisegundos
+// cuando se procesan listas masivas de puntos o zonas poligonales complejas.
+Map<String, dynamic> _parseJsonData(String responseBody) {
+  return json.decode(responseBody) as Map<String, dynamic>;
+}
 
 class MapService {
   /// Enlace base apuntando al entorno de producción hospedado en Railway.
@@ -53,7 +62,7 @@ class MapService {
     final response = await http.get(Uri.parse('$_baseUrl/api/map/zonas_riesgo'));
     
     if (response.statusCode == 200) {
-      final decodedData = json.decode(response.body);
+      final decodedData = await compute(_parseJsonData, response.body);
       if (decodedData['status'] == 'success') {
         return decodedData['zonas'] ?? [];
       } else {
@@ -69,7 +78,7 @@ class MapService {
     final response = await http.get(Uri.parse('$_baseUrl/api/map/historial_puntos'));
     
     if (response.statusCode == 200) {
-      final decodedData = json.decode(response.body);
+      final decodedData = await compute(_parseJsonData, response.body);
       if (decodedData['status'] == 'success') {
         return decodedData['puntos'] ?? [];
       } else {
@@ -85,7 +94,7 @@ class MapService {
     final response = await http.get(Uri.parse('$_baseUrl/api/map/puntos_exactos'));
     
     if (response.statusCode == 200) {
-      final decodedData = json.decode(response.body);
+      final decodedData = await compute(_parseJsonData, response.body);
       if (decodedData['status'] == 'success') {
         return decodedData['puntos'] ?? [];
       } else {
@@ -101,7 +110,7 @@ class MapService {
     final response = await http.get(Uri.parse('$_baseUrl/api/reportes/policia'));
     
     if (response.statusCode == 200) {
-      final decodedData = json.decode(response.body);
+      final decodedData = await compute(_parseJsonData, response.body);
       if (decodedData['status'] == 'success') {
         return decodedData['puntos'] ?? [];
       } else {

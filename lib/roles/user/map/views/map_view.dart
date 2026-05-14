@@ -42,6 +42,8 @@ class _MapViewState extends State<MapView> {
   bool _showReportesValidados = true;
   bool _showMisReportes = true;
   bool _isFilterMenuOpen = false;
+  int? _filterYear;
+  int? _filterMonth;
   double _currentZoom = 15.0;
 
   @override
@@ -153,6 +155,7 @@ class _MapViewState extends State<MapView> {
   Future<void> _loadZonasRiesgo() async {
     try {
       final zonas = await MapService.fetchZonasRiesgo();
+      if (!mounted) return;
       setState(() {
         _zonasRiesgo = zonas;
       });
@@ -627,9 +630,17 @@ class _MapViewState extends State<MapView> {
                           initialZoom: 15.0,
                           onPositionChanged: (position, hasGesture) {
                             if (mounted) {
-                              setState(() {
-                                _currentZoom = position.zoom;
-                              });
+                              // Optimización Fase 3: Solo redibujar la vista si el zoom cruza el umbral de 15.5
+                              // para evitar consumir recursos de GPU llamando a setState decenas de veces por segundo.
+                              bool wasThresh = _currentZoom > 15.5;
+                              bool isThresh = position.zoom > 15.5;
+                              if (wasThresh != isThresh) {
+                                setState(() {
+                                  _currentZoom = position.zoom;
+                                });
+                              } else {
+                                _currentZoom = position.zoom; // Actualizar el valor en memoria sin re-renderizar todo
+                              }
                             }
                           },
                           onTap: (tapPosition, latLng) {
@@ -666,8 +677,23 @@ class _MapViewState extends State<MapView> {
                           MarkerLayer(
                             markers: [
                               // 0. Puntos históricos (SIDPOL + Ciudadanos) al hacer zoom
-                              if (_currentZoom > 15.5 && _showZonasRiesgo)
-                                ..._puntosHistorial.map((punto) {
+                              if (_currentZoom > 15.5)
+                                ..._puntosHistorial.where((punto) {
+                                  final fuente = punto['fuente'] ?? 'sidpol';
+                                  if (fuente == 'ciudadano' && !_showReportesValidados) return false;
+                                  
+                                  if (_filterYear != null || _filterMonth != null) {
+                                    final fechaRaw = punto['fecha_hecho'] as String?;
+                                    if (fechaRaw != null) {
+                                      try {
+                                        final dt = DateTime.parse(fechaRaw);
+                                        if (_filterYear != null && dt.year != _filterYear) return false;
+                                        if (_filterMonth != null && dt.month != _filterMonth) return false;
+                                      } catch (_) {}
+                                    }
+                                  }
+                                  return true;
+                                }).map((punto) {
                                   final coords = punto['ubicacion']['coordinates'];
                                   final subTipo = punto['sub_tipo'] ?? 'Desconocido';
                                   final fuente = punto['fuente'] ?? 'sidpol';
@@ -745,7 +771,19 @@ class _MapViewState extends State<MapView> {
 
                               // 1. Puntos exactos reportados
                               if (_showReportesValidados)
-                                ..._puntosExactos.map((punto) {
+                                ..._puntosExactos.where((punto) {
+                                  if (_filterYear != null || _filterMonth != null) {
+                                    final fechaRaw = punto['fecha'] as String?;
+                                    if (fechaRaw != null) {
+                                      try {
+                                        final dt = DateTime.parse(fechaRaw);
+                                        if (_filterYear != null && dt.year != _filterYear) return false;
+                                        if (_filterMonth != null && dt.month != _filterMonth) return false;
+                                      } catch (_) {}
+                                    }
+                                  }
+                                  return true;
+                                }).map((punto) {
                                   final coords = punto['ubicacion']['coordinates'];
                                   final estadoStr = (punto['estado'] ?? '').toString().toLowerCase();
                                   final colorPunto = estadoStr.contains('pendiente')
@@ -834,24 +872,75 @@ class _MapViewState extends State<MapView> {
 
                               // 1.5. Propios reportes pendientes del usuario (Azul tactico)
                               if (_showMisReportes)
-                                ..._misReportesPendientes.map((reporte) {
+                                ..._misReportesPendientes.where((reporte) {
+                                  if (_filterYear != null || _filterMonth != null) {
+                                    final fechaRaw = reporte.creadoEn;
+                                    if (fechaRaw != null) {
+                                      try {
+                                        final dt = DateTime.parse(fechaRaw.toString());
+                                        if (_filterYear != null && dt.year != _filterYear) return false;
+                                        if (_filterMonth != null && dt.month != _filterMonth) return false;
+                                      } catch (_) {}
+                                    }
+                                  }
+                                  return true;
+                                }).map((reporte) {
                                   return Marker(
                                     point: LatLng(reporte.latitud!, reporte.longitud!),
-                                    width: 20,
-                                    height: 20,
+                                    width: 32,
+                                    height: 32,
                                     alignment: Alignment.center,
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: AppTheme.accentBlue,
-                                        shape: BoxShape.circle,
-                                        border: Border.all(color: Colors.white, width: 2.0),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: AppTheme.accentBlue.withValues(alpha: 0.6),
-                                            blurRadius: 6,
-                                            spreadRadius: 2,
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        showDialog(
+                                          context: context,
+                                          builder: (ctx) => AlertDialog(
+                                            backgroundColor: isDark ? AppTheme.bgSurface : Colors.white,
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                            title: Row(
+                                              children: [
+                                                const Icon(Icons.person, color: AppTheme.accentBlue, size: 24),
+                                                const SizedBox(width: 10),
+                                                const Expanded(
+                                                  child: Text('Mi Reporte', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                                                ),
+                                              ],
+                                            ),
+                                            content: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text('Subtipo: ${reporte.subTipo}', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                                                const SizedBox(height: 8),
+                                                Text('Descripción: ${reporte.descripcion ?? 'Sin descripción'}', style: TextStyle(fontSize: 13, color: isDark ? AppTheme.textSecondary : Colors.grey[800])),
+                                                const SizedBox(height: 8),
+                                                Text('Estado: ${reporte.estado}', style: const TextStyle(fontSize: 13, color: AppTheme.accentBlue, fontWeight: FontWeight.bold)),
+                                              ],
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.of(ctx).pop(),
+                                                child: Text('Cerrar', style: TextStyle(color: isDark ? AppTheme.textSecondary : Colors.grey)),
+                                              ),
+                                            ],
                                           ),
-                                        ],
+                                        );
+                                      },
+                                      child: Container(
+                                        width: 20,
+                                        height: 20,
+                                        decoration: BoxDecoration(
+                                          color: AppTheme.accentBlue,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: Colors.white, width: 2.0),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: AppTheme.accentBlue.withValues(alpha: 0.6),
+                                              blurRadius: 6,
+                                              spreadRadius: 2,
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   );
@@ -980,6 +1069,8 @@ class _MapViewState extends State<MapView> {
                                 onChanged: (val) => setState(() => _showMisReportes = val),
                                 isDark: isDark,
                               ),
+                              Divider(height: 1, color: isDark ? AppTheme.borderSubtle : Colors.grey.shade200, indent: 16, endIndent: 16),
+                              _buildDateFilters(isDark),
                             ],
                           ),
                         )
@@ -1110,6 +1201,67 @@ class _MapViewState extends State<MapView> {
       inactiveThumbColor: isDark ? Colors.grey.shade400 : Colors.grey.shade300,
       inactiveTrackColor: isDark ? AppTheme.bgDeep : Colors.grey.shade400,
       onChanged: onChanged,
+    );
+  }
+
+  Widget _buildDateFilters(bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Filtro por Fecha',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: isDark ? AppTheme.textSecondary : Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 8.0),
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<int?>(
+                  decoration: InputDecoration(
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  value: _filterYear,
+                  hint: const Text('Año', style: TextStyle(fontSize: 12)),
+                  items: [
+                    const DropdownMenuItem<int?>(value: null, child: Text('Todos', style: TextStyle(fontSize: 12))),
+                    ...[2022, 2023, 2024, 2025].map((y) => DropdownMenuItem<int?>(value: y, child: Text(y.toString(), style: const TextStyle(fontSize: 12)))),
+                  ],
+                  onChanged: (val) => setState(() => _filterYear = val),
+                  style: TextStyle(fontSize: 12, color: isDark ? Colors.white : Colors.black),
+                  dropdownColor: isDark ? AppTheme.bgSurface : Colors.white,
+                ),
+              ),
+              const SizedBox(width: 8.0),
+              Expanded(
+                child: DropdownButtonFormField<int?>(
+                  decoration: InputDecoration(
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  value: _filterMonth,
+                  hint: const Text('Mes', style: TextStyle(fontSize: 12)),
+                  items: [
+                    const DropdownMenuItem<int?>(value: null, child: Text('Todos', style: TextStyle(fontSize: 12))),
+                    ...List.generate(12, (i) => i + 1).map((m) => DropdownMenuItem<int?>(value: m, child: Text(m.toString().padLeft(2, '0'), style: const TextStyle(fontSize: 12)))),
+                  ],
+                  onChanged: (val) => setState(() => _filterMonth = val),
+                  style: TextStyle(fontSize: 12, color: isDark ? Colors.white : Colors.black),
+                  dropdownColor: isDark ? AppTheme.bgSurface : Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
