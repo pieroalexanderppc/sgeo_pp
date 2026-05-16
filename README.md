@@ -53,14 +53,14 @@ El sistema está estructurado bajo una arquitectura de microservicios con interf
 │
 ├── 🧠 backend/                                  # Backend: Servidor Inteligente (Python + FastAPI)
 │   ├── main.py                                  # API RESTful central: auth, reportes, mapas, usuarios, IA Predictiva
-│   ├── motor_ia_espacial.py                     # Motor ML Espacial: DBSCAN + fusión SIDPOL/Flagrancia
+│   ├── motor_ia_zonas_riesgo.py                 # Motor ML Espacial: DBSCAN + fusión SIDPOL/Flagrancia
 │   ├── firebase_service.py                      # Servicio FCM: Push Notifications con Admin SDK
 │   ├── requirements.txt                         # Dependencias Python (FastAPI, Scikit-Learn, Pandas)
 │   ├── Procfile                                 # Despliegue en Railway
 │   └── scripts_iniciales/                       # Scripts de Ingeniería de Datos (ETL)
 │       ├── setup_db.py                          #   → Creación de colecciones MongoDB
-│       ├── importador_mensual.py                #   → Scraping SIDPOL + Flagrancia
-│       └── importador_data.py                   #   → Migración masiva SIDPOL 2018-2026
+│       ├── extract_arcgis_data.py               #   → Scraping y extracción de datos geoespaciales desde ArcGIS
+│       └── import_arcgis_data.py                #   → Migración masiva de datos y poblacion historica de Tacna
 │
 ├── 📄 docs/
 │   └── SCRUM.md                                 # Documentación ágil: Product Backlog, Sprints
@@ -105,12 +105,17 @@ geocrimen_tacna/
 | `POST` | `/api/auth/login` | Autenticación con verificación bcrypt |
 | `POST` | `/api/auth/register` | Registro con validación de email y nombre |
 | `GET` | `/api/map/zonas_riesgo` | Zonas de riesgo calculadas por la IA |
-| `GET` | `/api/map/puntos_exactos` | Reportes confirmados para el mapa |
+| `GET` | `/api/map/puntos_exactos` | Reportes confirmados para el mapa en vivo |
+| `GET` | `/api/map/historial_puntos` | Historial completo de reportes archivados |
 | `POST` | `/api/map/generar_zonas_ia` | Trigger manual del motor de IA DBSCAN |
 | `POST` | `/api/reportes` | Crear reporte ciudadano (límite: 5/día) |
 | `POST` | `/api/reportes/confirmar/{id}` | Policía confirma → agrupa cercanos 500m → Push FCM → Trigger IA |
 | `POST` | `/api/reportes/rechazar/{id}` | Policía rechaza reporte falso |
 | `GET` | `/api/reportes/mis_reportes/{user_id}` | Historial del ciudadano |
+| `DELETE` | `/api/reportes/{id}` | Eliminar un reporte ciudadano |
+| `GET` | `/api/reportes/policia` | Lista de reportes pendientes para validación policial |
+| `GET` | `/api/usuarios/{user_id}` | Obtener información de un usuario |
+| `PUT` | `/api/usuarios/{user_id}` | Actualizar perfil del usuario |
 | `GET` | `/api/admin/dashboard_stats` | Métricas en vivo de reportes de la app |
 | `GET` | `/api/admin/sidpol_stats` | Métricas BigData SIDPOL: Top Distritos, Tipos y cronología |
 | `GET` | `/api/admin/sidpol_predict` | **Predicción ML (Regresión Lineal):** Proyecciones a 3 meses y riesgo |
@@ -148,7 +153,7 @@ El sistema emplea inteligencia artificial en dos frentes distintos:
 - Persistencia local en buzón interno para ver notificaciones pasadas, implementando navegación automática al punto exacto del robo.
 
 ### 🔄 Pipeline ETL Automatizado (Extracción de Datos)
-Scripts (`importador_mensual.py`, `importador_data.py`) ejecutan tareas Cron para visitar fuentes gubernamentales (Policía del Perú y Unidad de Flagrancia), raspar, limpiar mediante pandas e inyectar data en la MongoDB.
+Scripts (`extract_arcgis_data.py`, `import_arcgis_data.py`) ejecutan tareas Cron para extraer datos geoespaciales desde repositorios (como ArcGIS), limpiar la información mediante pandas y reingresarlos masivamente a MongoDB (`datos_historicos_tacna.json`).
 
 ---
 

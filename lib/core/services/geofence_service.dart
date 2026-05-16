@@ -151,10 +151,26 @@ class GeofenceService {
   }
 
   static Future<void> _triggerLocalAlert(String zoneName) async {
-    // Encapsulación del objeto contenedor para uniformizar con 
-    // la estructura proveniente nativamente de Firebase Cloud Messaging.
-    final String title = '¡Precaución! Nivel de Riesgo: $zoneName';
-    final String body = 'Se ha detectado que estás ingresando a una zona de riesgo. Mantente alerta a tu entorno.';
+    // Determinar turno actual para alerta contextual
+    final hora = DateTime.now().hour;
+    String turno;
+    String contextMsg;
+    if (hora >= 0 && hora <= 5) {
+      turno = 'MADRUGADA';
+      contextMsg = 'El riesgo es mayor durante la madrugada. Evita transitar solo/a.';
+    } else if (hora >= 6 && hora <= 11) {
+      turno = 'MAÑANA';
+      contextMsg = 'Aunque el riesgo es menor durante la mañana, mantente alerta.';
+    } else if (hora >= 12 && hora <= 17) {
+      turno = 'TARDE';
+      contextMsg = 'Precaución moderada durante la tarde. Evita zonas aisladas.';
+    } else {
+      turno = 'NOCHE';
+      contextMsg = 'El índice de incidentes aumenta por la noche. Extrema precauciones.';
+    }
+
+    final String title = '¡Precaución! Riesgo $zoneName — Turno: $turno';
+    final String body = '$contextMsg';
     
     final fakeMessage = RemoteMessage(
       notification: RemoteNotification(

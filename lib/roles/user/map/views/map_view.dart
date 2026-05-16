@@ -9,10 +9,13 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:showcaseview/showcaseview.dart';
 import '../../../../core/services/map_service.dart';
 import '../../../../core/services/report_service.dart';
+import '../../../../core/services/predictive_service.dart';
 import '../../../../core/models/report_model.dart';
 import '../../../../core/services/geofence_service.dart';
 import '../../../../core/services/tutorial_service.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/safety_score_gauge.dart';
+import '../../../../core/widgets/insights_card.dart';
 import 'widgets/report_dialog.dart';
 
 class MapView extends StatefulWidget {
@@ -46,6 +49,11 @@ class _MapViewState extends State<MapView> {
   int? _filterMonth;
   double _currentZoom = 15.0;
 
+  // ── Predictive Context Engine ──
+  Map<String, dynamic>? _safetyScoreData;
+  List<Map<String, dynamic>> _insightsData = [];
+  bool _showInsightsPanel = false;
+
   @override
   void initState() {
     super.initState();
@@ -61,6 +69,29 @@ class _MapViewState extends State<MapView> {
 
     TutorialService.triggerTutorialNotifier.addListener(_tutorialListener);
     ReportService.reportsUpdatedNotifier.addListener(_reportsUpdatedListener);
+  }
+
+  /// Carga el Safety Score y los Insights para la posición actual del usuario.
+  Future<void> _loadPredictiveData() async {
+    if (_realUserPosition == null) return;
+    try {
+      final score = await PredictiveService.fetchSafetyScore(
+        lat: _realUserPosition!.latitude,
+        lng: _realUserPosition!.longitude,
+      );
+      final insights = await PredictiveService.fetchContextInsights(
+        lat: _realUserPosition!.latitude,
+        lng: _realUserPosition!.longitude,
+      );
+      if (mounted) {
+        setState(() {
+          _safetyScoreData = score;
+          _insightsData = insights;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error cargando datos predictivos: $e');
+    }
   }
 
   Future<void> _loadPuntosHistorial() async {
@@ -286,6 +317,9 @@ class _MapViewState extends State<MapView> {
           }
           _isLoading = false;
         });
+
+        // Cargar datos predictivos cuando se obtiene la posición
+        _loadPredictiveData();
 
         Future.delayed(const Duration(milliseconds: 500), () {
           if (!mounted) return;
@@ -1167,6 +1201,33 @@ class _MapViewState extends State<MapView> {
                     ),
                   ),
                 ),
+
+                // ── SAFETY SCORE GAUGE (bottom-right) ──
+                if (_safetyScoreData != null && !_isLoading)
+                  Positioned(
+                    bottom: 24,
+                    right: 12,
+                    width: 170,
+                    child: GestureDetector(
+                      onTap: () => setState(() => _showInsightsPanel = !_showInsightsPanel),
+                      child: SafetyScoreGauge(
+                        score: (_safetyScoreData!['score'] as num?)?.toDouble() ?? 65.0,
+                        nivel: _safetyScoreData!['nivel'] ?? 'precaucion',
+                        turno: _safetyScoreData!['turno_actual'] ?? '',
+                        mensaje: _safetyScoreData!['mensaje'] ?? '',
+                        size: 110,
+                      ),
+                    ),
+                  ),
+
+                // ── INSIGHTS PANEL (expandable) ──
+                if (_showInsightsPanel && _insightsData.isNotEmpty)
+                  Positioned(
+                    bottom: 200,
+                    left: 16,
+                    right: 16,
+                    child: InsightsCard(insights: _insightsData),
+                  ),
               ],
             ),
           ),
