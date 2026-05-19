@@ -1,428 +1,586 @@
 ![Logo UPT](media/image17.png)
 
 **UNIVERSIDAD PRIVADA DE TACNA**  
-**FACULTAD DE INGENIERÍA**  
-**Escuela Profesional de Ingeniería de Sistemas**  
+**FACULTAD DE INGENIERIA**  
+**Escuela Profesional de Ingenieria de Sistemas**  
 
-**Proyecto: "SGEO — Sistema de Geolocalización de Inseguridad Ciudadana con Machine Learning Predictivo y Espacial"**  
+**Proyecto: "SGEO - Sistema de Geolocalizacion de Inseguridad Ciudadana con Analisis Predictivo y Espacial"**  
 
-**Curso:** Construcción De Software II  
+**Curso:** Construccion De Software II  
 **Docente:** Alberto Johnatan Flor Rodriguez  
 
 **Integrante:**  
 - Piero Alexander Paja de la Cruz (2020067576)
 
-**Tacna -- Perú**  
+**Tacna -- Peru**  
 **2026**  
 
 ---
 
 **Documento de Arquitectura de Software (SAD)**  
-**Versión:** 1.0  
-
-### CONTROL DE VERSIONES
-
-| Versión | Hecha por | Revisada por | Aprobada por | Fecha      | Motivo                             |
-|---------|-----------|--------------|--------------|------------|------------------------------------|
-| 1.0     | PP        | PP           | AF           | 13/03/2026 | Creación Inicial - Contexto SGEO   |
+**Version:** 3.0 (Alineacion Integral estandar IEEE 42010)
 
 ---
 
-## ÍNDICE GENERAL
+# INDICE GENERAL
 
-1. [Introducción](#1-introducción)
-2. [Representación Arquitectónica](#2-representación-arquitectónica)
-3. [Objetivos y Restricciones Arquitectónicas](#3-objetivos-y-restricciones-arquitectónicas)
-4. [Vista de Casos de Uso](#4-vista-de-casos-de-uso)
-5. [Vista Lógica](#5-vista-lógica)
-6. [Vista de Implementación](#6-vista-de-implementación)
-7. [Vista de Procesos](#7-vista-de-procesos)
-8. [Vista de Despliegue](#8-vista-de-despliegue)
-9. [Calidad del Software](#9-calidad-del-software)
-10. [Decisiones Arquitectónicas](#10-decisiones-arquitectónicas)
-11. [Tamaño y Rendimiento](#11-tamaño-y-rendimiento)
+- [1. Introduccion](#1-introduccion)
+  - [1.1 Proposito](#11-proposito)
+  - [1.2 Alcance](#12-alcance)
+  - [1.3 Definiciones, Siglas y Abreviaturas](#13-definiciones-siglas-y-abreviaturas)
+  - [1.4 Referencias](#14-referencias)
+  - [1.5 Organizacion del documento](#15-organizacion-del-documento)
+- [2. Representacion Arquitectonica](#2-representacion-arquitectonica)
+  - [2.1 Modelo de Vistas](#21-modelo-de-vistas)
+  - [2.2 Patrones Arquitectonicos Aplicados](#22-patrones-arquitectonicos-aplicados)
+  - [2.3 Tecnologias Utilizadas](#23-tecnologias-utilizadas)
+- [3. Objetivos y Restricciones Arquitectonicas](#3-objetivos-y-restricciones-arquitectonicas)
+  - [3.1 Objetivos de Software](#31-objetivos-de-software)
+  - [3.2 Restricciones Tecnologicas](#32-restricciones-tecnologicas)
+  - [3.3 Priorizacion de Requerimientos](#33-priorizacion-de-requerimientos)
+- [4. Vista de Casos de Uso](#4-vista-de-casos-de-uso)
+  - [4.1 Diagrama de Casos de Uso General](#41-diagrama-de-casos-de-uso-general)
+  - [4.2 Actores del Sistema](#42-actores-del-sistema)
+  - [4.3 Especificacion de Casos de Uso](#43-especificacion-de-casos-de-uso)
+- [5. Vista Logica](#5-vista-logica)
+  - [5.1 Arquitectura de Alto Nivel](#51-arquitectura-de-alto-nivel)
+  - [5.2 Diagrama de Paquetes/Subsistemas](#52-diagrama-de-paquetessubsistemas)
+  - [5.3 Diagramas de Secuencia](#53-diagramas-de-secuencia)
+  - [5.4 Diagrama de Clases del Dominio](#54-diagrama-de-clases-del-dominio)
+- [6. Vista de Implementacion](#6-vista-de-implementacion)
+  - [6.1 Diagrama de Componentes](#61-diagrama-de-componentes)
+  - [6.2 Estructura de Directorios](#62-estructura-de-directorios-repositorio-logico)
+  - [6.3 Configuracion de Servicios](#63-configuracion-de-servicios)
+- [7. Vista de Procesos](#7-vista-de-procesos)
+  - [7.1 Arquitectura Basada en Roles (Flujo RBAC)](#71-arquitectura-basada-en-roles-flujo-rbac)
+  - [7.2 Procesos Criticos del Sistema](#72-procesos-criticos-del-sistema-analitica-de-prediccion-score)
+- [8. Vista de Despliegue](#8-vista-de-despliegue)
+  - [8.1 Diagrama de Despliegue Empresarial](#81-diagrama-de-despliegue-empresarial)
+  - [8.2 Especificaciones Tecnicas](#82-especificaciones-tecnicas)
+- [9. Calidad del Software](#9-calidad-del-software)
+- [10. Decisiones Arquitectonicas](#10-decisiones-arquitectonicas)
+- [11. Tamanio y Rendimiento](#11-tamanio-y-rendimiento)
 
 ---
 
-## 1. Introducción
+## 1. Introduccion
 
-### 1.1. Propósito
-El presente Documento de Arquitectura de Software (SAD) describe la arquitectura técnica del **Sistema SGEO**, una plataforma predictiva de inseguridad ciudadana. Sirve como un plano arquitectónico exhaustivo (incluyendo diagramas UML, APIs y modelos lógicos) para comunicar las decisiones tecnológicas al equipo de desarrollo, a la plana docente de la UPT y a los stakeholders (Policía Nacional y Municipalidad).
+### 1.1 Proposito
+Este Documento de Arquitectura de Software (SAD) provee una descripcion abstracta y exhaustiva de la arquitectura del Sistema de Geolocalizacion de Inseguridad Ciudadana (SGEO). Define las estructuras, interfaces y componentes que conforman la aplicacion, sirviendo como guia estricta para el equipo de desarrollo, mantenimiento y validacion. Su enfoque asegura el cumplimiento normativo acorde a las especificaciones trazadas en el Software Requirements Specification (SRS).
 
-### 1.2. Alcance
-Cubre el diseño arquitectónico del **Frontend** (Aplicación Móvil en Flutter), el **Backend** (API RESTful en FastAPI con Machine Learning), la **Capa de Persistencia** (MongoDB Atlas) y los **Servicios de Nube** externos (Firebase Cloud Messaging).
+### 1.2 Alcance
+El documento cubre el diseno logico, la persistencia, la logica de negocio en el backend (FastAPI), la implementacion movil (Flutter) y los flujos de integracion de analitica de datos (DBSCAN y ETL). No incluye el codigo fuente explicito, sino la abstraccion de los modulos, las reglas de integracion y el despliegue en infraestructura de produccion.
 
-### 1.3. Definiciones, Siglas y Abreviaturas
+### 1.3 Definiciones, Siglas y Abreviaturas
 - **SAD:** Software Architecture Document.
-- **SGEO:** Sistema de Geolocalización de Inseguridad Ciudadana.
-- **DBSCAN:** Algoritmo de clustering espacial basado en densidad.
-- **MVC/MVT:** Patrones de arquitectura Model-View-Controller.
-- **FCM:** Firebase Cloud Messaging.
+- **SRS:** Software Requirements Specification.
+- **DBSCAN:** Density-Based Spatial Clustering of Applications with Noise. Algoritmo no parametrico para clustering.
+- **ETL:** Extract, Transform, Load. Proceso para importar origenes historicos (SIDPOL).
+- **JWT:** JSON Web Token. Estructura de autenticacion de estado descentralizado.
+- **FCM:** Firebase Cloud Messaging. Plataforma para envio de notificaciones push.
+- **RBAC:** Role-Based Access Control. Manejo de dominios de autorizacion.
 
-### 1.4. Referencias
-- Patrones de Arquitectura Empresarial (Martin Fowler).
-- Documentación Oficial de FastAPI (Asynchronous Python).
-- Documentación del Framework Flutter (Dart).
+### 1.4 Referencias
+- IEEE Std 42010-2011: Systems and software engineering - Architecture description.
+- Kruchten, P. (1995). The 4+1 View Model of Architecture.
+- Documentacion oficial de FastAPI (Uvicorn, Starlette).
+- Documentacion de MongoDB (Geospatial Queries, BSON).
 
----
-
-## 2. Representación Arquitectónica
-
-### 2.1. Modelo de Vistas
-Se ha documentado el sistema utilizando un **Enfoque de Arquitectura en Capas (Layered Architecture)** y un modelo tipo C4 modificado para reflejar la estructura real del repositorio:
-1. **Vista de Contexto / Casos de Uso:** Relación de los actores (Policía, Administrador, Ciudadano) con el sistema central de SGEO y los servicios en la nube.
-2. **Vista Lógica (Contenedores):** Separación en módulos independientes: Frontend (Aplicación Móvil en Flutter), Backend (API REST en FastAPI) y Persistencia (MongoDB Atlas).
-3. **Vista de Implementación (Componentes):** Cómo el código fuente está agrupado en el repositorio (Ej: directorios `core`, `roles` en Flutter y los `Routers` en Python).
-4. **Vista de Procesos:** Orquestación y concurrencia asíncrona, documentando cómo FastAPI procesa la Inteligencia Artificial (DBSCAN y ML) en tareas en segundo plano.
-5. **Vista de Despliegue:** Mapa de la infraestructura técnica donde se ejecuta el código en producción (PaaS Railway, AWS y Firebase).
-
-### 2.2. Patrones Arquitectónicos Aplicados
-- **Cliente-Servidor (Client-Server):** Desacoplamiento total entre la App Móvil (Cliente) y la API Central (Servidor).
-- **Clean Architecture (Frontend):** Separación en Flutter entre `core`, `features`, `theme` y `roles`.
-- **Arquitectura Basada en Eventos:** Uso de *Push Notifications* y Tareas en Segundo Plano (*BackgroundTasks* en FastAPI) para no bloquear el `Event Loop`.
-
-### 2.3. Tecnologías Utilizadas
-- **Frontend:** Flutter v3+, Dart, `flutter_map`, `fl_chart`.
-- **Backend:** Python 3.11+, FastAPI, Uvicorn, Scikit-Learn (ML), Pandas.
-- **Base de Datos:** MongoDB Atlas (M0/M10 Cluster) con índices `2dsphere`.
-- **Integraciones:** Firebase Admin SDK, Bcrypt.
+### 1.5 Organizacion del documento
+El documento adopta el Modelo de Vistas 4+1 (Logica, Implementacion, Procesos, Despliegue y Casos de Uso) estandarizado, complementado con secciones obligatorizadas para el aseguramiento de la calidad y justificacion de decisiones arquitectonicas.
 
 ---
 
-## 3. Objetivos y Restricciones Arquitectónicas
+## 2. Representacion Arquitectonica
 
-### 3.1. Objetivos de Software
-- **Alta Cohesión y Bajo Acoplamiento:** Cada módulo del Backend (Auth, Dashboards, Machine Learning, Reportes) opera de manera independiente a través de Routers de FastAPI.
-- **Latencia Mínima Espacial:** Las consultas geográficas (`$near`) deben responder en milisegundos incluso con miles de reportes.
+### 2.1 Modelo de Vistas
+SGEO se fundamenta en un modelo de capas acoplado al estandar 4+1 de Kruchten:
+- **Vista de Casos de Uso:** Identifica como los actores interactuan con el entorno y sus barreras (Auth).
+- **Vista Logica:** Abstrae las colecciones MongoDB a Modelos Pydantic y las transacciones hacia los Servicios.
+- **Vista de Implementacion:** Divide el codigo fuente entre los subdirectorios cliente (`lib/` en Dart) y servidor (`backend/` en Python).
+- **Vista de Procesos:** Detalla la ejecucion de hilos en asincronia paralela (ej. `BackgroundTasks` en Python para modelos de machine learning).
+- **Vista de Despliegue:** Ubicacion de contenedores Docker instanciados sobre Railway hacia el cluster de Atlas.
 
-### 3.2. Restricciones Tecnológicas
-- **Lenguaje:** Obligatoriedad de usar Python en el Backend para garantizar la compatibilidad matemática con las librerías `scikit-learn` y `pandas`.
-- **Persistencia:** Requerimiento estricto de base de datos NoSQL con soporte geoespacial nativo (MongoDB).
-- **Costo:** Maximizar el uso de capa gratuita (PaaS como Railway y MongoDB Atlas) para mantener el presupuesto por debajo de S/ 2,000 mensuales en infraestructura.
+### 2.2 Patrones Arquitectonicos Aplicados
+- **Arquitectura Cliente-Servidor (REST):** Protocolo fundamental de estado representacional con verbos HTTP estrictos.
+- **Arquitectura N-Capas (N-Tier):** En el backend se segrega la presentacion (Routers), la logica de dominio (Services) y el acceso a datos (Repositorios PyMongo).
+- **Patron Observer/Pub-Sub (FCM):** Para la distribucion masiva de las alertas de Geofencing hacia receptores flutter registrados.
+
+### 2.3 Tecnologias Utilizadas
+- **Backend:** Python 3.10+, FastAPI, Pydantic, Passlib, Uvicorn.
+- **Analitica de Datos:** Scikit-Learn, Pandas, Numpy.
+- **Base de Datos:** MongoDB Atlas (Capa M0/M10, Indices 2dsphere).
+- **Frontend:** Dart 3.x, Flutter, Provider/Riverpod (State Management), flutter_map.
+- **Infraestructura:** Docker, Railway, Firebase Admin SDK.
+
+---
+
+## 3. Objetivos y Restricciones Arquitectonicas
+
+### 3.1 Objetivos de Software
+- **Bajo Acoplamiento Backend:** Modulos como `auth`, `reportes` y `estadisticas` se estructuran en `APIRouter` independientes.
+- **Alta Tolerancia de I/O:** Mediante concurrencia asincrona (async/await), el servicio debe despachar transacciones a BD sin bloquear el Event Loop.
+
+### 3.2 Restricciones Tecnologicas
+- **Global Interpreter Lock (GIL):** Python impide verdadera ejecucion multiproceso en una sola instancia. Los calculos pesados de DBSCAN deben derivarse a tareas ejecutadas con `BackgroundTasks` de FastAPI o procesos desacoplados.
+- **Consumo Restringido en Cliente:** La integracion geoespacial en moviles (`Geolocator`) impacta la bateria; se restringe el sondeo a tiempos fijos parametrizados o solicitud directa de la UI.
+
+### 3.3 Priorizacion de Requerimientos
+1. Persistencia de reportes geoespaciales inmutables.
+2. Autorizacion estricta (JWT + RBAC).
+3. Resilencia temporal frente a calculos espaciales defectuosos en etapa ML.
 
 ---
 
 ## 4. Vista de Casos de Uso
 
-### 4.1. Diagrama de Casos de Uso General
+### 4.1 Diagrama de Casos de Uso General
+
 ```plantuml
 @startuml
 skinparam shadowing false
-skinparam roundcorner 10
-skinparam dpi 150
-skinparam defaultFontName Segoe UI
-skinparam backgroundColor #F8FAFC
-skinparam ArrowColor #6D28D9
-skinparam UsecaseBackgroundColor #F3E8FF
-skinparam UsecaseBorderColor #7C3AED
-skinparam ActorBackgroundColor #FFFFFF
-skinparam ActorBorderColor #8B5CF6
-skinparam PackageBackgroundColor #FFFFFF
-skinparam PackageBorderColor #334155
-
 left to right direction
-actor "Ciudadano" as C
-actor "Policía" as P
-actor "Administrador" as A
 
-package "App SGEO" {
-  usecase "Reportar Crimen GPS" as UC1
-  usecase "Ver Mapa de Calor" as UC2
-  usecase "Recibir Alertas Push" as UC3
-  
-  usecase "Validar/Rechazar Reportes a 3km" as UC4
-  usecase "Monitorear su Cuadrante" as UC5
-  
-  usecase "Analizar Dashboards (fl_chart)" as UC6
-  usecase "Generar Predicciones ML" as UC7
-  usecase "Visualizar Data SIDPOL" as UC8
+actor "Usuario Anonimo" as Anon
+actor Ciudadano
+actor Policia
+actor Administrador
+
+package "SGEO Platform Services" {
+  usecase "Autenticacion Central (Login/Registro)" as UC_Auth
+  usecase "Emitir Reporte Incidente" as UC_Rep
+  usecase "Visualizar Capas de Riesgo" as UC_Map
+  usecase "Consultar Score de Zona" as UC_Score
+  usecase "Intervenir Evento (Aprobar/Declinar)" as UC_Eval
+  usecase "Visualizar Tableros Administrativos" as UC_Dash
+  usecase "Carga de Registros Historicos (SIDPOL)" as UC_ETL
 }
 
-C --> UC1
-C --> UC2
-C --> UC3
+Anon --> UC_Auth
+Ciudadano --> UC_Rep
+Ciudadano --> UC_Map
+Ciudadano --> UC_Score
+Policia --> UC_Map
+Policia --> UC_Eval
+Administrador --> UC_Dash
+Administrador --> UC_ETL
 
-P --> UC4
-P --> UC5
-
-A --> UC6
-A --> UC7
-A --> UC8
-
-UC4 .> UC1 : "Audita"
-UC7 .> UC8 : "Consume Data"
+UC_Score .> UC_Auth : include
+UC_Rep .> UC_Auth : include
+UC_Eval .> UC_Auth : include
 @enduml
 ```
+
+### 4.2 Actores del Sistema
+- **Usuario Anonimo:** Solo posee persistencia base interactuando con metodos POST para registro.
+- **Ciudadano (Rol 1):** Acceso GET a datos procesados; POST limitado a su propiedad sobre "ReporteCiudadano".
+- **Policia (Rol 2):** Permiso de lectura geolocalizada `$near` y modificacion (PATCH) de estado de alerta.
+- **Administrador (Rol 3):** Visibilidad global de los flujos de lectura transversal; ejecucion del ETL.
+
+### 4.3 Especificacion de Casos de Uso
+Referirse al documento SRS, Seccion IV.c para la especificacion exhaustiva tabulada.
 
 ---
 
-## 5. Vista Lógica
+## 5. Vista Logica
 
-### 5.1. Arquitectura de Alto Nivel
+### 5.1 Arquitectura de Alto Nivel
+SGEO aisla la logica de persistencia empleando el patron de Capas. La capa front (Flutter) ignora absolutamente toda interaccion BSON, enlazada netamente mediante interfaces JSON sobre HTTPS provistas por Pydantic.
+
 ```plantuml
 @startuml
 skinparam shadowing false
-skinparam roundcorner 10
-skinparam dpi 150
-skinparam defaultFontName Segoe UI
-skinparam backgroundColor #F8FAFC
-skinparam ArrowColor #334155
-skinparam PackageBackgroundColor #EEF2FF
-skinparam PackageBorderColor #4F46E5
-skinparam ComponentBackgroundColor #FFFFFF
-skinparam ComponentBorderColor #6366F1
-skinparam componentStyle rectangle
-
-package "Capa de Presentación (Flutter)" {
-  [Auth View]
-  [Citizen Map View]
-  [Police Tactical View]
-  [Admin Dashboard View]
+node "Client Application (Flutter)" {
+  [UI Widgets] --> [Services Controllers]
+  [Services Controllers] --> [HTTP Client]
 }
-
-package "Capa de Lógica de Negocio (FastAPI)" {
-  [Auth Service (JWT)]
-  [Reports Service (CRUD)]
-  [AI Prediction Service]
-  [Geo Spatial Service (DBSCAN)]
+node "API Gateway & Logic (FastAPI)" {
+  [HTTP Client] ..> [FastAPI Routers] : HTTPS/JSON
+  [FastAPI Routers] --> [Auth & RBAC Middleware]
+  [Auth & RBAC Middleware] --> [Business Services]
+  [Business Services] --> [Machine Learning Core]
+  [Business Services] --> [PyMongo Database Access]
 }
-
-package "Capa de Datos" {
-  [MongoDB Driver (PyMongo)]
+database "MongoDB Atlas" {
+  [PyMongo Database Access] ..> [BSON Collections] : MQL
 }
-
-[Auth View] --> [Auth Service (JWT)]
-[Citizen Map View] --> [Geo Spatial Service (DBSCAN)]
-[Police Tactical View] --> [Reports Service (CRUD)]
-[Admin Dashboard View] --> [AI Prediction Service]
-[Auth Service (JWT)] --> [MongoDB Driver (PyMongo)]
-[Reports Service (CRUD)] --> [MongoDB Driver (PyMongo)]
-[AI Prediction Service] --> [MongoDB Driver (PyMongo)]
 @enduml
 ```
 
-### 5.2. Modelo de Base de Datos (Diagrama de Clases)
+### 5.2 Diagrama de Paquetes/Subsistemas
+
 ```plantuml
 @startuml
 skinparam shadowing false
-skinparam roundcorner 10
-skinparam dpi 150
-skinparam defaultFontName Segoe UI
-skinparam backgroundColor #FFFBF5
-skinparam ArrowColor #6D28D9
-skinparam ClassBackgroundColor #FFFFFF
-skinparam ClassBorderColor #8B5CF6
-skinparam ClassFontColor #2E1065
+
+package "backend.api" {
+  [auth_router]
+  [ciudadano_router]
+  [policia_router]
+  [admin_router]
+}
+
+package "backend.services" {
+  [jwt_service]
+  [reporte_service]
+  [firebase_service]
+}
+
+package "backend.ia" {
+  [motor_ia_zonas_riesgo]
+  [predictive_context_engine]
+  [etl_historico_processor]
+}
+
+package "backend.models" {
+  [pydantic_schemas]
+}
+
+[auth_router] --> [jwt_service]
+[ciudadano_router] --> [reporte_service]
+[policia_router] --> [motor_ia_zonas_riesgo]
+[admin_router] --> [etl_historico_processor]
+
+[reporte_service] --> [pydantic_schemas]
+[motor_ia_zonas_riesgo] --> [firebase_service]
+@enduml
+```
+
+### 5.3 Diagramas de Secuencia
+
+#### 5.3.1 Flujo de Autenticacion JWT
+```plantuml
+@startuml
+skinparam shadowing false
+participant "Flutter UI" as UI
+participant "AuthRouter" as Router
+participant "AuthService" as Service
+database "MongoDB" as DB
+
+UI -> Router: POST /login {email, password}
+Router -> Service: verify_credentials(email, pw)
+Service -> DB: find_one({"email": email})
+DB --> Service: Documento Usuario BSON
+Service -> Service: match_bcrypt_hash(pw, hash_db)
+alt Valid Password
+    Service -> Service: encode_jwt(sub=id, rol=rol)
+    Service --> Router: Token string
+    Router --> UI: 200 OK {access_token, token_type}
+else Invalid Password
+    Service --> Router: HTTPException 401
+    Router --> UI: 401 Unauthorized
+end
+@enduml
+```
+
+#### 5.3.2 Flujo DBSCAN y Notificaciones FCM
+```plantuml
+@startuml
+skinparam shadowing false
+participant "PoliciaRouter" as Router
+participant "ReporteService" as Service
+participant "BackgroundTasks" as BG
+participant "MotorIA (DBSCAN)" as Motor
+participant "FirebaseService" as FCM
+database "MongoDB" as DB
+
+Router -> Service: PATCH /confirmar_reporte/{id}
+Service -> DB: update_one(id, estado="confirmado")
+DB --> Service: UpdateResult (Acknowledge)
+Service -> BG: add_task(recalcular_zonas_riesgo)
+Service --> Router: 200 OK (Desbloquea Event Loop)
+Router --> "Cliente Policia": "Reporte validado"
+
+== Tarea Asincrona en Paralelo ==
+BG -> Motor: invocar_clustering()
+activate Motor
+Motor -> DB: fetch all = reportes("confirmados") + historico(SIDPOL)
+DB --> Motor: Pandas DataFrame / List[Dict]
+Motor -> Motor: fit_predict(haversine, epsilon, min_samples)
+Motor -> Motor: generate_geo_polygons()
+Motor -> DB: bulk_write (ZonasRiesgo)
+Motor -> FCM: send_multicast(topic="zonas_g", payload)
+deactivate Motor
+@enduml
+```
+
+#### 5.3.3 Flujo Integracion Analitica ETL (SIDPOL)
+```plantuml
+@startuml
+skinparam shadowing false
+participant "AdminRouter" as Router
+participant "ETLService" as ETL
+participant "Sistema Archivos" as FS
+database "MongoDB" as DB
+
+Router -> ETL: POST /api/admin/etl_upload (CSV/JSON)
+ETL -> FS: persist_temp_file()
+FS --> ETL: File pointer
+ETL -> ETL: Pandas.read_csv()
+ETL -> ETL: clean_data() -> map_to_geojson()
+ETL -> DB: insert_many(Documentos SIDPOL)
+DB --> ETL: bulk_result
+ETL -> Router: Reporte finalizacion (count)
+@enduml
+```
+
+### 5.4 Diagrama de Clases del Dominio
+
+```plantuml
+@startuml
+skinparam shadowing false
+skinparam classAttributeIconSize 0
 
 class Usuario {
-  +ObjectId id
-  +String nombre
-  +String email
-  +String password_hash
-  +String rol
-  +GeoJSON ubicacion_default
+  + ObjectId _id
+  + String correo
+  + String password_hash
+  + String rol
+  + String nombre_completo
+  + DateTime fecha_creacion
+  + AuthResponse generar_dto()
 }
 
 class ReporteCiudadano {
-  +ObjectId id
-  +String sub_tipo
-  +GeoJSON ubicacion
-  +String estado (pendiente, confirmado)
-}
-
-class EstadisticaSidpol {
-  +int anio
-  +int mes
-  +String distrito
-  +int cantidad
+  + ObjectId _id
+  + ObjectId emisor_id
+  + GeoJSON Point ubicacion
+  + String descripcion
+  + String estado
+  + DateTime timestamp
+  + Boolean verificar_caducidad()
 }
 
 class ZonaRiesgo {
-  +GeoJSON centroide
-  +int radio_metros
-  +String nivel_riesgo
+  + ObjectId _id
+  + GeoJSON Point centroide
+  + Float radio_metros
+  + Float puntaje_riesgo
+  + List<ObjectId> crimenes_relacionados
+  + DateTime ultima_actualizacion
 }
 
-Usuario "1" -- "0..*" ReporteCiudadano
-EstadisticaSidpol "1" ..> "1" ZonaRiesgo : alimenta ML
+class ConfiguracionSistema {
+  + Float dbscan_epsilon_km
+  + Integer dbscan_min_samples
+  + Integer horas_vigencia_alerta
+}
+
+Usuario "1" --> "0..*" ReporteCiudadano : emite
+ReporteCiudadano "1..*" --> "1" ZonaRiesgo : alimenta calculo
 @enduml
 ```
 
 ---
 
-## 6. Vista de Implementación
+## 6. Vista de Implementacion
 
-### 6.1. Estructura de Directorios del Repositorio
-**Frontend (Flutter):**
-```
-sgeo_pp/
-├── lib/
-│   ├── core/         # Servicios base, HTTP, Utils, Theme
-│   ├── features/     # Auth, Onboarding (Módulos transversales)
-│   ├── roles/        # Separación estricta (admin/, citizen/, police/)
-│   └── main.dart     # Punto de entrada y Router principal
-```
+### 6.1 Diagrama de Componentes
 
-**Backend (Python/FastAPI):**
-```
-backend/
-├── api/
-│   ├── auth.py       # JWT Login
-│   ├── ciudadano.py  # Rutas de civil
-│   ├── admin.py      # Rutas de administrador e Inteligencia Artificial
-│   └── policia.py    # Rutas de validación
-├── models/           # Pydantic schemas (validación estricta de JSON)
-├── scripts_iniciales/ # setup_db.py y scripts de ETL para SIDPOL
-├── database.py       # Conexión PyMongo singleton
-└── main.py           # Instancia FastAPI y middleware CORS
-```
-
-### 6.2. Diagrama de Componentes
 ```plantuml
 @startuml
 skinparam shadowing false
-skinparam roundcorner 10
-skinparam dpi 150
-skinparam defaultFontName Segoe UI
-skinparam backgroundColor #F8FAFC
-skinparam ArrowColor #334155
-skinparam ComponentBackgroundColor #EEF2FF
-skinparam ComponentBorderColor #4F46E5
-skinparam DatabaseBackgroundColor #ECFDF5
-skinparam DatabaseBorderColor #047857
 
-component "App Móvil (iOS/Android)" as App {
-  [Dio HTTP Client]
-  [Geolocator]
+package "Entorno Cliente Movil" {
+  component [Flutter APK/AAB] as UI
 }
 
-component "Backend Server (Railway)" as Server {
-  [Uvicorn ASGI]
-  [FastAPI Routers]
-  [Scikit-Learn Engine]
+package "Entorno Produccion Backend (Docker)" {
+  component [Uvicorn ASGI Server] as Uvicorn
+  component [FastAPI App] as FastAPI
+  component [Routers] as Routers
+  component [Services] as Services
+  component [Scikit-Learn ML] as ML
 }
 
-component "Database (MongoDB Atlas)" as DB {
-  [2dsphere Indexes]
-}
+database "MongoDB Atlas Cluster" as Mongo
+cloud "Google Firebase" as Firebase
 
-[Dio HTTP Client] --> [Uvicorn ASGI] : HTTPS (REST)
-[FastAPI Routers] --> [2dsphere Indexes] : Motor PyMongo
-[Scikit-Learn Engine] --> [2dsphere Indexes] : Fetch Pandas DataFrame
+UI <--> Uvicorn : REST API / JWT
+Uvicorn --> FastAPI
+FastAPI --> Routers
+FastAPI --> Services
+FastAPI --> ML
+Services --> Mongo : PyMongo (Motor)
+ML --> Mongo : Lectura/Escritura Masiva
+Services --> Firebase : Firebase Admin SDK
 @enduml
 ```
+
+
+### 6.2 Estructura de Directorios (Repositorio Logico)
+
+```text
+sgeo_pp/
+|-- android/                     # Dependencias Gradle / Compilacion nativa
+|-- ios/                         # Workspace Xcode para entorno Apple
+|-- lib/                         # Codigo Flutter (Client Logic)
+|   |-- core/                    # Logica transversal HTTP, Config, Routing
+|   |-- features/                # Utilidades de UI compartidas
+|   |-- roles/                   # UI dividida por Modulos RBAC
+|   |-- firebase_options.dart    # Configuraciones Firebase Client SDK
+|   +-- main.dart                # Setup inicial y providers de Dart
+|-- backend/                     # Microservicio, IA y Data
+|   |-- scripts_iniciales/       # Procesos ETL y configuracion base (SIDPOL)
+|   |-- firebase_service.py      # Interfaz backend para Firebase Cloud Messaging
+|   |-- main.py                  # Instancia principal FastAPI y Routers
+|   |-- motor_ia_zonas_riesgo.py # Logica clustering espacial DBSCAN
+|   |-- predictive_context_engine.py # Analisis heuristico temporal
+|   |-- predictive_routes.py     # Controladores Geoespaciales
+|   |-- requirements.txt         # Dependencias Pip (FastAPI, PyMongo, scikit-learn)
+|   +-- Procfile                 # Comandos para inicializacion en Railway
++-- pubspec.yaml                 # Core dependencias de interface (Flutter)
+```
+
+### 6.3 Configuracion de Servicios
+- **CORS:** Habilitado irrestrictamente para origenes de desarrollo movil en entorno Dev; restringido a direcciones de confianza en Produccion.
+- **Variables de Entorno (.env):** `MONGO_URI`, `JWT_SECRET_KEY`, `ALGORITHM`, `ACCESS_TOKEN_EXPIRE_MINUTES`, credenciales JSON de Firebase `sgeo-firebase-adminsdk.json`.
 
 ---
 
 ## 7. Vista de Procesos
 
-### 7.1. Diagrama de Actividad: Generación de Zonas Rojas (DBSCAN)
-El procesamiento espacial corre en background para no interrumpir al oficial de policía que acaba de validar un incidente.
+### 7.1 Arquitectura Basada en Roles (Flujo RBAC)
+
 ```plantuml
 @startuml
 skinparam shadowing false
-skinparam roundcorner 10
-skinparam dpi 150
-skinparam defaultFontName Segoe UI
-skinparam backgroundColor #F8FAFC
-skinparam ArrowColor #0F766E
-skinparam ActivityBackgroundColor #ECFEFF
-skinparam ActivityBorderColor #0F766E
-skinparam ActivityDiamondBackgroundColor #FFFFFF
-skinparam ActivityDiamondBorderColor #0F766E
+actor Cliente
+participant "FastAPI Request" as API
+participant "AuthMiddleware\n(Depends)" as MID
+participant "BusinessService" as SRV
 
-|Oficial de Policía|
-start
-:Presiona "Validar Incidente";
-|Backend (FastAPI)|
-:Actualiza estado a "confirmado" en MongoDB;
-fork
-  :Responde "200 OK" al instante al Oficial;
-fork again
-  |Backend (Background Task)|
-  :Obtiene todos los incidentes confirmados (30 días);
-  :Ejecuta algoritmo DBSCAN (eps=400m);
-  :Calcula nuevos centroides y radios;
-  :Guarda colección 'zonas_riesgo';
-  if (Hubo un cambio severo de zona?) then (Sí)
-    |Firebase|
-    :Emitir Push Notification "Peligro en zona";
-  endif
-end fork
-|Oficial de Policía|
-stop
+Cliente -> API: Endpoint protegido (Header: Bearer Token)
+API -> MID: get_current_active_user()
+MID -> MID: decodificar(JWT)
+alt Token Valido y Rol Permitido
+    MID --> API: Pydantic User Object
+    API -> SRV: Ejecutar Logica
+    SRV --> Cliente: DTO Response 200
+else Token Caducado o Rol Inaccesible
+    MID --> API: Raise HTTPException
+    API --> Cliente: 401 / 403 Forbidden
+end
 @enduml
 ```
+
+### 7.2 Procesos Criticos del Sistema: Analitica de Prediccion (Score)
+
+El proceso de estimacion temporal cruza distancias metricas hacia puntos criticos confirmados con variacion temporal. Requiere alta fidelidad en el query NoSQL `$near`. Este metodo se acompana de una metrica heuristica calculada en `predictive_context_engine.py`.
 
 ---
 
 ## 8. Vista de Despliegue
 
-### 8.1. Arquitectura Cloud e Infraestructura
+### 8.1 Diagrama de Despliegue
+
 ```plantuml
 @startuml
 skinparam shadowing false
-skinparam roundcorner 10
-skinparam dpi 150
-skinparam defaultFontName Segoe UI
-skinparam backgroundColor #F8FAFC
-skinparam ArrowColor #334155
-skinparam NodeBackgroundColor #EEF2FF
-skinparam NodeBorderColor #4F46E5
-skinparam ComponentBackgroundColor #FFFFFF
-skinparam ComponentBorderColor #6366F1
-skinparam DatabaseBackgroundColor #ECFDF5
-skinparam DatabaseBorderColor #047857
-skinparam CloudBackgroundColor #FEF3C7
-skinparam CloudBorderColor #B45309
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
 
-node "Dispositivos Móviles" {
-  [Smartphone Android (APK)]
-  [Smartphone iPhone (IPA)]
+skinparam node {
+  BackgroundColor #EEF2FF
+  BorderColor #6366F1
+  FontColor #1E1B4B
+  BorderThickness 2
 }
 
-node "Infraestructura Cloud (PaaS)" {
-  component "Railway App Service" {
-    [FastAPI Docker Container]
-    [Python 3.11 Environment]
+skinparam artifact {
+  BackgroundColor #FFFFFF
+  BorderColor #818CF8
+  FontColor #1E1B4B
+}
+
+skinparam database {
+  BackgroundColor #FEF3C7
+  BorderColor #D97706
+  FontColor #451A03
+}
+
+skinparam cloud {
+  BackgroundColor #FFF7ED
+  BorderColor #EA580C
+  FontColor #431407
+}
+
+skinparam component {
+  BackgroundColor #EDE9FE
+  BorderColor #7C3AED
+  FontColor #1E1B4B
+}
+
+skinparam arrow {
+  Color #6366F1
+  FontColor #374151
+  FontSize 11
+}
+
+title Arquitectura del Sistema
+
+node "Dispositivos Cliente" {
+  node "Smartphone" {
+    artifact "Flutter App\n(APK / iOS)" as Movil
   }
 }
 
-node "MongoDB Atlas Cluster" {
-  database "Replica Set (Primary)" {
-    [geocrimen_tacna DB]
+node "Railway PaaS" {
+  node "Contenedor Docker\nlinux/amd64" as Docker {
+    component "Python 3.10 Runtime" as Runtime {
+      artifact "Uvicorn ASGI\n(FastAPI)" as Uvicorn
+      artifact "Background\nWorker Threads" as Worker
+    }
   }
 }
 
-cloud "Google Cloud Firebase" {
-  [Cloud Messaging Server]
+database "MongoDB Atlas\n(Replica Set × 3)" as Mongo {
+  artifact "BSON · 2dSphere" as BSON
 }
 
-[Smartphone Android (APK)] --> [FastAPI Docker Container] : HTTPS (REST)
-[FastAPI Docker Container] --> [geocrimen_tacna DB] : MongoDB Wire Protocol (TLS)
-[FastAPI Docker Container] --> [Cloud Messaging Server] : Firebase Admin SDK
-[Cloud Messaging Server] -.> [Smartphone Android (APK)] : Push Alerta
+cloud "Google Firebase" as GCloud {
+  node "Firebase Cloud\nMessaging (FCM)" as FCM
+}
+
+Movil   ..>  Uvicorn : REST · HTTPS/TLS 1.2
+Uvicorn ..>  Mongo   : PyMongo · TLS
+Worker  ..>  FCM     : HTTP/JSON · FCM SDK
+FCM     ..>  Movil   : APNs / Google Play Services
+
 @enduml
 ```
 
-### 8.2. Especificaciones Técnicas
-- **Servidor API:** Instancia Railway con 1GB RAM y 1vCPU. Entorno aislado en Docker `python:3.11-slim`.
-- **Base de Datos:** MongoDB Atlas M10 (Cluster dedicado o capa gratuita optimizada), desplegado en AWS `us-east-1` (Virginia) para menor latencia con Perú.
-- **Canal Seguro:** Todos los endpoints están resguardados por certificados TSL/SSL provistos automáticamente por la plataforma Railway.
+### 8.2 Especificaciones Tecnicas
+- **Contenedores de Aplicacion:** Servidor construido sobre imagen base oficial `python:3.10-slim`. Administracion de recursos dependiente del hardware del contenedor PaaS en Railway (1GB RAM recomendada como limite vital para Scikit-Learn).
+- **Cluster MongoDB:** Entorno gestionado (Atlas), tolerante a caidas mediante arquitectura Replica Set que certifica Alta Disponibilidad.
+- **Redes y Resolucion:** Enrutamiento DNS automatizado. Toda transferencia serializada esta configurada estrictamente bajo capa encriptada TLS de 256 bits.
 
 ---
 
 ## 9. Calidad del Software
-- **Testabilidad:** Separación de Pydantic Models y Controllers facilita la inyección de dependencias para `pytest`.
-- **Mantenibilidad:** El uso del patrón Repository (Manejadores directos de BD) en `database.py` previene el espagueti code en los endpoints de FastAPI.
-- **Performance:** Al delegar los cálculos pesados de Scikit-Learn a la librería C underlying (Numpy), el Event Loop de Python nunca se bloquea, logrando métricas de *High-Concurrency*.
 
-## 10. Decisiones Arquitectónicas
-- **¿Por qué Flutter y no React Native?** Flutter provee un motor de renderizado propio (Skia/Impeller) que asegura 60 FPS estables al dibujar cientos de polígonos geoespaciales (hotspots criminales), algo en lo que React Native sufre pérdida de *frames*.
-- **¿Por qué FastAPI en lugar de Node.js?** Si bien Node.js es rápido para E/S, SGEO requiere ejecutar Modelos Predictivos y DBSCAN. Python es el estándar de oro en Inteligencia Artificial y FastAPI permite exponer esos modelos asíncronamente en una sola pieza de infraestructura.
+- **Escalabilidad Horizontal:** Debido a la naturaleza estandar HTTP REST sin guardar estado del lado del servidor (Stateless), FastAPI puede desplegar multiples web-workers detras de un balanceador de carga.
+- **Mantenibilidad:** Separacion inquebrantable de modelos (`models/`) respecto a rutas (`api/`) propicia pruebas unitarias agiles por dependencias.
+- **Rendimiento Optimo en Lectura Geoespacial:** Uso mandatorio del estandar geoespacial GeoJSON coordinado con indices tipo `2dsphere` para delegar la busqueda cartesiana al motor de C++ subyacente en Mongo, omitiendo castigar a Python con dichas iteraciones matriciales iniciales.
+- **Seguridad Logica:** Empleo de dependencias OAuth2 incorporadas nativamente en Starlette/FastAPI, invalidando de plano el secuestro de sesiones.
 
-## 11. Tamaño y Rendimiento
-- **Métricas Esperadas:**
-  - Ingesta de 500,000 registros históricos de SIDPOL procesados en memoria (Pandas) en menos de 5 segundos de entrenamiento en servidor.
-  - El peso del aplicativo Móvil final optimizado (AppBundle para Android) es estimado a `< 30 MB`.
-  - Capacidad para atender hasta 2,000 conexiones concurrentes gracias al servidor ASGI Uvicorn.
+---
+
+## 10. Decisiones Arquitectonicas
+
+1. **Eleccion de Python / FastAPI vs Node.js:** Se escogio Python dado su rol absoluto como estandar en ciencia de datos. Replicar DBSCAN en entornos JavaScript conllevaria sobreescribir linderos ineficientes. FastAPI suple los problemas de la barrera de transaccion bloqueante que sufria Flask y Django en esquemas anteriores.
+2. **Eleccion de MongoDB vs PostGIS (PostgreSQL):** La dinamica organica de datos Json transferidos desde moviles se adecua inmejorablemente al estandar BSON sin necesidad de traductores ORM (Object-Relational Mapping). El motor `2dsphere` es suficiente para los limites cartograficos de este alcance.
+3. **Eleccion de Flutter vs React Native:** Flutter integra el motor de renderizado Skia capaz de soportar graficado cartografico multipoligonal asincrono (`flutter_map`) sosteniendo metricas cercanas a los 60 fps invariables, esquivando asi el puente nativo JS Bridge costoso de alternativas hibridas.
+4. **Justificacion de Scikit-Learn DBSCAN:** Modelos alternos como K-Means requieren determinar el numero de clusters previamente (lo cual es falaz en entornos de criminalidad desconocida). DBSCAN parametriza exclusivamente la proximidad geofisica y la densidad de incidentes para auto-descubrir clusters criminales con ruido.
+5. **Autenticacion basada en RBAC embebido via Headers:** Ocultacion frontal de rutas en UI y purga automatica via codigo HTTP 403. Simplifica despliegues en clientes delgados no autorizados.
+
+---
+
+## 11. Tamanio y Rendimiento
+
+La arquitectura asegura metas realistas y prudentes basadas en analisis estandar de librerias de integracion de datos modernas bajo infraestructuras basicas:
+- **Latencia Maxima Estimada de Servicio Base:** Resuelve endpoints genericos (`GET /usuarios`) en <= 80 ms, considerando red peruana y centro de datos AWS Virginia.
+- **Latencia Limite Modelos Analiticos Espaciales:** Calculo de riesgo directo en via HTTP en limite sub-250ms (busquedas compuestas `$near` BSON).
+- **Procesamiento de Archivos Pesados Offline (SIDPOL):** Pandas es funcional e iterara sets tabulares de formato CSV/Json de ~30,000 incidentes historicos en aproximaciones de 8 a 15 segundos en CPU ordinario, sin impactar servicios concurrentes gracias a la separacion asincronica dictaminada.
+- **Concurrencia Moderada:** Uvicorn en su disposicion estandar en un servidor de 2 nucleos atiende sin saturacion hasta ~300 request transaccionales por segundo (RPS).

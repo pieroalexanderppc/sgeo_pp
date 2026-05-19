@@ -1,216 +1,347 @@
 ![Logo UPT](media/image25.png)
 
 **UNIVERSIDAD PRIVADA DE TACNA**  
-**FACULTAD DE INGENIERÍA**  
-**Escuela Profesional de Ingeniería de Sistemas**  
+**FACULTAD DE INGENIERIA**  
+**Escuela Profesional de Ingenieria de Sistemas**  
 
-**Proyecto: "SGEO — Sistema de Geolocalización de Inseguridad Ciudadana con Machine Learning Predictivo y Espacial"**  
+**Proyecto: "SGEO - Sistema de Geolocalizacion de Inseguridad Ciudadana con Analisis Predictivo y Espacial"**  
 
-**Curso:** Construcción De Software II  
+**Curso:** Construccion De Software II  
 **Docente:** Alberto Johnatan Flor Rodriguez  
 
 **Integrante:**  
 - Piero Alexander Paja de la Cruz (2020067576)  
 
-**Tacna -- Perú**  
+**Tacna -- Peru**  
 **2026**  
 
 ---
 
-**Documento de Especificación de Requerimientos de Software (SRS)**  
-**Versión:** 1.0  
-
-### CONTROL DE VERSIONES
-
-| Versión | Hecha por | Revisada por | Aprobada por | Fecha      | Motivo                             |
-|---------|-----------|--------------|--------------|------------|------------------------------------|
-| 1.0     | PP        | PP           | AF           | 13/03/2026 | Creación inicial (Contexto SGEO)   |
+**Documento de Especificacion de Requerimientos de Software (SRS)**  
+**Version:** 4.0 (Alineacion Integral estandar IEEE 830 / ISO 29148)
 
 ---
 
-## ÍNDICE GENERAL
+# INDICE DE CONTENIDOS
 
-1. [INTRODUCCIÓN](#introducción)
-2. [I. Generalidades de la Organización](#i-generalidades-de-la-organización)
-3. [II. Visionamiento de la Organización](#ii-visionamiento-de-la-organización)
-4. [III. Análisis de Procesos](#iii-análisis-de-procesos)
-5. [IV. Especificación de Requerimientos de Software](#iv-especificación-de-requerimientos-de-software)
+1. [INTRODUCCION](#introduccion)
+2. [I. Generalidades de la Empresa](#i-generalidades-de-la-empresa)
+   - 1. [Nombre de la Empresa](#1-nombre-de-la-empresa)
+   - 2. [Vision](#2-vision)
+   - 3. [Mision](#3-mision)
+   - 4. [Organigrama](#4-organigrama)
+3. [II. Visionamiento de la Empresa](#ii-visionamiento-de-la-empresa)
+   - 1. [Descripcion del Problema](#1-descripcion-del-problema)
+   - 2. [Objetivos de Negocios](#2-objetivos-de-negocios)
+   - 3. [Objetivos de Disenio](#3-objetivos-de-disenio)
+   - 4. [Alcance del Proyecto](#4-alcance-del-proyecto)
+   - 5. [Viabilidad del Sistema](#5-viabilidad-del-sistema)
+   - 6. [Informacion Obtenida del Levantamiento de Informacion](#6-informacion-obtenida-del-levantamiento-de-informacion)
+4. [III. Analisis de Procesos](#iii-analisis-de-procesos)
+   - a) [Diagrama del Proceso Actual (Diagrama de Actividades)](#a-diagrama-del-proceso-actual-diagrama-de-actividades)
+   - b) [Diagrama del Proceso Propuesto (Diagrama de Actividades Inicial)](#b-diagrama-del-proceso-propuesto-diagrama-de-actividades-inicial)
+5. [IV. Especificacion de Requerimientos de Software](#iv-especificacion-de-requerimientos-de-software)
+   - a) [Cuadro de Requerimientos Funcionales Inicial](#a-cuadro-de-requerimientos-funcionales-inicial)
+   - b) [Cuadro de Requerimientos No Funcionales](#b-cuadro-de-requerimientos-no-funcionales)
+   - c) [Cuadro de Requerimientos Funcionales Final](#c-cuadro-de-requerimientos-funcionales-final)
+   - d) [Reglas de Negocio](#d-reglas-de-negocio)
 6. [V. Fase de Desarrollo](#v-fase-de-desarrollo)
-   - 5.1 [Perfiles de Usuario](#1-perfiles-de-usuario)
-   - 5.2 [Modelo Conceptual (Casos de Uso)](#2-modelo-conceptual)
-   - 5.3 [Modelo Lógico (Secuencia y Clases)](#3-modelo-lógico)
+   - 1. [Perfiles de Usuario](#1-perfiles-de-usuario)
+   - 2. [Modelo Conceptual](#2-modelo-conceptual)
+      - a) [Diagrama de Paquetes](#a-diagrama-de-paquetes)
+      - b) [Diagrama de Casos de Uso](#b-diagrama-de-casos-de-uso)
+      - c) [Escenarios de Caso de Uso (Narrativa)](#c-escenarios-de-caso-de-uso-narrativa)
+   - 3. [Modelo Logico](#3-modelo-logico)
+      - a) [Analisis de Objetos](#a-analisis-de-objetos)
+      - b) [Diagrama de Actividades con Objetos](#b-diagrama-de-actividades-con-objetos)
+      - c) [Diagrama de Secuencia](#c-diagrama-de-secuencia)
+      - d) [Diagrama de Clases](#d-diagrama-de-clases)
 7. [CONCLUSIONES](#conclusiones)
 8. [RECOMENDACIONES](#recomendaciones)
+9. [BIBLIOGRAFIA](#bibliografia)
+10. [WEBGRAFIA](#webgrafia)
 
 ---
 
-## INTRODUCCIÓN
+## INTRODUCCION
 
-El presente documento de Especificación de Requerimientos de Software (SRS) describe detalladamente los requerimientos funcionales y no funcionales para el desarrollo del **Sistema de Geolocalización de Inseguridad Ciudadana (SGEO)**, el cual cuenta con motores de Machine Learning predictivo y espacial.
-
-Este proyecto representa una iniciativa tecnológica orientada a reducir el crimen en la ciudad de Tacna al reemplazar los modelos reactivos de patrullaje con analítica predictiva. Integrando reportes ciudadanos con Big Data oficial del Estado Peruano (SIDPOL) mediante una interfaz móvil desarrollada en Flutter y un backend asíncrono en FastAPI.
+El presente Documento de Especificacion de Requerimientos de Software (SRS) tiene como proposito definir de manera formal, inequivoca y verificable las funcionalidades y restricciones del Sistema de Geolocalizacion de Inseguridad Ciudadana (SGEO). Este documento actua como el contrato base de ingenieria que rige el comportamiento del sistema, detallando que debe hacer la plataforma sin especificar los detalles de su implementacion subyacente. Esta redactado siguiendo las directrices fundamentales establecidas en los estandares de ingenieria de software formales, garantizando trazabilidad y claridad para analistas, desarrolladores y validadores de calidad (QA).
 
 ---
 
-## I. Generalidades de la Organización
+## I. Generalidades de la Empresa
 
-**1. Nombre de la Organización Beneficiaria**  
-Policía Nacional del Perú (Región Policial Tacna) en coordinación con la Municipalidad Provincial de Tacna.
+### 1. Nombre de la Empresa
+Policia Nacional del Peru (Region Policial Tacna), en operacion conjunta con las municipalidades distritales y la red ciudadana.
 
-**2. Visión**  
-Garantizar el orden interno, el libre ejercicio de los derechos fundamentales de las personas y el normal desarrollo de las actividades ciudadanas en la región de Tacna, apoyándose en la tecnología de vanguardia y la inteligencia predictiva.
+### 2. Vision
+Ser la institucion publica lider a nivel nacional en la aplicacion de tecnologias geoespaciales para la prevencion del delito, estandarizando protocolos de respuesta policial basados en inteligencia de datos para el anio 2030.
 
-**3. Misión**  
-Prestar protección y ayuda a las personas y a la comunidad, investigar los delitos y mantener el orden público, ahora potenciados mediante herramientas de geolocalización cívico-policial.
+### 3. Mision
+Administrar, validar y procesar la informacion de incidencias delictivas reportadas por la ciudadania y el personal policial, con el fin de generar mapas de riesgo actualizados que permitan optimizar la asignacion de recursos de patrullaje preventivo.
 
-**4. Organigrama (Contexto del Proyecto)**
+### 4. Organigrama
+
 ```plantuml
 @startuml
 skinparam shadowing false
-skinparam roundcorner 10
-skinparam dpi 150
-skinparam defaultFontName Segoe UI
-skinparam backgroundColor #F8FAFC
-skinparam ArrowColor #334155
-skinparam NodeBackgroundColor #EEF2FF
-skinparam NodeBorderColor #4F46E5
-skinparam ComponentBackgroundColor #FFFFFF
-skinparam ComponentBorderColor #6366F1
-node "Comando Policial Tacna" {
-  [Jefatura de Operaciones] --> [Central de Emergencias 105]
-  [Jefatura de Operaciones] --> [Unidades de Patrullaje]
-  [Unidad de Inteligencia] --> [Análisis de Datos (SIDPOL)]
+skinparam roundcorner 5
+skinparam defaultFontName Arial
+skinparam node {
+    BackgroundColor white
+    BorderColor black
 }
+
+node "Direccion General Region Policial" as DGRP {
+  node "Unidad de Planeamiento" as UP
+  node "Division de Orden" as DO
+}
+
+node "Area de Patrullaje" as AP
+node "Central de Despacho 105" as C105
+
+DGRP --> UP
+DGRP --> DO
+DO --> AP
+DO --> C105
 @enduml
 ```
 
 ---
 
-## II. Visionamiento de la Organización
+## II. Visionamiento de la Empresa
 
-**1. Descripción del Problema**  
-La ciudad de Tacna padece un problema de latencia en la prevención del delito:
-- **Tiempos de respuesta lentos:** Patrulleros y serenazgo asisten a lugares donde el crimen ya ocurrió.
-- **Data Estadística estancada:** Miles de registros de la Unidad de Flagrancia no se mapean visualmente.
-- **Desinformación Ciudadana:** Los civiles caminan por "Zonas Rojas" sin ninguna advertencia, debido a la falta de herramientas de notificación en tiempo real.
+### 1. Descripcion del Problema
+La gestion actual de emergencias e incidencias delictivas se basa en procesos reactivos con baja integracion tecnologica comunitaria. Los ciudadanos carecen de un canal de comunicacion geografica directa con las unidades de patrullaje sectorial. Asimismo, la administracion operativa carece de sistemas automaticos que identifiquen concentraciones delictivas, dependiendo de analisis manuales lentos que retrasan la advertencia a los civiles que transitan por areas de alto riesgo.
 
-**2. Objetivos de Negocios**  
-- **Objetivo General:** Desplegar una aplicación móvil que triangule denuncias civiles en vivo y proyecte predicciones criminalísticas para optimizar las rutas de patrullaje.
-- **Objetivos Específicos:** 
-  - Reducir el tiempo de validación policial de crímenes a menos de 2 minutos.
-  - Implementar alertas push automáticas para civiles que crucen áreas de peligro.
-  - Ahorrar S/ 16,500 anuales en combustible logístico redirigiendo patrullas bajo algoritmos predictivos (Regresión Lineal).
+### 2. Objetivos de Negocios
+- Disminuir el tiempo de recoleccion y validacion de datos sobre incidentes delictivos en un 40%.
+- Aumentar la precision en la identificacion de sectores peligrosos mediante validacion de reportes cruzados.
+- Establecer un canal oficial de comunicacion asincrona para prevencion comunitaria.
 
-**3. Objetivos de Diseño**  
-- **UI Táctica:** Interfaz "Premium Tactical Dark" en Flutter.
-- **Latencia API:** Endpoints en FastAPI resolviendo por debajo de los 300ms.
-- **Mapas en caché:** Uso de `flutter_map` para renderizado offline ligero.
+### 3. Objetivos de Disenio
+- Diseniar una arquitectura unificada que permita acceso desde terminales moviles y paneles web administrativos.
+- Garantizar tiempos de respuesta optimos frente a consultas estructuradas de geolocalizacion.
+- Establecer controles de acceso basados en roles (RBAC) para segregar la visualizacion y mutacion de datos sensibles.
 
-**4. Viabilidad del Sistema**  
-Técnica y económicamente viable (VAN = S/ 1,501, TIR > 13%). Uso de tecnologías Open Source (Python, Dart/Flutter, MongoDB Atlas Tier gratuito inicial).
+### 4. Alcance del Proyecto
+Este SRS contempla el dominio del sistema SGEO, abarcando:
+- Modulo de autenticacion y gestion de perfiles (Ciudadanos, Policias, Administradores).
+- Modulo de emision, recepcion y clasificacion de reportes geolocalizados.
+- Modulo de analisis espacial y generacion de poligonos de precaucion.
+- Modulo de notificaciones y emision de alertas georreferenciadas.
+- Modulo administrativo de metricas e importacion de datos externos.
+
+### 5. Viabilidad del Sistema
+El desarrollo es tecnica y operativamente viable. La solucion emplea estandares abiertos y estandares HTTP probados que permiten escalar de forma horizontal y aseguran compatibilidad con la infraestructura de red movil empleada por la institucion policial.
+
+### 6. Informacion Obtenida del Levantamiento de Informacion
+Mediante entrevistas con operadores del sistema de despacho, se concluyo que los reportes aislados no deben ser tomados como verdades absolutas por el sistema hasta recibir confirmacion oficial, a fin de evitar alarmas falsas generalizadas.
 
 ---
 
-## III. Análisis de Procesos
+## III. Analisis de Procesos
 
-### a) Diagrama del Proceso Actual (Reactivo)
+### a) Diagrama del Proceso Actual (Diagrama de Actividades)
+
 ```plantuml
 @startuml
-skinparam shadowing false
-skinparam roundcorner 10
-skinparam dpi 150
-skinparam defaultFontName Segoe UI
-skinparam backgroundColor #F8FAFC
-skinparam ArrowColor #0F766E
-skinparam ActivityBackgroundColor #ECFEFF
-skinparam ActivityBorderColor #0F766E
-skinparam ActivityDiamondBackgroundColor #FFFFFF
-skinparam ActivityDiamondBorderColor #0F766E
-
 |Ciudadano|
 start
-:Sufre o presencia un delito;
-:Llama al 105 o acude a la comisaría;
-|Central Policial|
-:Recibe llamada;
-:Toma datos manuales;
-:Intenta localizar unidad cercana por radio;
-|Unidad de Patrullaje|
-:Recibe orden radial;
-:Se desplaza al lugar;
-:Informa novedades (usualmente tarde);
+:Presencia incidente;
+:Llama por telefono a central;
+|Central Telefonica|
+:Recepciona llamada;
+:Anota ubicacion referencial;
+:Trasmite por radio a unidad de calle;
+|Unidad Policial|
+:Recibe orden;
+:Se dirige al lugar;
+:Constata el hecho;
+:Informa estado resolutivo por radio a central;
+|Central Telefonica|
+:Actualiza registro fisico;
 stop
 @enduml
 ```
 
-### b) Diagrama del Proceso Propuesto (SGEO Predictivo y Preventivo)
+### b) Diagrama del Proceso Propuesto (Diagrama de Actividades Inicial)
+
 ```plantuml
 @startuml
-skinparam shadowing false
-skinparam roundcorner 10
-skinparam dpi 150
-skinparam defaultFontName Segoe UI
-skinparam backgroundColor #F8FAFC
-skinparam ArrowColor #0F766E
-skinparam ActivityBackgroundColor #ECFEFF
-skinparam ActivityBorderColor #0F766E
-skinparam ActivityDiamondBackgroundColor #FFFFFF
-skinparam ActivityDiamondBorderColor #0F766E
-
-|Motor ML (SGEO)|
-start
-:Extrae Data SIDPOL Mensual;
-:Proyecta Zonas de Riesgo (Regresión Lineal);
-:Agrupa polígonos (DBSCAN);
 |Ciudadano|
-:Camina cerca de Zona Roja;
-:Recibe Alerta Push (FCM) preventiva;
-:Reporta un evento sospechoso en 2 clics;
-|Policía (App SGEO)|
-:Recibe reporte geolocalizado al instante;
-:Valida o Rechaza (Filtro Anti-Troll);
-if (Validado?) then (Sí)
-  :Despacha unidad exacta por GPS;
+start
+:Registra reporte con coordenadas GPS exactas;
+|Sistema SGEO Central|
+:Almacena reporte como "Pendiente";
+:Identifica unidades en radio de alcance;
+|Unidad Policial|
+:Recibe alerta visual de incidencia;
+:Acude al punto georeferenciado;
+if (Hecho constatado?) then (Si)
+  :Marca reporte como "Confirmado";
+  |Sistema SGEO Central|
+  :Procesa actualizacion de historico;
+  :Gatilla subproceso de agrupamiento espacial;
+  :Actualiza mapa de calor/zonas de riesgo;
 else (No)
-  :Ignora y penaliza al usuario troll;
+  |Unidad Policial|
+  :Marca reporte como "Falso/Descartado";
 endif
+|Sistema SGEO Central|
+:Cierra flujo del reporte;
 stop
 @enduml
 ```
 
 ---
 
-## IV. Especificación de Requerimientos de Software
+## IV. Especificacion de Requerimientos de Software
 
-### a) Cuadro de Requerimientos Funcionales
+### a) Cuadro de Requerimientos Funcionales Inicial
+Se omitio en favor de presentar un inventario de requerimientos funcionales integral, unificado y exhaustivo en la seccion IV.c.
 
-| ID | Módulo | Requerimiento Funcional | Descripción Detallada | Actor | Prioridad |
-|----|--------|-------------------------|-----------------------|-------|-----------|
-| **RF001** | Autenticación | Control de Accesos | El sistema debe permitir el registro y autenticación de usuarios bajo tres roles: Ciudadano, Policía y Administrador. | Múltiple | Crítica |
-| **RF002** | Interfaz | Redirección por Roles | El sistema debe redirigir a cada usuario a un Dashboard diferente dependiendo de su rol (RBAC). | Múltiple | Alta |
-| **RF003** | Geolocalización | Reporte de Incidentes | Los Ciudadanos deben poder colocar marcadores de crimen en el mapa interactivo con latitud y longitud precisa. | Ciudadano | Crítica |
-| **RF004** | Validación | Filtro de Reportes | El Policía debe poder visualizar los reportes pendientes en un radio de 3 km y presionar "Validar" o "Rechazar". | Policía | Crítica |
-| **RF005** | Inteligencia Artificial | Algoritmo DBSCAN | El Backend (FastAPI) debe ejecutar el algoritmo espacial DBSCAN sobre los reportes validados para generar Zonas de Riesgo. | Sistema | Alta |
-| **RF006** | Notificaciones | Alertas Preventivas | La app móvil debe ejecutar un servicio en background (Geofencing) para enviar Push si el usuario entra a una Zona Roja. | Ciudadano | Alta |
-| **RF007** | Analítica | Visualización Gráfica | El Administrador debe poder ver estadísticas de crímenes en gráficos dinámicos (fl_chart) filtrados por tiempo. | Administrador | Media |
-| **RF008** | Integración | Automatización ETL | El sistema debe contar con un cron job ETL para hacer scraping e importar datos históricos del SIDPOL a MongoDB. | Sistema | Media |
-| **RF009** | Machine Learning | Predicción Temporal | El Backend debe exponer un modelo de Regresión Lineal sobre la data de SIDPOL para pronosticar delitos por distrito mensual. | Administrador | Media |
+---
 
 ### b) Cuadro de Requerimientos No Funcionales
 
-| ID | Módulo | Requerimiento No Funcional | Descripción Detallada | Categoría |
-|----|--------|----------------------------|-----------------------|-----------|
-| **RNF001** | Arquitectura | Multiplataforma Híbrida | El sistema debe estar desarrollado en Flutter (Dart) para asegurar exportación simultánea e idéntica a iOS y Android. | Rendimiento |
-| **RNF002** | Base de Datos | Persistencia Geoespacial | La base de datos debe ser MongoDB Atlas utilizando índices `2dsphere` para cálculos geográficos en milisegundos. | Escalabilidad |
-| **RNF003** | Seguridad | Encriptación Criptográfica | Todas las contraseñas de los usuarios deben encriptarse obligatoriamente usando el algoritmo Bcrypt con salt. | Seguridad |
-| **RNF004** | UI/UX | Estética Premium | La interfaz debe adherirse estrictamente al sistema "Premium Tactical Dark" (Fondos #1A1A24, Acentos #E53935). | Diseño |
-| **RNF005** | Rendimiento | Latencia Mínima HTTP | El tiempo de respuesta de los endpoints del mapa en FastAPI no debe superar los 300 milisegundos con red 4G. | Performance |
+**Categoria: Seguridad (SEC)**
+- **RNF-SEC-01 (Autenticacion Segura):** El sistema debe utilizar mecanismos de cifrado unidireccional con sal (salting) para el almacenamiento de contrasenias.
+- **RNF-SEC-02 (Transito de Datos):** Toda comunicacion cliente-servidor debe estar encriptada obligatoriamente bajo protocolo TLS 1.2 o superior (HTTPS).
+- **RNF-SEC-03 (Sesiones):** Las sesiones moviles y web deben expirar automaticamente o caducar los tokens de acceso tras 24 horas de inactividad sin renovacion.
 
-### c) Reglas de Negocio
+**Categoria: Rendimiento (PER)**
+- **RNF-PER-01 (Consultas Espaciales):** El sistema debe resolver las consultas de proximidad geografica (busqueda de reportes cercanos) en un tiempo menor a 500 milisegundos bajo una carga concurrente nominal de 100 usuarios.
+- **RNF-PER-02 (Latencia de Notificaciones):** El retardo maximo aceptable entre el despacho de una notificacion y el envio a la plataforma externa de mensajeria debe ser estrictamente menor a 2 segundos.
 
-- **RN01 - Bloqueo por Spam:** Si un Ciudadano recibe 3 reportes marcados como "Rechazados" por un Policía, su cuenta es baneada para crear reportes por 72 horas.
-- **RN02 - Vigencia de Reportes:** Todo reporte ciudadano validado por la policía formará parte de la Zona de Riesgo solo por 48 horas. Luego decaerá estadísticamente si no hay nuevos eventos cercanos (Decaimiento Temporal).
-- **RN03 - Autoridad Policial:** Un Policía solo puede validar incidentes que ocurran dentro de un radio de 3 kilómetros desde su posición GPS actual (asegurando el conocimiento in-situ de su cuadrante).
+**Categoria: Confiabilidad y Disponibilidad (REL)**
+- **RNF-REL-01 (Tolerancia a Fallos):** El sistema debe ser capaz de reintentar la persistencia de datos en caso de una perdidad temporal de conexion con el servicio de base de datos.
+- **RNF-REL-02 (Disponibilidad Operativa):** El entorno principal del servidor de aplicaciones debe mantener un nivel de disponibilidad (Uptime) contractual del 99.9% anual.
+
+**Categoria: Usabilidad (USA)**
+- **RNF-USA-01 (Adaptabilidad Movil):** La interfaz grafica principal de la aplicacion debe adaptar sus menus de interaccion y proporciones cartograficas en resoluciones que oscilen desde los 360px hasta los 1200px de ancho logico sin distorsion.
+- **RNF-USA-02 (Feedback de Red):** El sistema debe mostrar indicadores de carga visibles siempre que una transaccion de red exceda los 500 milisegundos en resolverse.
+
+**Categoria: Portabilidad y Compatibilidad (POR)**
+- **RNF-POR-01 (Sistemas Operativos):** La version empaquetada principal del lado cliente debe poder instalarse en dispositivos con sistema operativo Android version 8.0 (API 26) o superior.
+
+---
+
+### c) Cuadro de Requerimientos Funcionales Final
+
+A continuacion se detallan exhaustivamente los Requerimientos Funcionales (RF), categorizados por modulo operativo.
+
+#### Modulo 1: Autenticacion y Gestion de Identidad
+
+- **RF-AUT-01: Registro de Usuarios Ciudadanos**
+  - **Descripcion formal:** El sistema debe permitir a un usuario no registrado crear una cuenta ingresando su correo electronico, contrasenia, nombre completo y numero de documento.
+  - **Actor:** Usuario Anonimo
+  - **Precondiciones:** El usuario no debe poseer sesion activa ni el DNI/Email debe existir en el registro.
+  - **Identificador de Endpoint:** POST /api/auth/register
+
+- **RF-AUT-02: Inicio de Sesion**
+  - **Descripcion formal:** El sistema debe autenticar credenciales y devolver un token de acceso seguro que asocie temporalmente el dispositivo con la sesion del usuario.
+  - **Actor:** Todos los Roles.
+  - **Entradas:** Credenciales de usuario. **Salidas:** Estado de aprobacion y token temporal.
+
+- **RF-AUT-03: Cierre de Sesion Seguro**
+  - **Descripcion formal:** El sistema debe permitir la revocacion del token activo y purgar los datos de sesion local del cliente.
+
+- **RF-AUT-04: Recuperacion de Acceso**
+  - **Descripcion formal:** El sistema debe emitir un mecanismo (enlace o codigo por correo electronico) para restaurar credenciales de accounts ciudadanas perdidas.
+
+- **RF-AUT-05: Modificacion de Perfil Propio**
+  - **Descripcion formal:** El sistema debe permitir actualizar nombre o numero de contacto del perfil, restringiendo cambios en campos inmutables como el correo root.
+
+#### Modulo 2: Gestion de Reportes Geoespaciales
+
+- **RF-REP-01: Creacion de Alerta de Incidente**
+  - **Descripcion formal:** El sistema debe proveer de un formulario que capture coordenadas geograficas (Latitud/Longitud), nivel de criticidad o tipo de delito y una descripcion opcional.
+  - **Actor:** Ciudadano / Policia
+  - **Restricciones:** Un usuario no podra emitir mas de 3 reportes pendientes de verificacion en un rango de 10 minutos (Regla Antispam).
+  - **Identificador de Endpoint:** POST /api/reportes
+
+- **RF-REP-02: Visualizacion de Detalle de Reporte**
+  - **Descripcion formal:** El sistema debe arrojar todos los atributos descriptivos, temporalidad y estatus resolutivo de un incidente previamente emitido.
+
+- **RF-REP-03: Cancelacion de Reportes Propios**
+  - **Descripcion formal:** El sistema debe posibilitar la anulacion definitiva de los reportes unicamente si el actor instanciado es el creador legitimo y el estado del reporte recae en "Pendiente".
+
+- **RF-REP-04: Consulta Historica Personal**
+  - **Descripcion formal:** El sistema debe exponer un listado en formato descendente temporal con la traza de reportes elaborados por el usuario autenticado.
+
+#### Modulo 3: Interacciones Tacticas de Unidades Oficiales
+
+- **RF-TAC-01: Listado de Reportes Cercanos**
+  - **Descripcion formal:** El sistema debe proveer una lista filtrada de incidentes con estado "Pendiente" acotada exclusivamente a un radio en kilometros basado en la locacion en tiempo real del dispositivo consultante.
+  - **Actor:** Policia
+  - **Precondiciones:** Permisos validos de Rol Policial y hardware GPS funcional.
+
+- **RF-TAC-02: Confirmacion Oficial de Incidencia**
+  - **Descripcion formal:** El sistema debe otorgar potestad al Rol Policial de alterar permanentemente el estado transaccional de un reporte de "Pendiente" a "Confirmado".
+  - **Salidas:** Modificacion exitosa del estado del registro.
+
+- **RF-TAC-03: Rechazo de Falsas Alarmas**
+  - **Descripcion formal:** El sistema debe permitir transicionar alertas infundadas al estado "Descartado", aislando dicha data de modulos futuros de evaluacion estadistica.
+
+#### Modulo 4: Panel Administrativo Integrado
+
+- **RF-ADM-01: Listado Global de Usuarios**
+  - **Descripcion formal:** El sistema debe renderizar de manera seccionada o paginada el inventario de cuentas inscritas en el sistema.
+  - **Actor:** Administrador
+  - **Identificador de Endpoint:** GET /api/admin/usuarios
+
+- **RF-ADM-02: Elevacion de Privilegios de Acceso**
+  - **Descripcion formal:** El sistema debe exponer una vista u opcion para modificar el estado identificativo de Rol de una cuenta (Ej. Ascender un cuenta generica a "Policia").
+
+- **RF-ADM-03: Suspension de Cuentas Ciudadanas**
+  - **Descripcion formal:** El sistema debe habilitar el bloqueo transaccional temporal o indefinido sobre cuentas infractoras reiteradas.
+
+- **RF-ADM-04: Exportacion y Dashboard Analitico**
+  - **Descripcion formal:** El sistema debe generar sumarios temporales aglutinando conteos y porcentajes resolutivos para visualizar estadisticas maestras operacionales.
+
+- **RF-ADM-05: Inyeccion Estructurada de Datos (ETL Manual)**
+  - **Descripcion formal:** El sistema debera suministrar una entrada para instruir la lectura asimilacion masiva de ficheros de reportes delictivos gubernamentales offline hacia la base del sistema central.
+
+#### Modulo 5: Mapas Cartograficos e Inteligencia Espacial
+
+- **RF-MAP-01: Visualizar Capas de Superficie Cartografica**
+  - **Descripcion formal:** El cliente presentara una superficie de mapa iterativa renderizada dinamicamente a partir de un servicio externo.
+
+- **RF-MAP-02: Extraccion de Zonas de Riesgo Agrupadas**
+  - **Descripcion formal:** El sistema entregara colecciones procesadas de geometrias o centroides que representen las acumulaciones delictivas (Zonas Rojas) validadas matematicamente.
+  - **Actor:** Todos
+  - **Identificador de Endpoint:** GET /api/map/zonas_riesgo
+
+- **RF-MAP-03: Calculo de Indice de Riesgo Dinamico**
+  - **Descripcion formal:** El sistema debera procesar la coordenada enviada por el cliente cruzandola volumetricamente frente a eventos pasados y horas pico para generar un escalar representativo del peligro actual.
+  - **Identificador de Endpoint:** GET /predictive_routes/safety_score
+
+- **RF-MAP-04: Consulta de Tramos Temporales Sugeridos**
+  - **Descripcion formal:** El sistema permitira consultar estimaciones sobre periodos de baja ocurrencia delictiva para coordenadas predeterminadas de interes.
+
+- **RF-MAP-05: Actualizacion Interna del Arbol de Riesgo (Sistema)**
+  - **Descripcion formal:** El sistema debe gatillar autarquicamente calculos de identificacion periodica cada vez que el subsistema recaude una cantidad considerable de factores "Confirmados".
+  - **Actor:** Sistema (Proceso Interno)
+
+#### Modulo 6: Eventos y Notificaciones Push
+
+- **RF-NOT-01: Precepto de Suscripcion Perimetral**
+  - **Descripcion formal:** El sistema debera soportar la inscripcion de terminales moviles activos a canales de distribucion informativa referenciados geoespacialmente.
+
+- **RF-NOT-02: Emision de Alertas Geofencing Inminente**
+  - **Descripcion formal:** El sistema instanciara despachos informativos urgentes a cuentas si el modelo central detecta penetracion o permanencia en cuadrantes recien elevados a alta criticidad operativa.
+
+- **RF-NOT-03: Alternancia Silenciosa Dispositivo**
+  - **Descripcion formal:** El sistema permitira al usuario bloquear la interrupcion acustica y visual proveniente de las advertencias centralizadas.
+
+---
+
+### d) Reglas de Negocio
+
+- **RN-01 (Exclusividad Mutacional):** Ningun "Ciudadano" bajo registro estandar podra jamas transicionar un estado reportado hacia resoluciones oficiales confirmables. Solo identidades "Policia" poseen aval de transicion de fase.
+- **RN-02 (Causal de Exclusion Predictiva):** Todo requerimiento de elaboracion de mapas predictivos omitira en fase total de extraccion los reportes que presenten estado de negacion ("Descartado") o inadmision validada.
+- **RN-03 (Malla Radial Condicionada):** Un intento de presentacion perimetral del personal tactico (RF-TAC-01) estara supeditada invariablemente a un diametro preestablecido y validado en configuracion principal no parametrizable (ejemplo de radio operativo: limite urbano de Tacna).
 
 ---
 
@@ -218,315 +349,226 @@ stop
 
 ### 1. Perfiles de Usuario
 
-| Perfil | Rol en SGEO | Nivel de Acceso | Funciones Principales |
-|--------|-------------|-----------------|-----------------------|
-| **Ciudadano** | Consumidor/Generador | Básico | Reportar eventos, ver mapa térmico civil, recibir alertas Push de prevención. |
-| **Policía** | Auditor de Campo | Intermedio | Auditar reportes ciudadanos, confirmar emergencias, gestionar su cuadrante de 3km. |
-| **Administrador** | Oficial de Inteligencia | Avanzado | Visualizar Big Data del SIDPOL, analizar predicciones de Machine Learning, suspender usuarios, ver métricas policiales. |
-
----
+- **Ciudadano:** Consumidor directo de orientacion cartografica preventiva y ente emisor generador de volumen informativo no oficializado.
+- **Policia:** Ente rector logico sobre instancias crudas de incidentes; valida, comprueba e imprime el caracter legal del archivo dentro de la plataforma, dotandolo de un valor para ser evaluado posteriormente.
+- **Administrador:** Elemento de supervision tecnica y evaluacion directiva general; no interactua sobre calle pero manipula las politicas organizativas y extrae conocimiento estrategico procesado de los historicos del sistema SGEO.
 
 ### 2. Modelo Conceptual
 
-#### a) Diagrama de Paquetes (Arquitectura General SGEO)
+#### a) Diagrama de Paquetes Formal
+
 ```plantuml
 @startuml
 skinparam shadowing false
-skinparam roundcorner 10
-skinparam dpi 150
-skinparam defaultFontName Segoe UI
-skinparam backgroundColor #F8FAFC
-skinparam ArrowColor #334155
-skinparam PackageBackgroundColor #EEF2FF
-skinparam PackageBorderColor #4F46E5
-skinparam ComponentBackgroundColor #FFFFFF
-skinparam ComponentBorderColor #6366F1
-skinparam DatabaseBackgroundColor #ECFDF5
-skinparam DatabaseBorderColor #047857
-skinparam CloudBackgroundColor #FEF3C7
-skinparam CloudBorderColor #B45309
+skinparam roundcorner 5
+skinparam componentStyle rectangle
 
-package "Frontend Flutter (Móvil)" {
-  [Auth Module]
-  [Map Module (flutter_map)]
-  [Roles UI (Admin, Police, Citizen)]
-  [Geofencing Service]
+package "Aplicacion Cliente (Dart)" as P_Client {
+  [Modulo de Mapas y Rutas]
+  [Modulo Interfaz de Atencion Tactica]
+  [Subsistema Autorizacion Cliente]
 }
 
-package "Backend FastAPI (Python)" {
-  [Auth Router]
-  [Reports Router]
-  [AI Engine (Scikit-Learn)]
-  [Background Tasks (ETL)]
+package "Arquitectura Logica SOA (Python)" as P_Logic {
+  [Servicio de Autenticacion JWT]
+  [Controlador de Reportes y Mantenimiento]
+  [Instancia Central IA Identificadora]
+  [Pipeline de Transformacion Externa]
 }
 
-database "MongoDB Atlas" {
-  [Users Collection]
-  [Reports Collection (2dsphere)]
-  [SIDPOL Collection]
+package "Capa Almacenamiento Estructurado" as P_Data {
+  [Repositorio Indices Geosraciales]
 }
 
-cloud "Firebase" {
-  [FCM Push Notifications]
+package "Modulos Externos Complementarios" as P_Ext {
+  [Integrador de Notificaciones Push]
 }
 
-[Frontend Flutter (Móvil)] --> [Backend FastAPI (Python)] : HTTP REST (JSON)
-[Frontend Flutter (Móvil)] --> [Firebase] : Listen Topics
-[Backend FastAPI (Python)] --> [MongoDB Atlas] : PyMongo Motor
-[Backend FastAPI (Python)] --> [Firebase] : Admin SDK trigger
+[Subsistema Autorizacion Cliente] ..> [Servicio de Autenticacion JWT]
+[Modulo de Mapas y Rutas] ..> [Controlador de Reportes y Mantenimiento]
+[Modulo Interfaz de Atencion Tactica] ..> [Controlador de Reportes y Mantenimiento]
+
+[Controlador de Reportes y Mantenimiento] --> [Repositorio Indices Geosraciales]
+[Instancia Central IA Identificadora] ..> [Repositorio Indices Geosraciales]
+[Instancia Central IA Identificadora] --> [Integrador de Notificaciones Push]
 @enduml
 ```
 
-#### b) Diagrama de Casos de Uso (General)
+#### b) Diagrama de Casos de Uso del Sistema
+
 ```plantuml
 @startuml
 skinparam shadowing false
-skinparam roundcorner 10
-skinparam dpi 150
-skinparam defaultFontName Segoe UI
-skinparam backgroundColor #F8FAFC
-skinparam ArrowColor #6D28D9
-skinparam UsecaseBackgroundColor #F3E8FF
-skinparam UsecaseBorderColor #7C3AED
-skinparam ActorBackgroundColor #FFFFFF
-skinparam ActorBorderColor #8B5CF6
-skinparam RectangleBackgroundColor #FFFFFF
-skinparam RectangleBorderColor #334155
-
 left to right direction
-actor Ciudadano as C
-actor Policia as P
-actor Administrador as A
 
-rectangle "SGEO System" {
-  usecase "Registrarse / Login" as UC1
-  usecase "Reportar Incidente" as UC2
-  usecase "Recibir Alerta Preventiva" as UC3
-  usecase "Validar Reporte Ciudadano" as UC4
-  usecase "Ver Mapa de Validaciones" as UC5
-  usecase "Ver Predicciones AI (Regresión)" as UC6
-  usecase "Visualizar Big Data SIDPOL" as UC7
+actor Ciudadano as CIUDADANO
+actor Policia as POLICIA
+actor Administrador as ADMIN
+actor "Servicio Cron/Proceso Interno" as S_BG
+
+rectangle "SGEO Central Core Specifications" {
+  usecase "CU-01 Registrar Cuenta Nueva" as CU1
+  usecase "CU-02 Visualizar Reportes Personales" as CU2
+  usecase "CU-03 Reportar Incidencia GPS" as CU3
+  usecase "CU-04 Consultar Nivel Amenaza" as CU4
+  
+  usecase "CU-05 Buscar Solicitudes Proximales" as CU5
+  usecase "CU-06 Aprobar Legitimidad de Evento" as CU6
+  usecase "CU-07 Desestimar como Evento Falso" as CU7
+  
+  usecase "CU-08 Visualizar Operativa General" as CU8
+  usecase "CU-09 Autorizar Nuevo Rol" as CU9
+  usecase "CU-10 Clausurar Cuenta" as CU10
+  
+  usecase "CU-11 Calcular Poligonos Concentrados" as CU11
 }
 
-C --> UC1
-C --> UC2
-C --> UC3
+CIUDADANO --> CU1
+CIUDADANO --> CU2
+CIUDADANO --> CU3
+CIUDADANO --> CU4
 
-P --> UC1
-P --> UC4
-P --> UC5
+POLICIA --> CU4
+POLICIA --> CU5
+POLICIA --> CU6
+POLICIA --> CU7
 
-A --> UC1
-A --> UC6
-A --> UC7
+ADMIN --> CU8
+ADMIN --> CU9
+ADMIN --> CU10
+
+S_BG --> CU11
 @enduml
 ```
 
-#### c) Escenarios de Caso de Uso
+#### c) Escenarios de Caso de Uso (Narrativa)
+- **Modificacion Verificada de Sucesos (Policia):** El usuario Policia ingresa coordenadas estaticas para refrescar eventos locales. El sistema retorna la ubicacion puntual de la llamada ciudadana. El Policia avanza al sector y examina inconsistencias locales. Regresa al listado tactico en la interaccion visual y despacha el requerimiento como "Desestimado". El flujo termonal altera internamente la base e inhabilita su uso para agregacion logica a futuro.
+- **Exposicion Metrica Gerencial (Administrador):** La sesion validada como Administrador ejecuta un requerimiento analitico historico. El sistema recopila las tablas desde su coleccion temporal desde el ultimo semestre, secciona por categorizaciones delictivas formales (Hurto, Robo agravado, Distubio) y genera un payload numerico que la visualizacion dibuja graficamente sobre cuadrantes visuales de la region referenciada.
 
-**Caso de Uso:** Reportar Incidente (UC2)
-- **Actor:** Ciudadano
-- **Precondiciones:** El usuario tiene sesión iniciada y el GPS encendido.
-- **Flujo Principal:** 
-  1. El ciudadano presiona el botón rojo "Reportar".
-  2. El sistema captura la latitud y longitud actuales.
-  3. El usuario selecciona el tipo de evento (Robo, Sospecha, Vandalismo).
-  4. El sistema envía el payload JSON a FastAPI.
-  5. La base de datos guarda el reporte en estado `pending`.
-- **Postcondiciones:** El reporte aparece instantáneamente en la pantalla de los Policías en un radio de 3km.
+### 3. Modelo Logico
 
-**Caso de Uso:** Ver Predicciones AI (UC6)
-- **Actor:** Administrador
-- **Precondiciones:** Autenticado con rol `admin`. La base de datos SIDPOL tiene al menos 1,000 registros históricos.
-- **Flujo Principal:**
-  1. El Administrador navega a la pestaña "Predicción Táctica".
-  2. El sistema envía una solicitud GET `/api/admin/sidpol_predict`.
-  3. El backend carga el dataset en Pandas, entrena un modelo de Regresión Lineal y estima los incidentes para el siguiente trimestre.
-  4. La aplicación Flutter dibuja el gráfico usando `fl_chart`.
+#### a) Analisis de Objetos Estructurales
+Se definen formalmente las entidades cardinales con identificadores univocos. 
+- **Entidad `Usuario`**: Conteniente inmutable del control de la credencial criptografica, email principal, nombres y perfil descriptivo.
+- **Entidad `ReporteCiudadano`**: Aglutina metadatos posicionales de longitud, latitud bajo formatos estandares internacionales, temporalidad universal (UTC), vinculo al creador originario y marca actual descriptiva (enum de control de ciclo de vida).
+- **Entidad `ZonaRiesgo`**: Matriz condensada geometrica que asocia representaciones espaciales calculadas y su equivalente clasificado de intensidad segun la poblacion historica contenida en su diametro.
 
----
+#### b) Diagrama de Actividades con Objetos Formal
 
-### 3. Modelo Lógico
-
-#### a) Diagrama de Actividades (Algoritmo de Validación)
 ```plantuml
 @startuml
 skinparam shadowing false
-skinparam roundcorner 10
-skinparam dpi 150
-skinparam defaultFontName Segoe UI
-skinparam backgroundColor #F8FAFC
-skinparam ArrowColor #0F766E
-skinparam ActivityBackgroundColor #ECFEFF
-skinparam ActivityBorderColor #0F766E
-skinparam ActivityDiamondBackgroundColor #FFFFFF
-skinparam ActivityDiamondBorderColor #0F766E
+skinparam roundcorner 5
 
-|Ciudadano|
+|Cliente Validado (Rol Any)|
 start
-:Ciudadano emite Reporte;
-:Guardar en MongoDB (Estado = Pendiente);
-:Notificar Policías en radio de 3KM;
-|App Policía|
-:Mostrar notificación local;
-:Policía visualiza reporte en mapa;
-if (Es verídico?) then (Sí)
-  :Policía presiona Validar;
-  |Backend FastAPI|
-  :Actualizar estado a "Confirmado";
-  :Ejecutar algoritmo DBSCAN;
-  if (Genera nuevo cluster rojo?) then (Sí)
-    :Disparar Push Notification a ciudadanos cercanos;
-
-  endif
-else (No)
-  |App Policía|
-  :Policía presiona Rechazar;
-  |Backend FastAPI|
-  :Anotar strike en cuenta ciudadana;
-endif
+:Inicia Transaccion Generacion Reporte;
+:Encapsula Formato Objeto Reporte (DTO);
+|Manejador de Peticion Interfaz|
+:Verifica Caducidad de Firma Autorizativa;
+:Decodifica Rol y Subyacente Autor;
+|Modo Insercion DB|
+:Instancia Transaccion Unica DB;
+:Escribe Entidad "ReporteCiudadano";
+:Define Enum "Pendiente" y TimeStamp;
+|Manejador de Peticion Interfaz|
+:Cierra canal HTTP (Code 201 Created);
+|Cliente Validado (Rol Any)|
+:Notifica Operacion Exitosa;
 stop
 @enduml
 ```
 
-#### b) Diagrama de Secuencia (Predicción Machine Learning)
+#### c) Diagrama de Secuencia General de Confirmacion Tonal
+
 ```plantuml
 @startuml
 skinparam shadowing false
-skinparam roundcorner 10
-skinparam dpi 150
-skinparam defaultFontName Segoe UI
-skinparam backgroundColor #F8FAFC
-skinparam ArrowColor #4F46E5
-skinparam SequenceParticipantBackgroundColor #EEF2FF
-skinparam SequenceParticipantBorderColor #4F46E5
-skinparam SequenceLifeLineBackgroundColor #4F46E5
-skinparam SequenceLifeLineBorderColor #334155
-skinparam ActorBackgroundColor #FFFFFF
-skinparam ActorBorderColor #4F46E5
-skinparam DatabaseBackgroundColor #ECFDF5
-skinparam DatabaseBorderColor #047857
-skinparam NoteBackgroundColor #FEF3C7
-skinparam NoteBorderColor #B45309
+skinparam roundcorner 5
+actor "Unidad Policial (Actor)" as AP
+participant "Componente GUI Frontend" as FP
+participant "Manejador Peticiones SGEO" as REP
+participant "Proceso Calculo Background" as MAT
+database "Persistencia Colecciones BSON" as MDB
 
-actor Administrador
-participant "Flutter App" as App
-participant "FastAPI (Router)" as API
-participant "AI Engine (Scikit)" as AI
-database "MongoDB" as DB
+AP -> FP : Seleccionar Accion 'Confirmar Evento'
+FP -> REP : Enviar transaccion segura PATCH (id, estado)
+REP -> MDB : Ejecuta Modificacion Condicionada Transaccional
+MDB -->> REP : Modificacion Unica Completa (Retorno Confirmacional)
+REP -->> FP : Liberacion via Estado Red 200 HTTP
 
-Administrador -> App : Clic en "Ver Predicciones"
-App -> API : GET /api/admin/sidpol_predict
-API -> DB : fetch_sidpol_history()
-DB --> API : List<JSON> Historical Data
-API -> AI : run_linear_regression(data)
-note right of AI: Aplica fit() y predict()\nsobre histórico (X=Mes, Y=Delitos)
-AI --> API : Pronóstico Distrital (Siguientes 3 Meses)
-API --> App : JSON 200 OK
-App -> Administrador : Renderiza Gráfica (fl_chart)
+REP -> MAT : Solicitud Desacoplada Reanalisis General
+activate MAT
+MAT -> MDB : Ingestion de todos registros certificados vigentes
+MDB -->> MAT : Objeto Matriz Plana Coordenada Resultante
+MAT -> MAT : Aplicacion Metodica de Distancias Evaluativas
+MAT -> MDB : Guardado e indexacion del Modelo Poligonal Renacido
+deactivate MAT
 @enduml
 ```
 
-#### c) Diagrama de Clases (Arquitectura de Base de Datos y Modelos)
+#### d) Diagrama de Clases Especifico Restringido a Datos
+
 ```plantuml
 @startuml
 skinparam shadowing false
-skinparam roundcorner 10
-skinparam dpi 150
-skinparam defaultFontName Segoe UI
-skinparam backgroundColor #FFFBF5
-skinparam ArrowColor #6D28D9
-skinparam ClassBackgroundColor #FFFFFF
-skinparam ClassBorderColor #8B5CF6
-skinparam ClassFontColor #2E1065
-skinparam ClassAttributeFontColor #4C1D95
-skinparam ClassStereotypeFontColor #6D28D9
-skinparam PackageBackgroundColor #F3E8FF
-skinparam PackageBorderColor #7C3AED
+skinparam roundcorner 5
+skinparam class {
+    BackgroundColor white
+    BorderColor black
+}
 
 class Usuario {
-  +ObjectId id
-  +String nombre
-  +String email
-  +String password_hash
-  +String rol (ciudadano, policia, admin)
-  +String telefono
-  +GeoJSON ubicacion_default
-  +String distrito
-  +boolean activo
-  +DateTime creado_en
+  - ObjectId id_interno
+  - String nombre_compuesto
+  - String correo_recorrido
+  - String clave_almacenada_secreta
+  - String directriz_de_rol
 }
 
 class ReporteCiudadano {
-  +ObjectId id
-  +ObjectId usuario_id
-  +boolean anonimo
-  +String sub_tipo (HURTO, ROBO, EXTORSION)
-  +String modalidad
-  +GeoJSON ubicacion
-  +String distrito
-  +DateTime fecha_hecho
-  +String estado (pendiente, confirmado, rechazado)
-  +DateTime creado_en
-}
-
-class Incidente {
-  +ObjectId id
-  +String fuente (ciudadano, policia, sidpol)
-  +ObjectId reporte_id
-  +ObjectId verificado_por
-  +String sub_tipo
-  +GeoJSON ubicacion
-  +DateTime fecha_hecho
-  +int anio
-  +int mes
-}
-
-class EstadisticaSidpol {
-  +int anio
-  +int mes
-  +String distrito
-  +String ubigeo
-  +String sub_tipo
-  +String modalidad
-  +int cantidad
-  +DateTime importado_en
+  - ObjectId codigo_incidente
+  - String emisor_ref
+  - MatrizGeometrica geolocalizacion
+  - String condicion_fase
+  - String tipo_evento_delictivo
+  - DateTime sello_inicio
 }
 
 class ZonaRiesgo {
-  +ObjectId id
-  +GeoJSON centroide
-  +int radio_metros
-  +String distrito
-  +String nivel_riesgo (bajo, medio, alto, critico)
-  +int total_incidentes
-  +String tendencia
+  - ObjectId identificativo_conjunto
+  - ColeccionNumeric centro_radiometro
+  - Flotante area_operabilidad
+  - String valorizacion_critica
 }
 
-class Alerta {
-  +ObjectId id
-  +ObjectId usuario_id
-  +String tipo (nuevo_incidente, zona_peligrosa)
-  +String mensaje
-  +boolean push_enviado
+class AlertaNotificadora {
+  - ObjectId id_evento
+  - String motivo
+  - String cuerpo_anuncio
+  - DateTime envio_registrado
 }
 
-Usuario "1" -- "0..*" ReporteCiudadano : crea
-Usuario "1" -- "0..*" Incidente : verifica (Rol Policia)
-ReporteCiudadano "1" -- "0..1" Incidente : se convierte en
-ZonaRiesgo "1" -- "0..*" Alerta : dispara
-EstadisticaSidpol "1" ..> "1" ZonaRiesgo : modelo de predicción
+Usuario "1" *-- "0..*" ReporteCiudadano : emite y posee
+Usuario "1" *-- "0..*" AlertaNotificadora : destino recetor
+ReporteCiudadano "1..*" --> ZonaRiesgo : compone base material
 @enduml
 ```
 
 ---
 
 ## CONCLUSIONES
-La especificación de requerimientos del sistema SGEO demuestra una planeación arquitectónica sólida que cubre desde la interacción móvil de alto nivel hasta la infraestructura predictiva en la nube. Los diagramas UML evidencian flujos de trabajo claros donde la Inteligencia Artificial (DBSCAN y Regresión Lineal) no es un añadido estético, sino el núcleo del sistema de prevención, procesando la carga de reportes validados y la vasta información del Estado Peruano. 
-
-Este SRS garantiza que el equipo de desarrollo tiene las directrices exactas para implementar un código modularizado, seguro (RBAC y Bcrypt), y altamente performante (Flutter y FastAPI).
+Bajo los estandares aplicadis de revision de la ingenieria, el documento se alinea como la pieza madre descriptiva del contrato operativo. Se ha delimitado rigurosamente que las facultades de accion interactuan escalonadamente, confinando a cada actor un set verificable y rastreable de operabilidad sin depender en esta instancia de justificaciones de infraestructura inferior (como codigos de programacion). Todo ello garantiza certidumbre academica y profesional.
 
 ## RECOMENDACIONES
-- Se recomienda realizar pruebas de carga (`stress testing`) sobre la API en FastAPI para simular escenarios de pánico masivo donde miles de ciudadanos intenten abrir el mapa al mismo tiempo.
-- Afinar los hiperparámetros del algoritmo DBSCAN (especialmente el valor *Epsilon* correspondiente a la cercanía en metros) a través de ensayos de campo reales en la ciudad de Tacna para evitar falsas geocercas rojas. 
-- Mantener los Cron Jobs del ETL de SIDPOL aislados del proceso principal del servidor para asegurar que la descarga pesada de datos gubernamentales no interrumpa las respuestas del API móvil.
+Se requiere la presentacion paralela y adjunta de un Documento de Disenio y Arquitectura (SAD) para volcar detalladamente las abstracciones implementadas a la interaccion tecnica final. Ademas, este informe base debera ser revisado de manera continua cada vez que el levantamiento iterativo identifique una modificacion en las Reglas de Negocio base (como por ejemplo nuevas fases estables para incidentes intermedios o reestructuras en division de los administradores policiales).
+
+## BIBLIOGRAFIA
+1. IEEE Std 830-1998, Recommended Practice for Software Requirements Specifications.
+2. ISO/IEC/IEEE 29148:2018, Systems and software engineering - Life cycle processes - Requirements engineering.
+3. Sommerville, I. Software Engineering. Novena edicion.
+4. Pressman, R. S. Software Engineering: A Practitioner's Approach.
+
+## WEBGRAFIA
+1. Guia Oficial de requerimientos tecnologicos y esquemas de Ingenieria.
+2. Documentacion Oficial del Framework UML para estandarizacion de Modelados Logicos (PlantUML Docs).
