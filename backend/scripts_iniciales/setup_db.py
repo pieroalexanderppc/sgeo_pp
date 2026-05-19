@@ -62,13 +62,13 @@ def setup_db():
         db.create_collection('reportes_ciudadano', validator={
             "$jsonSchema": {
                 "bsonType": "object",
-                "required": ["tipo", "sub_tipo", "ubicacion", "departamento", "provincia", "distrito", "fecha_hecho", "estado"],
+                "required": ["tipo_hecho", "subtipo_hecho", "ubicacion", "departamento_hecho", "provincia_hecho", "distrito_hecho", "estado"],
                 "properties": {
                     "usuario_id": {"bsonType": ["objectId", "null"]},
                     "anonimo": {"bsonType": "bool"},
-                    "tipo": {"enum": ["PATRIMONIO (DELITO)"]},
-                    "sub_tipo": {"enum": ["HURTO", "ROBO"]},
-                    "modalidad": {"bsonType": "string"},
+                    "tipo_hecho": {"enum": ["PATRIMONIO (DELITO)"]},
+                    "subtipo_hecho": {"enum": ["HURTO", "ROBO"]},
+                    "modalidad_hecho": {"bsonType": "string"},
                     "ubicacion": {
                         "bsonType": "object",
                         "required": ["type", "coordinates"],
@@ -77,14 +77,11 @@ def setup_db():
                             "coordinates": {"bsonType": "array"}
                         }
                     },
-                    "direccion": {"bsonType": "string"},
-                    "departamento": {"bsonType": "string"},
-                    "provincia": {"bsonType": "string"},
-                    "distrito": {"bsonType": "string"},
-                    "relacion_incidente": {"enum": ["Fui testigo presencial", "Familiar / Conocido"]},
-                    "ubigeo": {"bsonType": "string"},
-                    "fecha_hecho": {"bsonType": "date"},
-                    "hora_aprox": {"bsonType": "string"},
+                    "direccion_hecho": {"bsonType": "string"},
+                    "departamento_hecho": {"bsonType": "string"},
+                    "provincia_hecho": {"bsonType": "string"},
+                    "distrito_hecho": {"bsonType": "string"},
+                    "fecha_hora_hecho": {"bsonType": "date"},
                     "descripcion": {"bsonType": "string"},
                     "fotos": {"bsonType": "array"},
                     "estado": {"enum": ["pendiente", "confirmado", "rechazado"]},
@@ -102,7 +99,7 @@ def setup_db():
         db.create_collection('historial_delitos', validator={
             "$jsonSchema": {
                 "bsonType": "object",
-                "required": ["ubicacion", "departamento", "provincia", "distrito", "fecha_hecho", "tipo", "sub_tipo"],
+                "required": ["ubicacion", "departamento_hecho", "provincia_hecho", "distrito_hecho", "fecha_hecho", "tipo_hecho", "subtipo_hecho"],
                 "properties": {
                     "ubicacion": {
                         "bsonType": "object",
@@ -112,17 +109,17 @@ def setup_db():
                             "coordinates": {"bsonType": "array"}
                         }
                     },
-                    "direccion": {"bsonType": ["string", "null"]},
+                    "direccion_hecho": {"bsonType": ["string", "null"]},
                     "tipo_via": {"bsonType": ["string", "null"]},
-                    "departamento": {"bsonType": ["string", "null"]},
-                    "provincia": {"bsonType": ["string", "null"]},
-                    "distrito": {"bsonType": ["string", "null"]},
+                    "departamento_hecho": {"bsonType": ["string", "null"]},
+                    "provincia_hecho": {"bsonType": ["string", "null"]},
+                    "distrito_hecho": {"bsonType": ["string", "null"]},
                     "ubigeo": {"bsonType": ["string", "null"]},
                     "fecha_hecho": {"bsonType": "date"},
-                    "turno": {"bsonType": ["string", "null"]},
-                    "tipo": {"bsonType": ["string", "null"]},
-                    "sub_tipo": {"bsonType": ["string", "null"]},
-                    "modalidad": {"bsonType": ["string", "null"]},
+                    "turno_hecho": {"bsonType": ["string", "null"]},
+                    "tipo_hecho": {"bsonType": ["string", "null"]},
+                    "subtipo_hecho": {"bsonType": ["string", "null"]},
+                    "modalidad_hecho": {"bsonType": ["string", "null"]},
                     "estado_coord": {"bsonType": ["string", "null"]}, 
                     "fuente": {"enum": ["arcgis_sidpol", "ciudadano"]},
                     "creado_en": {"bsonType": "date"}

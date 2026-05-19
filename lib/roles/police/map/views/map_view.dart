@@ -4,12 +4,12 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:async';
+import 'dart:ui' as dart_ui;
 import 'package:sliding_up_panel/sliding_up_panel.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:showcaseview/showcaseview.dart';
 import '../../../../core/services/map_service.dart';
 import '../../../../core/services/report_service.dart';
-import '../../../../core/services/geofence_service.dart';
 import '../../../../core/services/tutorial_service.dart';
 import '../../../../core/theme/app_theme.dart';
 
@@ -41,6 +41,25 @@ class _PoliceMapViewState extends State<PoliceMapView> {
   int? _filterYear;
   int? _filterMonth;
   double _currentZoom = 15.0;
+
+  List<int> get _availableYears {
+    final Set<int> years = {};
+    for (var p in _puntosHistorial) {
+      final dateStr = p['fecha_hora_hecho'] ?? p['fecha_hecho'];
+      if (dateStr != null) {
+        try { years.add(DateTime.parse(dateStr).year); } catch (_) {}
+      }
+    }
+    for (var p in _puntosExactos) {
+      final dateStr = p['fecha_hora_hecho'] ?? p['fecha'];
+      if (dateStr != null) {
+        try { years.add(DateTime.parse(dateStr).year); } catch (_) {}
+      }
+    }
+    if (years.isEmpty) years.add(DateTime.now().year);
+    final sorted = years.toList()..sort();
+    return sorted.reversed.toList();
+  }
 
   @override
   void initState() {
@@ -345,20 +364,6 @@ class _PoliceMapViewState extends State<PoliceMapView> {
     _panelController.open();
   }
 
-  void _moveFakeGps(double dLat, double dLng) {
-    if (_realUserPosition == null) return;
-    setState(() {
-      _realUserPosition = LatLng(
-        _realUserPosition!.latitude + dLat,
-        _realUserPosition!.longitude + dLng,
-      );
-    });
-    _mapController.move(_realUserPosition!, 16.0);
-    GeofenceService.checkManualLocation(
-      _realUserPosition!.latitude,
-      _realUserPosition!.longitude,
-    );
-  }
 
   Widget _buildPanelContent() {
     if (_selectedZona == null) return const SizedBox.shrink();
@@ -643,9 +648,9 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                                   return true;
                                 }).map((punto) {
                                   final coords = punto['ubicacion']['coordinates'];
-                                  final subTipo = punto['sub_tipo'] ?? 'Desconocido';
+                                  final subTipo = punto['subtipo_hecho'] ?? punto['sub_tipo'] ?? 'Desconocido';
                                   final fuente = punto['fuente'] ?? 'sidpol';
-                                  final fechaHecho = punto['fecha_hecho'] ?? 'Fecha no disponible';
+                                  final fechaHecho = punto['fecha_hora_hecho'] ?? punto['fecha_hecho'] ?? 'Fecha no disponible';
                                   final modalidad = punto['modalidad'] ?? 'No especificada';
                                   final isCitizen = fuente == 'ciudadano';
 
@@ -661,45 +666,71 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                                       onTap: () {
                                         showDialog(
                                           context: context,
-                                          builder: (ctx) => AlertDialog(
-                                            backgroundColor: isDark ? AppTheme.bgSurface : Colors.white,
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                            title: Row(
-                                              children: [
-                                                Icon(
-                                                  isCitizen ? Icons.person_pin_circle : Icons.local_police,
-                                                  color: isCitizen ? AppTheme.accentBlue : AppTheme.alertRed,
-                                                  size: 24,
-                                                ),
-                                                const SizedBox(width: 10),
-                                                const Expanded(
-                                                  child: Text(
-                                                    'Detalle Histórico',
-                                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                                          builder: (ctx) => Dialog(
+                                            backgroundColor: Colors.transparent,
+                                            insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+                                            child: ClipRRect(
+                                              borderRadius: BorderRadius.circular(20),
+                                              child: BackdropFilter(
+                                                filter: dart_ui.ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(24),
+                                                  decoration: BoxDecoration(
+                                                    color: isDark ? AppTheme.bgSurface.withValues(alpha: 0.8) : Colors.white.withValues(alpha: 0.9),
+                                                    borderRadius: BorderRadius.circular(20),
+                                                    border: Border.all(color: isDark ? AppTheme.borderTactical : Colors.grey.shade300, width: 1),
+                                                  ),
+                                                  child: Column(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Row(
+                                                        children: [
+                                                          Icon(
+                                                            isCitizen ? Icons.person_pin_circle : Icons.local_police,
+                                                            color: isCitizen ? AppTheme.accentBlue : AppTheme.alertRed,
+                                                            size: 28,
+                                                          ),
+                                                          const SizedBox(width: 12),
+                                                          Expanded(
+                                                            child: Text(
+                                                              'Detalle Histórico',
+                                                              style: TextStyle(
+                                                                fontSize: 18,
+                                                                fontWeight: FontWeight.bold,
+                                                                color: isDark ? Colors.white : Colors.black87,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      const SizedBox(height: 20),
+                                                      Text('Delito: $subTipo', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: isDark ? Colors.white : Colors.black87)),
+                                                      const SizedBox(height: 10),
+                                                      Text('Modalidad: $modalidad', style: TextStyle(fontSize: 14, color: isDark ? AppTheme.textSecondary : Colors.grey[800])),
+                                                      const SizedBox(height: 10),
+                                                      Text('Fecha: $fechaHecho', style: TextStyle(fontSize: 14, color: isDark ? AppTheme.textSecondary : Colors.grey[800])),
+                                                      const SizedBox(height: 10),
+                                                      Text('Origen: ${isCitizen ? "Reporte validado (App)" : "Registro Policial SIDPOL"}', 
+                                                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isCitizen ? AppTheme.accentBlue : AppTheme.alertRed)),
+                                                      const SizedBox(height: 24),
+                                                      Align(
+                                                        alignment: Alignment.centerRight,
+                                                        child: TextButton(
+                                                          style: TextButton.styleFrom(
+                                                            backgroundColor: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey.shade200,
+                                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                                          ),
+                                                          onPressed: () => Navigator.of(ctx).pop(),
+                                                          child: Text('Cerrar', style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold)),
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
                                                 ),
-                                              ],
-                                            ),
-                                            content: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text('Delito: $subTipo', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                                                const SizedBox(height: 8),
-                                                Text('Modalidad: $modalidad', style: TextStyle(fontSize: 13, color: isDark ? AppTheme.textSecondary : Colors.grey[800])),
-                                                const SizedBox(height: 8),
-                                                Text('Fecha: $fechaHecho', style: TextStyle(fontSize: 13, color: isDark ? AppTheme.textSecondary : Colors.grey[800])),
-                                                const SizedBox(height: 8),
-                                                Text('Origen: ${isCitizen ? "Reporte validado (App)" : "Registro Policial SIDPOL"}', 
-                                                    style: TextStyle(fontSize: 13, color: isDark ? AppTheme.textSecondary : Colors.grey[800])),
-                                              ],
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () => Navigator.of(ctx).pop(),
-                                                child: Text('Cerrar', style: TextStyle(color: isDark ? AppTheme.textSecondary : Colors.grey)),
                                               ),
-                                            ],
+                                            ),
                                           ),
                                         );
                                       },
@@ -720,7 +751,7 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                                 if (_showReportesValidados)
                                   ..._puntosExactos.where((punto) {
                                     if (_filterYear != null || _filterMonth != null) {
-                                      final fechaRaw = punto['fecha'] as String?;
+                                      final fechaRaw = punto['fecha_hora_hecho'] as String?;
                                       if (fechaRaw != null) {
                                         try {
                                           final dt = DateTime.parse(fechaRaw);
@@ -952,68 +983,18 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                   ),
                 ),
 
-                if (_realUserPosition != null)
-                  Positioned(
-                    bottom: 110,
-                    left: 20,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: isDark ? AppTheme.bgSurface.withValues(alpha: 0.9) : Colors.white.withValues(alpha: 0.9),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: isDark ? AppTheme.borderTactical : Colors.transparent),
-                        boxShadow: [
-                          BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 4)),
-                        ],
-                      ),
-                      padding: const EdgeInsets.all(8),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: Icon(Icons.keyboard_arrow_up, color: isDark ? Colors.white : Colors.black87),
-                            onPressed: () => _moveFakeGps(0.0005, 0),
-                            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                            padding: EdgeInsets.zero,
-                          ),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: Icon(Icons.keyboard_arrow_left, color: isDark ? Colors.white : Colors.black87),
-                                onPressed: () => _moveFakeGps(0, -0.0005),
-                                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                                padding: EdgeInsets.zero,
-                              ),
-                              Icon(Icons.control_camera, color: AppTheme.accentBlue, size: 20),
-                              IconButton(
-                                icon: Icon(Icons.keyboard_arrow_right, color: isDark ? Colors.white : Colors.black87),
-                                onPressed: () => _moveFakeGps(0, 0.0005),
-                                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                                padding: EdgeInsets.zero,
-                              ),
-                            ],
-                          ),
-                          IconButton(
-                            icon: Icon(Icons.keyboard_arrow_down, color: isDark ? Colors.white : Colors.black87),
-                            onPressed: () => _moveFakeGps(-0.0005, 0),
-                            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                            padding: EdgeInsets.zero,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                // ====== SE ELIMINÓ EL JOYSTICK FALSO TEMPORAL ======
               ],
             ),
           ),
           floatingActionButton: FloatingActionButton(
             heroTag: 'map_location_police',
-            mini: true,
-            backgroundColor: isDark ? AppTheme.bgSurface : Colors.white,
-            foregroundColor: isDark ? AppTheme.textPrimary : Colors.black87,
+            mini: false,
+            backgroundColor: isDark ? AppTheme.bgSurface.withValues(alpha: 0.9) : Colors.white.withValues(alpha: 0.9),
+            foregroundColor: isDark ? AppTheme.accentBlue : Colors.black87,
             elevation: 4,
             onPressed: () => _determinePosition(userForced: true),
-            child: const Icon(Icons.my_location, size: 20),
+            child: const Icon(Icons.my_location, size: 24),
           ),
         );
       },
@@ -1059,16 +1040,17 @@ class _PoliceMapViewState extends State<PoliceMapView> {
             children: [
               Expanded(
                 child: DropdownButtonFormField<int?>(
+                  isExpanded: true,
                   decoration: InputDecoration(
                     isDense: true,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   ),
-                  value: _filterYear,
+                  initialValue: _filterYear,
                   hint: const Text('Año', style: TextStyle(fontSize: 12)),
                   items: [
                     const DropdownMenuItem<int?>(value: null, child: Text('Todos', style: TextStyle(fontSize: 12))),
-                    ...[2022, 2023, 2024, 2025].map((y) => DropdownMenuItem<int?>(value: y, child: Text(y.toString(), style: const TextStyle(fontSize: 12)))),
+                    ..._availableYears.map((y) => DropdownMenuItem<int?>(value: y, child: Text(y.toString(), style: const TextStyle(fontSize: 12)))),
                   ],
                   onChanged: (val) => setState(() => _filterYear = val),
                   style: TextStyle(fontSize: 12, color: isDark ? Colors.white : Colors.black),
@@ -1078,16 +1060,20 @@ class _PoliceMapViewState extends State<PoliceMapView> {
               const SizedBox(width: 8.0),
               Expanded(
                 child: DropdownButtonFormField<int?>(
+                  isExpanded: true,
                   decoration: InputDecoration(
                     isDense: true,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   ),
-                  value: _filterMonth,
+                  initialValue: _filterMonth,
                   hint: const Text('Mes', style: TextStyle(fontSize: 12)),
                   items: [
                     const DropdownMenuItem<int?>(value: null, child: Text('Todos', style: TextStyle(fontSize: 12))),
-                    ...List.generate(12, (i) => i + 1).map((m) => DropdownMenuItem<int?>(value: m, child: Text(m.toString().padLeft(2, '0'), style: const TextStyle(fontSize: 12)))),
+                    ...List.generate(12, (i) {
+                      const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                      return DropdownMenuItem<int?>(value: i + 1, child: Text(meses[i], style: const TextStyle(fontSize: 12)));
+                    }),
                   ],
                   onChanged: (val) => setState(() => _filterMonth = val),
                   style: TextStyle(fontSize: 12, color: isDark ? Colors.white : Colors.black),

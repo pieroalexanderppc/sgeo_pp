@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'dart:ui' as dart_ui;
 import 'package:http/http.dart' as http;
 import '../../../../../core/services/map_service.dart';
 import '../../../../../core/theme/app_theme.dart';
@@ -17,10 +18,10 @@ class ReportDialog extends StatefulWidget {
 }
 
 class _ReportDialogState extends State<ReportDialog> {
-  // Mapa de opciones amigables -> Valores esperados por el backend
+  // Mapa de opciones tácticas -> Valores esperados por el backend (SIDPOL Compatible)
   final Map<String, String> _tiposDelitoMap = {
-    'Robo (Asalto con violencia, armas o arrebato)': 'ROBO',
-    'Hurto (Sustracción sin violencia, a escondidas)': 'HURTO',
+    'Robo (Asalto con violencia / amenaza)': 'ROBO',
+    'Hurto (Sustracción sin violencia)': 'HURTO',
   };
 
   late String _subTipoSeleccionadoAmigable;
@@ -81,15 +82,33 @@ class _ReportDialogState extends State<ReportDialog> {
   Future<void> _enviarReporte() async {
     setState(() { _isSubmitting = true; });
 
+    final now = DateTime.now();
+    final offsetHours = now.timeZoneOffset.inHours;
+    final offsetStr = '${offsetHours < 0 ? '-' : '+'}${offsetHours.abs().toString().padLeft(2, '0')}:00';
+
     final datos = {
-        "sub_tipo": _tiposDelitoMap[_subTipoSeleccionadoAmigable],
+        "subtipo_hecho": _tiposDelitoMap[_subTipoSeleccionadoAmigable],
         "latitud": widget.latitud,
         "longitud": widget.longitud,
-        "descripcion": _descripcionController.text.trim().isEmpty 
-            ? "Reporte ciudadano sin descripción" 
-            : _descripcionController.text.trim(),
-        "direccion": _direccionDetectada,
+        "descripcion": _descripcionController.text.trim(),
+        "direccion_hecho": _direccionDetectada,
         "usuario_id": widget.userId,
+        
+        // --- Nuevos campos estrictos (QA & ML Ready) ---
+        "distrito_hecho": "TACNA",
+        "provincia_hecho": "TACNA",
+        "departamento_hecho": "TACNA",
+        "precision_gps": 10.0,
+        "fuente": "CIUDADANO_APP",
+        "gravedad": "MEDIA",
+        "device_timestamp": now.toIso8601String(),
+        "timezone": "America/Lima",
+        "metadata_contextual": {
+            "plataforma": "Flutter App",
+            "version": "1.0.0",
+            "tipo_conexion": "Desconocido",
+            "offset_local": offsetStr
+        },
     };
 
     try {
@@ -126,30 +145,25 @@ class _ReportDialogState extends State<ReportDialog> {
     return Dialog(
       backgroundColor: Colors.transparent, // Fondo manejado por el Container interno
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      child: Container(
-        width: double.maxFinite,
-        decoration: BoxDecoration(
-          color: isDark ? AppTheme.bgSurface : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.borderTactical, width: 0.5),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.5),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            )
-          ]
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: dart_ui.ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+          child: Container(
+            width: double.maxFinite,
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.bgSurface.withValues(alpha: 0.85) : Colors.white.withValues(alpha: 0.9),
+              border: Border.all(color: AppTheme.borderTactical.withValues(alpha: 0.5), width: 1),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
             // --- HEADER DE ALERTA ---
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               decoration: BoxDecoration(
-                color: isDark ? AppTheme.bgDeep : Colors.grey.shade50,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                color: isDark ? AppTheme.bgDeep.withValues(alpha: 0.5) : Colors.grey.shade50.withValues(alpha: 0.5),
                 border: Border(bottom: BorderSide(color: isDark ? AppTheme.borderSubtle : Colors.grey.shade200)),
               ),
               child: Row(
@@ -183,7 +197,7 @@ class _ReportDialogState extends State<ReportDialog> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Ayuda a mejorar la seguridad indicando qué ocurrió detalladamente en esta ubicación.',
+                      'Detalla el incidente de forma breve y precisa. Esta información se integrará directamente al motor predictivo.',
                       style: TextStyle(fontSize: 13, color: isDark ? AppTheme.textSecondary : Colors.grey[700], height: 1.4),
                     ),
                     const SizedBox(height: 20),
@@ -266,9 +280,25 @@ class _ReportDialogState extends State<ReportDialog> {
                     const SizedBox(height: 8),
                     TextField(
                       controller: _descripcionController,
-                      style: const TextStyle(fontSize: 14),
-                      decoration: const InputDecoration(
-                        hintText: 'Ej: Moto lineal negra con 2 sujetos...',
+                      style: TextStyle(fontSize: 14, color: isDark ? AppTheme.textPrimary : Colors.black87),
+                      decoration: InputDecoration(
+                        hintText: 'Ej: Moto lineal negra, 2 sujetos armados...',
+                        hintStyle: TextStyle(color: isDark ? AppTheme.textSecondary.withValues(alpha: 0.5) : Colors.grey.shade400),
+                        filled: true,
+                        fillColor: isDark ? AppTheme.bgDeep : Colors.grey.shade50,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: isDark ? AppTheme.borderTactical : Colors.grey.shade300),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: isDark ? AppTheme.borderTactical : Colors.grey.shade300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: AppTheme.accentBlue),
+                        ),
+                        contentPadding: const EdgeInsets.all(16),
                       ),
                       maxLines: 4,
                     ),
@@ -283,7 +313,7 @@ class _ReportDialogState extends State<ReportDialog> {
               child: Row(
                 children: [
                   SafetyButton.outline(
-                    label: 'Cancelar',
+                    label: 'CANCELAR',
                     expand: false,
                     padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                     onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(false),
@@ -291,7 +321,7 @@ class _ReportDialogState extends State<ReportDialog> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: SafetyButton.danger(
-                      label: 'Enviar Alerta',
+                      label: 'ENVIAR ALERTA',
                       icon: Icons.send_rounded,
                       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
                       isLoading: _isSubmitting,
@@ -304,6 +334,8 @@ class _ReportDialogState extends State<ReportDialog> {
           ],
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 }

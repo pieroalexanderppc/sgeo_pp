@@ -170,7 +170,7 @@ class GeofenceService {
     }
 
     final String title = '¡Precaución! Riesgo $zoneName — Turno: $turno';
-    final String body = '$contextMsg';
+    final String body = contextMsg;
     
     final fakeMessage = RemoteMessage(
       notification: RemoteNotification(

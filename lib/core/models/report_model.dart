@@ -8,6 +8,14 @@ class ReportModel {
   final String? descripcion;
   final double? latitud;
   final double? longitud;
+  
+  // Nuevos campos
+  final String? rangoHorario;
+  final String? gravedad;
+  final String? fechaCompleta;
+  final String? diaSemana;
+  final double? precisionGps;
+  final String? timestampUtc;
 
   ReportModel({
     required this.id,
@@ -18,6 +26,12 @@ class ReportModel {
     this.descripcion,
     this.latitud,
     this.longitud,
+    this.rangoHorario,
+    this.gravedad,
+    this.fechaCompleta,
+    this.diaSemana,
+    this.precisionGps,
+    this.timestampUtc,
   });
 
   /// Transforma el JSON del servidor (Map dinámico) a un Objeto Dart tipado.
@@ -38,12 +52,18 @@ class ReportModel {
     return ReportModel(
       id: json['_id']?.toString() ?? '',
       estado: json['estado']?.toString() ?? 'desconocido',
-      subTipo: json['sub_tipo']?.toString() ?? 'DESCONOCIDO',
+      subTipo: json['subtipo_hecho']?.toString() ?? 'DESCONOCIDO',
       creadoEn: json['creado_en']?.toString(),
-      direccion: json['direccion']?.toString(),
+      direccion: json['direccion_hecho']?.toString(),
       descripcion: json['descripcion']?.toString(),
       latitud: lat,
       longitud: lng,
+      rangoHorario: json['turno_hecho']?.toString(),
+      gravedad: json['gravedad']?.toString(),
+      fechaCompleta: json['fecha_hora_hecho']?.toString(),
+      diaSemana: json['dia_semana']?.toString(),
+      precisionGps: (json['precision_gps'] as num?)?.toDouble(),
+      timestampUtc: json['timestamp_utc']?.toString(),
     );
   }
 }

@@ -106,7 +106,7 @@ class _SafetyScoreGaugeState extends State<SafetyScoreGauge>
         final scoreColor = _getScoreColor(currentScore);
 
         return Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: isDark ? AppTheme.bgSurface : Colors.white,
             borderRadius: BorderRadius.circular(20),
@@ -122,68 +122,74 @@ class _SafetyScoreGaugeState extends State<SafetyScoreGauge>
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(6),
+                    padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
                       color: scoreColor.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.shield_rounded, color: scoreColor, size: 18),
+                    child: Icon(Icons.shield_rounded, color: scoreColor, size: 16),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'SAFETY SCORE',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.5,
-                        color: isDark ? AppTheme.textSecondary : Colors.grey[600],
-                      ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'SCORE',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.0,
+                      color: isDark ? AppTheme.textSecondary : Colors.grey[600],
                     ),
                   ),
-                  Icon(_getTurnoIcon(), size: 18, color: isDark ? AppTheme.textMuted : Colors.grey[400]),
+                  const Spacer(),
+                  Icon(_getTurnoIcon(), size: 14, color: isDark ? AppTheme.textMuted : Colors.grey[400]),
                   const SizedBox(width: 4),
-                  Text(
-                    widget.turno.toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? AppTheme.textMuted : Colors.grey[500],
+                  Flexible(
+                    child: SizedBox(
+                      width: 60, // Límite de ancho para que el texto haga scroll
+                      child: _AutoScrollText(
+                        text: widget.turno.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? AppTheme.textMuted : Colors.grey[500],
+                        ),
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
 
               // ── Arco Gauge ──
               SizedBox(
                 width: widget.size,
-                height: widget.size * 0.65,
+                height: widget.size * 0.70, // Un poco más de altura para evitar overflow
                 child: CustomPaint(
                   painter: _GaugePainter(
                     score: currentScore,
                     color: scoreColor,
                     isDark: isDark,
                   ),
-                  child: Center(
+                  child: Align(
+                    alignment: Alignment.center,
                     child: Padding(
-                      padding: const EdgeInsets.only(top: 16),
+                      padding: EdgeInsets.only(top: widget.size * 0.35), // Lo bajamos aún más para que quede perfecto al centro
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Text(
                             currentScore.toStringAsFixed(0),
                             style: TextStyle(
-                              fontSize: 36,
+                              fontSize: widget.size * 0.22, // Escala dinámicamente según el tamaño (ej: ~21pt para size 95)
                               fontWeight: FontWeight.w800,
                               color: scoreColor,
-                              height: 1,
+                              height: 1.0,
                             ),
                           ),
                           Text(
                             '/100',
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: widget.size * 0.08, // Escala proporcionalmente
                               color: isDark ? AppTheme.textMuted : Colors.grey[400],
                             ),
                           ),
@@ -203,9 +209,11 @@ class _SafetyScoreGaugeState extends State<SafetyScoreGauge>
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  widget.mensaje.isNotEmpty ? widget.mensaje : _defaultMessage(currentScore),
+                  // Forzamos remover el texto que manda el backend / padre
+                  (widget.mensaje.isNotEmpty ? widget.mensaje : _defaultMessage(currentScore))
+                      .replaceAll(' — mantente alerta', ''),
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: widget.size * 0.10, // Escala el texto inferior al tamaño del marco
                     fontWeight: FontWeight.w600,
                     color: scoreColor,
                   ),
@@ -222,7 +230,7 @@ class _SafetyScoreGaugeState extends State<SafetyScoreGauge>
   String _defaultMessage(double score) {
     if (score >= 80) return 'Zona segura';
     if (score >= 50) return 'Precaución recomendada';
-    return 'Alto riesgo — mantente alerta';
+    return 'Alto riesgo';
   }
 }
 
@@ -310,5 +318,75 @@ class _GaugePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _GaugePainter oldDelegate) {
     return oldDelegate.score != score || oldDelegate.color != color;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  AutoScrollText: Texto automático deslizante bidireccional
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _AutoScrollText extends StatefulWidget {
+  final String text;
+  final TextStyle style;
+
+  const _AutoScrollText({required this.text, required this.style});
+
+  @override
+  _AutoScrollTextState createState() => _AutoScrollTextState();
+}
+
+class _AutoScrollTextState extends State<_AutoScrollText> with SingleTickerProviderStateMixin {
+  late ScrollController _scrollController;
+  late AnimationController _animationController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    // Rotación lenta, tipo panel publicitario
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 7500), // Mucho más calmado (antes 3000)
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startScrolling();
+    });
+  }
+
+  void _startScrolling() {
+    if (_scrollController.hasClients && _scrollController.position.maxScrollExtent > 0) {
+      // Bucle infinito hacia la izquierda solamente
+      _animationController.repeat(reverse: false);
+      _animationController.addListener(() {
+        if (_scrollController.hasClients) {
+          final maxScroll = _scrollController.position.maxScrollExtent;
+          if (maxScroll > 0) {
+            _scrollController.jumpTo(maxScroll * _animationController.value);
+          }
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      controller: _scrollController,
+      scrollDirection: Axis.horizontal,
+      physics: const NeverScrollableScrollPhysics(), // Animación automática
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2.0),
+        // Repetimos el texto con espacio para crear la ilusión del bucle (efecto panel)
+        child: Text("${widget.text}      ${widget.text}", style: widget.style),
+      ),
+    );
   }
 }

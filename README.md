@@ -6,7 +6,7 @@ Aplicación móvil híbrida orientada a la participación ciudadana y la acción
 
 ## 🎨 Sistema de Diseño: Premium Tactical Dark
 
-Toda la aplicación (Frontend) está construida rigurosamente bajo el sistema de diseño nativo **Premium Tactical Dark**. Esta estética prioriza interfaces *glassmórficas*, sombras dinámicas, modales tácticos y componentes reutilizables (`SafetyLayout`, `SafetyCard`, `SafetyButton`) para asegurar que el sistema no solo sea altamente funcional sino inmersivo, visualmente impresionante y moderno para cualquiera de los tres roles.
+Toda la aplicación (Frontend) está construida rigurosamente bajo el sistema de diseño nativo **Premium Tactical Dark**. Esta estética prioriza interfaces *glassmórficas*, sombras dinámicas, modales tácticos y componentes reutilizables (`SafetyLayout`, `SafetyCard`, `SafetyScoreGauge`, `SafetyButton`). Se han implementado micro-interacciones avanzadas, efectos de *marquee* infinito (paneles LED deslizantes) y calibración paramétrica responsiva para evitar desbordes (*overflows*), asegurando que el sistema sea inmersivo, *pixel-perfect* y visualmente impresionante para los usuarios.
 
 ---
 
@@ -134,6 +134,9 @@ El sistema emplea inteligencia artificial en dos frentes distintos:
 2. **Machine Learning Predictivo (Linear Regression) - Análisis Macro:**  
    Implementado en el rol de Administrador. Procesa la colección masiva de SIDPOL Histórico empleando `pandas` y `LinearRegression`. Emite predicciones precisas sobre cuántos crímenes sucederán en los próximos tres meses y detecta de manera automatizada cuál distrito experimentará el mayor aumento de riesgo inminente.
 
+### ⏱️ Motor de Homogeneización Temporal y Filtros Dinámicos
+El frontend de la aplicación incorpora un analizador temporal robusto y *memoizado* (`_extractDate`) capaz de interpretar y unificar múltiples orígenes de datos en el cliente. Transforma automáticamente timestamps UNIX en milisegundos (nativos de ArcGIS) y cadenas UTC estrictas bajo norma ISO 8601 (derivadas de FastAPI). Esto dota al mapa de **filtros interactivos en vivo por Año y Mes**, garantizando 60 FPS sin *UI Freezing* durante la iteración sobre clústeres masivos de incidentes.
+
 ### 🛡️ Geocercas (Geofencing) y Monitoreo GPS Silencioso
 
 - **Rastreo en Background:** El servicio `GeofenceService` monitoriza la posición del usuario cada 50 metros mediante `Geolocator`.
@@ -164,7 +167,7 @@ Scripts (`extract_arcgis_data.py`, `import_arcgis_data.py`) ejecutan tareas Cron
 | **Frontend Móvil** | Flutter (Dart) | SDK `^3.11.3` |
 | **Analítica Visual** | fl_chart, flutter_animate | Gráficos e interfaces interactivas Premium |
 | **Mapas & GPS** | flutter_map, Geolocator | Capas OSM e integración latlong2 |
-| **Backend API** | FastAPI (Python 3.11), Uvicorn | Async, BackgroundTasks, Servidor ultra rápido |
+| **Backend API** | FastAPI (Python 3.11), Uvicorn | Async, sanitización estricta de JSONs temporales a ISO 8601 |
 | **Base de Datos** | MongoDB Atlas (PyMongo) | Esquemas validados, índices geoespaciales 2dsphere |
 | **Machine Learning**| Scikit-Learn | DBSCAN (Espacial) y Regresión Lineal (Predictiva) |
 | **Minería de Datos**| Pandas, NumPy, BeautifulSoup | Web Scraping y manipulación masiva de Excel/CSV |

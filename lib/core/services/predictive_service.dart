@@ -126,7 +126,7 @@ class PredictiveService {
       final uri = Uri.parse('$_baseUrl/api/predictive/temporal_analysis').replace(
         queryParameters: {
           'dias': dias.toString(),
-          if (distrito != null) 'distrito': distrito,
+          'distrito': ?distrito,
         },
       );
 
@@ -149,7 +149,7 @@ class PredictiveService {
     try {
       final uri = Uri.parse('$_baseUrl/api/predictive/risk_forecast').replace(
         queryParameters: {
-          if (distrito != null) 'distrito': distrito,
+          'distrito': ?distrito,
         },
       );
 
@@ -172,7 +172,7 @@ class PredictiveService {
     try {
       final uri = Uri.parse('$_baseUrl/api/predictive/safe_hours').replace(
         queryParameters: {
-          if (distrito != null) 'distrito': distrito,
+          'distrito': ?distrito,
         },
       );
 
