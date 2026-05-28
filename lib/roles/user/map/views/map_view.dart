@@ -10,6 +10,7 @@ import 'package:showcaseview/showcaseview.dart';
 import '../../../../core/services/map_service.dart';
 import '../../../../core/services/report_service.dart';
 import '../../../../core/services/predictive_service.dart';
+import '../../../../core/services/geofence_service.dart';
 import '../../../../core/models/report_model.dart';
 import '../../../../core/services/tutorial_service.dart';
 import 'dart:ui' as dart_ui;
@@ -54,6 +55,26 @@ class _MapViewState extends State<MapView> {
   Map<String, dynamic>? _safetyScoreData;
   List<Map<String, dynamic>> _insightsData = [];
   bool _showInsightsPanel = false;
+
+  // ── TEST MODE JOYSTICK ──
+  bool _isTestMode = true; // Cambiar a false cuando terminemos las pruebas
+
+  void _moveJoystick(double dLat, double dLng) {
+    if (_realUserPosition == null) return;
+    setState(() {
+      _realUserPosition = LatLng(
+        _realUserPosition!.latitude + dLat,
+        _realUserPosition!.longitude + dLng,
+      );
+      _currentPosition = _realUserPosition;
+      _mapController.move(_realUserPosition!, _mapController.camera.zoom);
+    });
+    // Volver a cargar el motor predictivo y notificaciones en base a la nueva posición
+    _loadPredictiveData(forceRefresh: true);
+    
+    // Y probamos si entramos a la zona (Bypass = true para que el mensaje siempre salga en las pruebas)
+    GeofenceService.checkManualLocation(_realUserPosition!.latitude, _realUserPosition!.longitude, bypassCooldown: true);
+  }
 
   /// Helper robusto para extraer y guardar la fecha de cualquier estructura (ArcGis o Ciudadana)
   DateTime? _extractDate(dynamic punto) {
@@ -132,16 +153,23 @@ class _MapViewState extends State<MapView> {
   }
 
   /// Carga el Safety Score y los Insights para la posición actual del usuario.
-  Future<void> _loadPredictiveData() async {
+  Future<void> _loadPredictiveData({bool forceRefresh = false}) async {
     if (_realUserPosition == null) return;
     try {
+      // Inyectamos la hora local del dispositivo para evitar problemas con la zona horaria del servidor
+      final int currentHour = DateTime.now().hour;
+      
       final score = await PredictiveService.fetchSafetyScore(
         lat: _realUserPosition!.latitude,
         lng: _realUserPosition!.longitude,
+        hora: currentHour,
+        forceRefresh: forceRefresh,
       );
       final insights = await PredictiveService.fetchContextInsights(
         lat: _realUserPosition!.latitude,
         lng: _realUserPosition!.longitude,
+        hora: currentHour,
+        forceRefresh: forceRefresh,
       );
       if (mounted) {
         setState(() {
@@ -268,6 +296,8 @@ class _MapViewState extends State<MapView> {
       setState(() {
         _zonasRiesgo = zonas;
       });
+      // Sincronizamos directamente con el servicio de geocerca para pruebas locales
+      GeofenceService.syncZonesDirectly(_zonasRiesgo);
     } catch (e) {
       debugPrint("❌ Error cargando zonas de riesgo: $e");
     }
@@ -1344,8 +1374,64 @@ class _MapViewState extends State<MapView> {
                   ),
                 ),
 
-                // ====== SE ELIMINÓ EL JOYSTICK FALSO TEMPORAL ======
-
+                // ====== JOYSTICK PARA TEST DE NOTIFICACIONES ======
+                if (_isTestMode)
+                  Positioned(
+                    bottom: 120, // Aumentado significativamente para saltar la barra de navegación del celular
+                    left: 16,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isDark ? AppTheme.bgElevated.withValues(alpha: 0.9) : Colors.white.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(40),
+                        border: Border.all(color: AppTheme.accentBlue.withValues(alpha: 0.3)),
+                        boxShadow: const [
+                          BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 4))
+                        ]
+                      ),
+                      padding: const EdgeInsets.all(4),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.keyboard_arrow_up, size: 28),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            color: AppTheme.accentBlue,
+                            onPressed: () => _moveJoystick(0.0005, 0),
+                          ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.keyboard_arrow_left, size: 28),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                color: AppTheme.accentBlue,
+                                onPressed: () => _moveJoystick(0, -0.0005),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.adjust_rounded, size: 22, color: Colors.grey),
+                              const SizedBox(width: 4),
+                              IconButton(
+                                icon: const Icon(Icons.keyboard_arrow_right, size: 28),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                color: AppTheme.accentBlue,
+                                onPressed: () => _moveJoystick(0, 0.0005),
+                              ),
+                            ],
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.keyboard_arrow_down, size: 28),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            color: AppTheme.accentBlue,
+                            onPressed: () => _moveJoystick(-0.0005, 0),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
 
                 // -- BOTON PARA REPORTAR (SafetyButton Premium) --
                 Positioned(

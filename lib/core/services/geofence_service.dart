@@ -24,6 +24,13 @@ class GeofenceService {
 
   static bool _currentlyInsideZone = false;
 
+  /// Permite inyectar las zonas cacheadas de la vista para asegurar sincronización en el testeo
+  static void syncZonesDirectly(List<dynamic> zones) {
+    if (zones.isNotEmpty) {
+      _realRiskZones = zones;
+    }
+  }
+
   static Future<void> refreshZones() async {
     try {
       _realRiskZones = await MapService.fetchZonasRiesgo(forceRefresh: true);
@@ -81,7 +88,11 @@ class GeofenceService {
 
   /// Método auxiliar creado con fines de desarrollo para evaluar triggers de notificación local
   /// al sobreescribir y enrutar las coordinadas deseadas a través de flujos manuales.
-  static Future<void> checkManualLocation(double lat, double lng) async {
+  static Future<void> checkManualLocation(double lat, double lng, {bool bypassCooldown = false}) async {
+    if (bypassCooldown) {
+      _lastAlertTime = null; // Forza el reseteo del cooldown para permitir Testing intensivo
+    }
+    
     final fakePosition = Position(
       longitude: lng,
       latitude: lat,

@@ -12,41 +12,58 @@ import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   // ── Notifier global para cambio de tema reactivo ──
-  static final ValueNotifier<ThemeMode> themeNotifier =
-      ValueNotifier(ThemeMode.dark);
+  static final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(
+    ThemeMode.dark,
+  );
 
   // ══════════════════════════════════════════════════════════════════════════
   //  PALETA DE COLORES TÁCTICOS (Constantes reutilizables)
   // ══════════════════════════════════════════════════════════════════════════
-  
+
   // ── Fondos ──
-  static const Color bgDeep       = Color(0xFF0A0E12);   // Fondo principal profundo
-  static const Color bgSurface    = Color(0xFF161B22);   // Superficies / tarjetas
-  static const Color bgElevated   = Color(0xFF1C2128);   // Superficies elevadas (dialogs, sheets)
+  static const Color bgDeep = Color(0xFF0A0E12); // Fondo principal profundo
+  static const Color bgSurface = Color(0xFF161B22); // Superficies / tarjetas
+  static const Color bgElevated = Color(
+    0xFF1C2128,
+  ); // Superficies elevadas (dialogs, sheets)
 
   // ── Acentos ──
-  static const Color accentBlue   = Color(0xFF1A73E8);   // Azul eléctrico principal
-  static const Color accentBlueLight = Color(0xFF4DA3FF); // Azul para textos sobre oscuro
-  static const Color accentBlueMuted = Color(0xFF1A73E8); // Azul para iconos/detalles
+  static const Color accentBlue = Color(0xFF1A73E8); // Azul eléctrico principal
+  static const Color accentBlueLight = Color(
+    0xFF4DA3FF,
+  ); // Azul para textos sobre oscuro
+  static const Color accentBlueMuted = Color(
+    0xFF1A73E8,
+  ); // Azul para iconos/detalles
 
   // ── Alertas ──
-  static const Color alertRed     = Color(0xFFE53935);   // Rojo de alerta (sólido)
-  static const Color alertRedBg   = Color(0x33E53935);   // Rojo semitransparente (fondos de badges/alertas)
-  static const Color alertAmber   = Color(0xFFFFB300);   // Ámbar para advertencias
-  static const Color successGreen = Color(0xFF43A047);   // Verde confirmación
+  static const Color alertRed = Color(0xFFE53935); // Rojo de alerta (sólido)
+  static const Color alertRedBg = Color(
+    0x33E53935,
+  ); // Rojo semitransparente (fondos de badges/alertas)
+  static const Color alertAmber = Color(0xFFFFB300); // Ámbar para advertencias
+  static const Color successGreen = Color(0xFF43A047); // Verde confirmación
 
   // ── Bordes tácticos ──
-  static const Color borderTactical   = Color(0x1AFFFFFF); // Blanco al 10%
-  static const Color borderSubtle     = Color(0x0DFFFFFF); // Blanco al 5%
+  static const Color borderTactical = Color(0x1AFFFFFF); // Blanco al 10%
+  static const Color borderSubtle = Color(0x0DFFFFFF); // Blanco al 5%
 
   // ── Textos ──
-  static const Color textPrimary   = Color(0xFFF0F6FC);  // Texto principal (alto contraste)
-  static const Color textSecondary = Color(0xFF8B949E);   // Texto secundario / subtítulos
-  static const Color textMuted     = Color(0xFF484F58);   // Texto deshabilitado / hints
+  static const Color textPrimary = Color(
+    0xFFF0F6FC,
+  ); // Texto principal (alto contraste)
+  static const Color textSecondary = Color(
+    0xFF8B949E,
+  ); // Texto secundario / subtítulos
+  static const Color textMuted = Color(
+    0xFF484F58,
+  ); // Texto deshabilitado / hints
 
   // ── Gradiente radial del fondo (para SafetyLayout) ──
-  static const Color bgGlowCenter = Color(0xFF0D1B2A);   // Centro del glow sutil
-  static const Color bgGlowEdge   = Color(0xFF0A0E12);   // Borde que se desvanece al bgDeep
+  static const Color bgGlowCenter = Color(0xFF0D1B2A); // Centro del glow sutil
+  static const Color bgGlowEdge = Color(
+    0xFF0A0E12,
+  ); // Borde que se desvanece al bgDeep
 
   // ══════════════════════════════════════════════════════════════════════════
   //  TEMA CLARO (Light Mode)
@@ -56,6 +73,14 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
+      extensions: const <ThemeExtension<dynamic>>[
+        SecurityColors(
+          critical: Color(0xFFD32F2F),
+          criticalBg: Color(0x33D32F2F),
+          warning: Color(0xFFF57C00),
+          success: Color(0xFF2E7D32),
+        ),
+      ],
       textTheme: GoogleFonts.poppinsTextTheme(base.textTheme),
       colorScheme: const ColorScheme.light(
         primary: Color(0xFF0061A4),
@@ -90,7 +115,10 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: const Color(0xFFF0F4FA),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 18,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Color(0xFFD0D5DD)),
@@ -112,7 +140,9 @@ class AppTheme {
           foregroundColor: Colors.white,
           elevation: 2,
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
       ),
@@ -127,10 +157,17 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      textTheme: GoogleFonts.poppinsTextTheme(base.textTheme).apply(
-        bodyColor: textPrimary,
-        displayColor: textPrimary,
-      ),
+      extensions: const <ThemeExtension<dynamic>>[
+        SecurityColors(
+          critical: Color(0xFFFF5252),
+          criticalBg: Color(0x33FF5252),
+          warning: Color(0xFFFFB300),
+          success: Color(0xFF66BB6A),
+        ),
+      ],
+      textTheme: GoogleFonts.poppinsTextTheme(
+        base.textTheme,
+      ).apply(bodyColor: textPrimary, displayColor: textPrimary),
 
       // ── Color Scheme ──
       colorScheme: const ColorScheme.dark(
@@ -175,7 +212,10 @@ class AppTheme {
         unselectedItemColor: textMuted,
         type: BottomNavigationBarType.fixed,
         elevation: 0,
-        selectedLabelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+        selectedLabelStyle: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
         unselectedLabelStyle: TextStyle(fontSize: 11),
       ),
 
@@ -209,7 +249,10 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: const Color(0xFF0D1117),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 18,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: borderTactical, width: 0.5),
@@ -244,7 +287,9 @@ class AppTheme {
           foregroundColor: Colors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           textStyle: GoogleFonts.poppins(
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -258,7 +303,9 @@ class AppTheme {
         style: OutlinedButton.styleFrom(
           foregroundColor: accentBlueLight,
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           side: const BorderSide(color: borderTactical, width: 0.5),
           textStyle: GoogleFonts.poppins(
             fontSize: 16,
@@ -361,6 +408,47 @@ class AppTheme {
         ),
         textStyle: GoogleFonts.poppins(color: textPrimary, fontSize: 12),
       ),
+    );
+  }
+}
+
+/// Extensión de tema para colores semánticos de Seguridad Ciudadana
+class SecurityColors extends ThemeExtension<SecurityColors> {
+  final Color critical;
+  final Color criticalBg;
+  final Color warning;
+  final Color success;
+
+  const SecurityColors({
+    required this.critical,
+    required this.criticalBg,
+    required this.warning,
+    required this.success,
+  });
+
+  @override
+  SecurityColors copyWith({
+    Color? critical,
+    Color? criticalBg,
+    Color? warning,
+    Color? success,
+  }) {
+    return SecurityColors(
+      critical: critical ?? this.critical,
+      criticalBg: criticalBg ?? this.criticalBg,
+      warning: warning ?? this.warning,
+      success: success ?? this.success,
+    );
+  }
+
+  @override
+  SecurityColors lerp(ThemeExtension<SecurityColors>? other, double t) {
+    if (other is! SecurityColors) return this;
+    return SecurityColors(
+      critical: Color.lerp(critical, other.critical, t)!,
+      criticalBg: Color.lerp(criticalBg, other.criticalBg, t)!,
+      warning: Color.lerp(warning, other.warning, t)!,
+      success: Color.lerp(success, other.success, t)!,
     );
   }
 }

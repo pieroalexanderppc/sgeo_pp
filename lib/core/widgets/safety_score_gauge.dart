@@ -144,12 +144,13 @@ class _SafetyScoreGaugeState extends State<SafetyScoreGauge>
                   const SizedBox(width: 4),
                   Flexible(
                     child: SizedBox(
-                      width: 60, // Límite de ancho para que el texto haga scroll
+                      width: 55, // Asegura un límite para la marquesina
                       child: _AutoScrollText(
                         text: widget.turno.toUpperCase(),
                         style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.5,
                           color: isDark ? AppTheme.textMuted : Colors.grey[500],
                         ),
                       ),
