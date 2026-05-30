@@ -1,19 +1,17 @@
 import os
+import sys
 from datetime import datetime
 from pymongo import MongoClient
 from dotenv import load_dotenv
-import bcrypt
+
+# Permitir importaciones desde el directorio principal
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils.crypto import hash_password
 
 # Cargar configuración desde .env
 load_dotenv()
 
 MONGO_URL = os.getenv("MONGO_URL")
-
-def get_password_hash(password):
-    # Genera el salt y cifra la contraseña usando la librería oficial de bcrypt directamente
-    salt = bcrypt.gensalt()
-    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
-    return hashed.decode('utf-8')
 
 def setup_db():
     if not MONGO_URL:
@@ -179,7 +177,7 @@ def setup_db():
         {
             "nombre": "Admin Supremo",
             "email": "admin@sgeo.com",
-            "password_hash": get_password_hash("ffe.Ad95"),
+            "password_hash": hash_password("ffe.Ad95"),
             "rol": "admin",
             "activo": True,
             "creado_en": now_utc
@@ -187,7 +185,7 @@ def setup_db():
         {
             "nombre": "Agente Policia 1",
             "email": "policia@sgeo.com",
-            "password_hash": get_password_hash("123456"),
+            "password_hash": hash_password("123456"),
             "rol": "policia",
             "activo": True,
             "creado_en": now_utc
@@ -195,7 +193,7 @@ def setup_db():
         {
             "nombre": "Ciudadano Juan",
             "email": "juan@ciudadano.com",
-            "password_hash": get_password_hash("123456"),
+            "password_hash": hash_password("123456"),
             "rol": "ciudadano",
             "activo": True,
             "creado_en": now_utc
