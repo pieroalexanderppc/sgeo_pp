@@ -5,6 +5,7 @@ import 'dart:convert';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/safety_layout.dart';
 import '../../../../core/widgets/safety_card.dart';
+import 'package:sgeo_pp/core/config/api_config.dart';
 
 class DashboardView extends StatefulWidget {
   const DashboardView({super.key});
@@ -48,7 +49,7 @@ class _DashboardViewState extends State<DashboardView> with SingleTickerProvider
     setState(() => _isLoadingLive = true);
     try {
       final res = await http.get(
-        Uri.parse('https://sgeo-backend-production.up.railway.app/api/admin/dashboard_stats?filtro_tiempo=$_selectedFiltroTiempo'),
+        Uri.parse('${ApiConfig.dashboardStats}?filtro_tiempo=$_selectedFiltroTiempo'),
       );
       if (res.statusCode == 200) {
         final data = json.decode(res.body);
@@ -69,8 +70,8 @@ class _DashboardViewState extends State<DashboardView> with SingleTickerProvider
   Future<void> _fetchBigDataStats() async {
     setState(() => _isLoadingBigData = true);
     try {
-      final resStats = await http.get(Uri.parse('https://sgeo-backend-production.up.railway.app/api/admin/sidpol_stats'));
-      final resPred = await http.get(Uri.parse('https://sgeo-backend-production.up.railway.app/api/admin/sidpol_predict'));
+      final resStats = await http.get(Uri.parse(ApiConfig.sidpolStats));
+      final resPred = await http.get(Uri.parse(ApiConfig.sidpolPredict));
       
       if (resStats.statusCode == 200 && resPred.statusCode == 200) {
         final dStats = json.decode(resStats.body);

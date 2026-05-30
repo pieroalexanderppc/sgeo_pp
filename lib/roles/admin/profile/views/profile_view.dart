@@ -8,6 +8,7 @@ import '../../../../core/widgets/safety_button.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_animate/flutter_animate.dart';
 import 'dart:convert';
+import 'package:sgeo_pp/core/config/api_config.dart';
 
 class AdminProfileView extends StatefulWidget {
   final String userId;
@@ -61,7 +62,7 @@ class _AdminProfileViewState extends State<AdminProfileView> {
   Future<void> _loadProfileData() async {
     try {
       final response = await http.get(
-        Uri.parse('https://sgeo-backend-production.up.railway.app/api/usuarios/${widget.userId}'),
+        Uri.parse(ApiConfig.usuario(widget.userId)),
       );
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -89,7 +90,7 @@ class _AdminProfileViewState extends State<AdminProfileView> {
     setState(() => _isLoading = true);
     try {
       final response = await http.put(
-        Uri.parse('https://sgeo-backend-production.up.railway.app/api/usuarios/${widget.userId}'),
+        Uri.parse(ApiConfig.usuario(widget.userId)),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'nombre': _nameController.text.trim(),

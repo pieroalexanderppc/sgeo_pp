@@ -8,6 +8,7 @@ import '../../../../core/widgets/safety_card.dart';
 import '../../../../core/widgets/safety_button.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:sgeo_pp/core/config/api_config.dart';
 
 class ProfileView extends StatefulWidget {
   final String? userName;
@@ -63,7 +64,7 @@ class _ProfileViewState extends State<ProfileView> {
     try {
       final response = await http.get(
         Uri.parse(
-          'https://sgeo-backend-production.up.railway.app/api/usuarios/${widget.userId}',
+          ApiConfig.usuario(widget.userId!),
         ),
       );
       if (response.statusCode == 200) {
@@ -97,7 +98,7 @@ class _ProfileViewState extends State<ProfileView> {
     try {
       final response = await http.put(
         Uri.parse(
-          'https://sgeo-backend-production.up.railway.app/api/usuarios/${widget.userId}',
+          ApiConfig.usuario(widget.userId!),
         ),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({

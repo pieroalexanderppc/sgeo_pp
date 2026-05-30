@@ -5,6 +5,7 @@ import 'dart:convert';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/safety_layout.dart';
 import '../../../../core/widgets/safety_card.dart';
+import 'package:sgeo_pp/core/config/api_config.dart';
 
 class UsersManageView extends StatefulWidget {
   const UsersManageView({super.key});
@@ -28,7 +29,7 @@ class _UsersManageViewState extends State<UsersManageView> {
     try {
       final res = await http.get(
         Uri.parse(
-          'https://sgeo-backend-production.up.railway.app/api/usuarios',
+          ApiConfig.usuariosBase,
         ),
       );
       if (res.statusCode == 200) {

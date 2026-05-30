@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'report_service.dart';
 import 'geofence_service.dart';
+import 'package:sgeo_pp/core/config/api_config.dart';
 
 // --- FUNCIÓN TOP-LEVEL PARA ISOLATE ---
 // Al sacar el parseo del Hilo Principal (Main UI Thread) usando compute, 
@@ -13,9 +14,6 @@ Map<String, dynamic> _parseJsonData(String responseBody) {
 }
 
 class MapService {
-  /// Enlace base apuntando al entorno de producción hospedado en Railway.
-  static const String _baseUrl = 'https://sgeo-backend-production.up.railway.app';
-
   /// Conjunto de variables relativas a la gestión de memoria (Caché local). 
   /// Esta estrategia restringe desbordamientos de peticiones HTTP en escenarios de alto tráfico.
   static List<dynamic>? _cachedZonas;
@@ -59,7 +57,7 @@ class MapService {
   }
 
   static Future<List<dynamic>> _doFetchZonas() async {
-    final response = await http.get(Uri.parse('$_baseUrl/api/map/zonas_riesgo'));
+    final response = await http.get(Uri.parse(ApiConfig.zonasRiesgo));
     
     if (response.statusCode == 200) {
       final decodedData = await compute(_parseJsonData, response.body);
@@ -75,7 +73,7 @@ class MapService {
 
   // --- OBTENER TODOS LOS PUNTOS HISTORICOS (Zoom in detallado) ---
   static Future<List<dynamic>> fetchPuntosHistorial() async {
-    final response = await http.get(Uri.parse('$_baseUrl/api/map/historial_puntos'));
+    final response = await http.get(Uri.parse(ApiConfig.historial));
     
     if (response.statusCode == 200) {
       final decodedData = await compute(_parseJsonData, response.body);
@@ -91,7 +89,7 @@ class MapService {
 
   // --- OBTENER PUNTOS EXACTOS (Reportes/Incidentes) ---
   static Future<List<dynamic>> fetchPuntosExactos() async {
-    final response = await http.get(Uri.parse('$_baseUrl/api/map/puntos_exactos'));
+    final response = await http.get(Uri.parse(ApiConfig.puntosExactos));
     
     if (response.statusCode == 200) {
       final decodedData = await compute(_parseJsonData, response.body);
@@ -107,7 +105,7 @@ class MapService {
 
   // --- OBTENER REPORTES POLICIA (Pendientes y Confirmados) ---
   static Future<List<dynamic>> fetchPuntosPolicia() async {
-    final response = await http.get(Uri.parse('$_baseUrl/api/reportes/policia'));
+    final response = await http.get(Uri.parse(ApiConfig.reportesPolicia));
     
     if (response.statusCode == 200) {
       final decodedData = await compute(_parseJsonData, response.body);
@@ -124,7 +122,7 @@ class MapService {
   // --- ENVIAR REPORTE CIUDADANO ---
   static Future<bool> crearReporte(Map<String, dynamic> datosReporte) async {
     final response = await http.post(
-      Uri.parse('$_baseUrl/api/reportes'),
+      Uri.parse(ApiConfig.crearReporte),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(datosReporte),
     );

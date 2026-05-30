@@ -2,13 +2,12 @@
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sgeo_pp/core/config/api_config.dart';
 
 /// Servicio encargado de manejar las operaciones de autenticación de usuarios.
 /// Interactúa directamente con la API del backend para procesos de login,
 /// registro y manejo de sesión local.
 class AuthService {
-  static const String _baseUrl =
-      'https://sgeo-backend-production.up.railway.app';
 
   /// Autentica a un usuario utilizando su [email] y [password].
   /// 
@@ -20,7 +19,7 @@ class AuthService {
   ) async {
     try {
       final response = await http.post(
-        Uri.parse('$_baseUrl/api/auth/login'),
+        Uri.parse(ApiConfig.login),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'password': password}),
       );
@@ -70,7 +69,7 @@ class AuthService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$_baseUrl/api/auth/register'),
+        Uri.parse(ApiConfig.register),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'nombre': nombre,

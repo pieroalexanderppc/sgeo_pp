@@ -2,19 +2,17 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import '../models/report_model.dart';
+import 'package:sgeo_pp/core/config/api_config.dart';
 
 /// Servicio responsable de la comunicación directa con la API del servidor
 /// para todo lo relacionado al Módulo de Reportes de Incidentes.
 class ReportService {
-  // Reutilizamos el endpoint base de Producción declarado en MapService
-  // Podrías extraerlo a un 'api_constants.dart' despues, pero ahora sirve bien.
-  static const String _baseUrl = 'https://sgeo-backend-production.up.railway.app';
 
   /// Obtiene la lista de reportes asociados a un usuario en específico
   /// Retorna una Lista de [ReportModel] fuertemente tipada.
   static Future<List<ReportModel>> getMyReports(String userId) async {
     try {
-      final response = await http.get(Uri.parse('$_baseUrl/api/reportes/mis_reportes/$userId'));
+      final response = await http.get(Uri.parse(ApiConfig.misReportes(userId)));
       
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -39,7 +37,7 @@ class ReportService {
 
   static Future<bool> deleteReport(String reportId) async {
     try {
-      final response = await http.delete(Uri.parse('$_baseUrl/api/reportes/$reportId'));
+      final response = await http.delete(Uri.parse(ApiConfig.eliminar(reportId)));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['status'] == 'success') {

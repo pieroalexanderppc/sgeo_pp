@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:sgeo_pp/core/config/api_config.dart';
 
 /// ============================================================================
 /// PredictiveService — Servicio Flutter para el módulo de seguridad contextual
@@ -10,8 +11,6 @@ import 'package:http/http.dart' as http;
 /// ============================================================================
 
 class PredictiveService {
-  static const String _baseUrl = 'https://sgeo-backend-production.up.railway.app';
-
   // ── Caché en memoria ──
   static Map<String, dynamic>? _cachedScore;
   static DateTime? _lastScoreFetch;
@@ -42,7 +41,7 @@ class PredictiveService {
     }
 
     try {
-      final uri = Uri.parse('$_baseUrl/api/predictive/safety_score').replace(
+      final uri = Uri.parse('${ApiConfig.baseUrl}/api/predictive/safety_score').replace(
         queryParameters: {
           'lat': lat.toStringAsFixed(5),
           'lng': lng.toStringAsFixed(5),
@@ -91,7 +90,7 @@ class PredictiveService {
     }
 
     try {
-      final uri = Uri.parse('$_baseUrl/api/predictive/context_insights').replace(
+      final uri = Uri.parse('${ApiConfig.baseUrl}/api/predictive/context_insights').replace(
         queryParameters: {
           'lat': lat.toStringAsFixed(5),
           'lng': lng.toStringAsFixed(5),
@@ -123,7 +122,7 @@ class PredictiveService {
     int dias = 365,
   }) async {
     try {
-      final uri = Uri.parse('$_baseUrl/api/predictive/temporal_analysis').replace(
+      final uri = Uri.parse('${ApiConfig.baseUrl}/api/predictive/temporal_analysis').replace(
         queryParameters: {
           'dias': dias.toString(),
           'distrito': ?distrito,
@@ -147,7 +146,7 @@ class PredictiveService {
   /// Obtiene el pronóstico de riesgo.
   static Future<Map<String, dynamic>> fetchRiskForecast({String? distrito}) async {
     try {
-      final uri = Uri.parse('$_baseUrl/api/predictive/risk_forecast').replace(
+      final uri = Uri.parse('${ApiConfig.baseUrl}/api/predictive/risk_forecast').replace(
         queryParameters: {
           'distrito': ?distrito,
         },
@@ -170,7 +169,7 @@ class PredictiveService {
   /// Obtiene los horarios seguros recomendados.
   static Future<Map<String, dynamic>> fetchSafeHours({String? distrito}) async {
     try {
-      final uri = Uri.parse('$_baseUrl/api/predictive/safe_hours').replace(
+      final uri = Uri.parse('${ApiConfig.baseUrl}/api/predictive/safe_hours').replace(
         queryParameters: {
           'distrito': ?distrito,
         },

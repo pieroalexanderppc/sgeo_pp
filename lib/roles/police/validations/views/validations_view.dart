@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/safety_layout.dart';
 import '../../../../core/widgets/safety_card.dart';
+import 'package:sgeo_pp/core/config/api_config.dart';
 
 class ValidationsView extends StatefulWidget {
   final String userId;
@@ -33,7 +34,7 @@ class _ValidationsViewState extends State<ValidationsView> {
     try {
       final res = await http.get(
         Uri.parse(
-          'https://sgeo-backend-production.up.railway.app/api/reportes/policia',
+          ApiConfig.reportesPolicia,
         ),
       );
       if (res.statusCode == 200) {
@@ -137,12 +138,12 @@ class _ValidationsViewState extends State<ValidationsView> {
     }
 
     try {
-      final endpoint = newStatus == 'VALIDADO' 
-        ? '/api/reportes/confirmar/$reportId' 
-        : '/api/reportes/rechazar/$reportId';
+      final String uri = newStatus == 'VALIDADO' 
+        ? ApiConfig.confirmar(reportId)
+        : ApiConfig.rechazar(reportId);
         
       final res = await http.post(
-        Uri.parse('https://sgeo-backend-production.up.railway.app$endpoint'),
+        Uri.parse(uri),
       );
       if (res.statusCode == 200 && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

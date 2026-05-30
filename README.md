@@ -21,8 +21,10 @@ El sistema está estructurado bajo una arquitectura de microservicios con interf
 │   ├── firebase_options.dart                    # Configuración generada por FlutterFire CLI
 │   │
 │   ├── core/                                    # Núcleo compartido
-│   │   ├── services/                            # Servicios lógicos (Auth, Mapas, Geocercas, Reportes, Notificaciones, Tutorial)
-│   │   ├── models/                              # Modelos tipados
+│   │   ├── config/                              # Entorno y variables de infraestructura
+│   │   │   └── api_config.dart                  # Centralización maestra de URLs (Target Producción)
+│   │   ├── services/                            # Servicios lógicos (Auth, Mapas, Geocercas, Reportes, Predictivo)
+│   │   ├── models/                              # Modelos tipados (Data Classes)
 │   │   └── widgets/                             # Sistema Maestro "Premium Tactical Dark" (SafetyLayout, SafetyCard, etc.)
 │   │
 │   ├── features/                                # Módulos transversales (independientes de rol)
@@ -52,15 +54,36 @@ El sistema está estructurado bajo una arquitectura de microservicios con interf
 │           └── profile/views/profile_view.dart  #   → Perfil nativo administrativo
 │
 ├── 🧠 backend/                                  # Backend: Servidor Inteligente (Python + FastAPI)
-│   ├── main.py                                  # API RESTful central: auth, reportes, mapas, usuarios, IA Predictiva
-│   ├── motor_ia_zonas_riesgo.py                 # Motor ML Espacial: DBSCAN + fusión SIDPOL/Flagrancia
-│   ├── firebase_service.py                      # Servicio FCM: Push Notifications con Admin SDK
-│   ├── requirements.txt                         # Dependencias Python (FastAPI, Scikit-Learn, Pandas)
-│   ├── Procfile                                 # Despliegue en Railway
+│   ├── main.py                                  # Entrypoint FastAPI (Gestión de lifespan y routers)
+│   ├── motor_ia_zonas_riesgo.py                 # Motor ML Espacial: DBSCAN + Fusión datos SIDPOL
+│   ├── firebase_service.py                      # Servicio FCM: Push Notifications atómicas
+│   ├── predictive_context_engine.py             # Motor predictivo contextual (Safety Score)
+│   ├── requirements.txt                         # Dependencias versionadas estrictamente
+│   ├── Procfile                                 # Gunicorn/Uvicorn target para Railway PaaS
+│   │
+│   ├── config/                                  # Configuraciones globales y de entorno
+│   │   └── database.py                          # Conexión asíncrona a MongoDB Atlas
+│   │
+│   ├── models/                                  # Validadores Pydantic (Data Transfer Objects)
+│   │   ├── auth_schemas.py                      # DTOs para Login/Registro
+│   │   ├── report_schemas.py                    # DTOs para confirmación de incidentes
+│   │   └── user_schemas.py                      # DTOs para perfiles de usuario
+│   │
+│   ├── routes/                                  # Enrutadores modulares (APIRouter)
+│   │   ├── admin.py                             # Métricas y predicción lineal para Dashboard
+│   │   ├── auth.py                              # Rutas de autenticación bcrypt
+│   │   ├── maps.py                              # Entrega de clústeres y datos GeoJSON
+│   │   ├── predictive.py                        # Entrega de Context Insights e IA predictiva
+│   │   ├── reports.py                           # CRUD y validación Policial de reportes
+│   │   └── users.py                             # Edición de perfiles
+│   │
+│   ├── services/                                # Lógica de negocio core (Aislada de los controladores)
+│   │
+│   ├── utils/                                   # Utilidades (Criptografía, parseo de tiempo)
+│   │
 │   └── scripts_iniciales/                       # Scripts de Ingeniería de Datos (ETL)
-│       ├── setup_db.py                          #   → Creación de colecciones MongoDB
-│       ├── extract_arcgis_data.py               #   → Scraping y extracción de datos geoespaciales desde ArcGIS
-│       └── import_arcgis_data.py                #   → Migración masiva de datos y poblacion historica de Tacna
+│       ├── setup_db.py                          # Creación de colecciones e índices MongoDB
+│       └── import_arcgis_data.py                # Migración de datasets masivos
 │
 ├── 📄 docs/
 │   └── SCRUM.md                                 # Documentación ágil: Product Backlog, Sprints
