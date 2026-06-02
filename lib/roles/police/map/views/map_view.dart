@@ -30,7 +30,6 @@ class _PoliceMapViewState extends State<PoliceMapView> {
   dynamic _selectedZona;
 
   StreamSubscription<Position>? _positionStreamSubscription;
-  bool _isLoading = true;
   List<dynamic> _zonasRiesgo = [];
   List<dynamic> _puntosExactos = [];
   List<dynamic> _puntosHistorial = [];
@@ -47,13 +46,17 @@ class _PoliceMapViewState extends State<PoliceMapView> {
     for (var p in _puntosHistorial) {
       final dateStr = p['fecha_hora_hecho'] ?? p['fecha_hecho'];
       if (dateStr != null) {
-        try { years.add(DateTime.parse(dateStr).year); } catch (_) {}
+        try {
+          years.add(DateTime.parse(dateStr).year);
+        } catch (_) {}
       }
     }
     for (var p in _puntosExactos) {
       final dateStr = p['fecha_hora_hecho'] ?? p['fecha'];
       if (dateStr != null) {
-        try { years.add(DateTime.parse(dateStr).year); } catch (_) {}
+        try {
+          years.add(DateTime.parse(dateStr).year);
+        } catch (_) {}
       }
     }
     if (years.isEmpty) years.add(DateTime.now().year);
@@ -102,7 +105,7 @@ class _PoliceMapViewState extends State<PoliceMapView> {
   void _currentLocationJump(LatLng target) {
     setState(() {
       _currentPosition = target;
-      _isLoading = false;
+      
     });
     Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) {
@@ -118,9 +121,9 @@ class _PoliceMapViewState extends State<PoliceMapView> {
     if (tutorialType != null) {
       if (mounted && showcaseContext != null) {
         if (tutorialType == 'all' || tutorialType == 'filter') {
-          ShowCaseWidget.of(showcaseContext!).startShowCase([
-            TutorialService.mapFilterBtnKey,
-          ]);
+          ShowCaseWidget.of(
+            showcaseContext!,
+          ).startShowCase([TutorialService.mapFilterBtnKey]);
         }
       }
     }
@@ -195,13 +198,15 @@ class _PoliceMapViewState extends State<PoliceMapView> {
       } else {
         _currentPosition ??= const LatLng(-18.0146, -70.2536);
       }
-      _isLoading = false;
+      
     });
 
     if (userForced) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('No se pudo obtener ubicación exacta tan rapido.'),
+          content: const Text(
+            'No se pudo obtener ubicación exacta tan rapido.',
+          ),
           duration: const Duration(seconds: 4),
           backgroundColor: AppTheme.alertAmber,
         ),
@@ -217,7 +222,7 @@ class _PoliceMapViewState extends State<PoliceMapView> {
           duration: Duration(seconds: 4),
         ),
       );
-      setState(() => _isLoading = true);
+      
     }
     try {
       bool serviceEnabled;
@@ -275,7 +280,7 @@ class _PoliceMapViewState extends State<PoliceMapView> {
           if (widget.initialLocation == null || userForced) {
             _currentPosition = newPos;
           }
-          _isLoading = false;
+          
         });
 
         Future.delayed(const Duration(milliseconds: 500), () {
@@ -294,7 +299,7 @@ class _PoliceMapViewState extends State<PoliceMapView> {
         if (_realUserPosition == null) {
           _useFallbackLocation(userForced: userForced);
         } else {
-          setState(() => _isLoading = false);
+          
           if (userForced && _realUserPosition != null) {
             try {
               _mapController.move(_realUserPosition!, 16.0);
@@ -308,29 +313,30 @@ class _PoliceMapViewState extends State<PoliceMapView> {
   }
 
   void _iniciarRastreoUbicacion() {
-    _positionStreamSubscription ??= Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 2,
-      ),
-    ).listen((Position position) {
-      if (mounted) {
-        final newPos = LatLng(position.latitude, position.longitude);
-        setState(() {
-          _realUserPosition = newPos;
-          if (_currentPosition == null ||
-              _currentPosition == const LatLng(-18.0146, -70.2536)) {
-            _currentPosition = newPos;
-            _isLoading = false;
-            Future.delayed(const Duration(milliseconds: 300), () {
-              try {
-                _mapController.move(newPos, 16.0);
-              } catch (_) {}
+    _positionStreamSubscription ??=
+        Geolocator.getPositionStream(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            distanceFilter: 2,
+          ),
+        ).listen((Position position) {
+          if (mounted) {
+            final newPos = LatLng(position.latitude, position.longitude);
+            setState(() {
+              _realUserPosition = newPos;
+              if (_currentPosition == null ||
+                  _currentPosition == const LatLng(-18.0146, -70.2536)) {
+                _currentPosition = newPos;
+                
+                Future.delayed(const Duration(milliseconds: 300), () {
+                  try {
+                    _mapController.move(newPos, 16.0);
+                  } catch (_) {}
+                });
+              }
             });
           }
         });
-      }
-    });
   }
 
   void _handleMapTap(TapPosition _, LatLng tapLatLng) {
@@ -364,7 +370,6 @@ class _PoliceMapViewState extends State<PoliceMapView> {
     _panelController.open();
   }
 
-
   Widget _buildPanelContent() {
     if (_selectedZona == null) return const SizedBox.shrink();
 
@@ -397,15 +402,22 @@ class _PoliceMapViewState extends State<PoliceMapView> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: colorNivel.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.whatshot, color: colorNivel, size: 28),
-              )
-                  .animate(onPlay: (controller) => controller.repeat(reverse: true))
-                  .scale(duration: 800.ms, curve: Curves.easeInOut, begin: const Offset(1, 1), end: const Offset(1.1, 1.1)),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: colorNivel.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.whatshot, color: colorNivel, size: 28),
+                  )
+                  .animate(
+                    onPlay: (controller) => controller.repeat(reverse: true),
+                  )
+                  .scale(
+                    duration: 800.ms,
+                    curve: Curves.easeInOut,
+                    begin: const Offset(1, 1),
+                    end: const Offset(1.1, 1.1),
+                  ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -424,7 +436,9 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                         zona['distrito'].toString().toUpperCase(),
                         style: TextStyle(
                           fontSize: 13,
-                          color: isDark ? AppTheme.textSecondary : Colors.grey[600],
+                          color: isDark
+                              ? AppTheme.textSecondary
+                              : Colors.grey[600],
                           fontWeight: FontWeight.w600,
                           letterSpacing: 0.5,
                         ),
@@ -438,7 +452,8 @@ class _PoliceMapViewState extends State<PoliceMapView> {
           _buildPanelTile(
             icon: Icons.security,
             iconColor: AppTheme.accentBlue,
-            title: 'Incidentes registrados: ${zona['total_incidentes'] ?? "Varios"}',
+            title:
+                'Incidentes registrados: ${zona['total_incidentes'] ?? "Varios"}',
             subtitle: 'Basado en denuncias y reportes policiales.',
             isDark: isDark,
           ).animate().fadeIn(delay: 150.ms).slideY(begin: 0.1),
@@ -503,7 +518,7 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                       color: isDark ? AppTheme.textSecondary : Colors.grey[600],
                     ),
                   ),
-                ]
+                ],
               ],
             ),
           ),
@@ -517,7 +532,9 @@ class _PoliceMapViewState extends State<PoliceMapView> {
   @override
   void dispose() {
     TutorialService.triggerTutorialNotifier.removeListener(_tutorialListener);
-    ReportService.reportsUpdatedNotifier.removeListener(_reportsUpdatedListener);
+    ReportService.reportsUpdatedNotifier.removeListener(
+      _reportsUpdatedListener,
+    );
     _positionStreamSubscription?.cancel();
     super.dispose();
   }
@@ -543,43 +560,8 @@ class _PoliceMapViewState extends State<PoliceMapView> {
             panel: _buildPanelContent(),
             body: Stack(
               children: [
-                _isLoading
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: AppTheme.accentBlue.withValues(alpha: 0.1),
-                              ),
-                              child: Icon(
-                                Icons.location_on,
-                                size: 40,
-                                color: AppTheme.accentBlue,
-                              ),
-                            )
-                                .animate(onPlay: (controller) => controller.repeat(reverse: true))
-                                .scale(duration: 800.ms, curve: Curves.easeInOut)
-                                .tint(color: AppTheme.accentBlueLight, duration: 800.ms),
-                            const SizedBox(height: 24),
-                            Text(
-                              "Ubicando señal GPS...",
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: isDark ? AppTheme.textSecondary : Colors.grey[700],
-                              ),
-                            ).animate().fadeIn(duration: 500.ms),
-                          ],
-                        ),
-                      )
-                    : _currentPosition == null
-                    ? const Center(
-                        child: Text(
-                          'No se pudo inicializar el mapa. Revisar permisos.',
-                        ),
-                      )
+                _currentPosition == null
+                    ? const Center(child: CircularProgressIndicator())
                     : FlutterMap(
                         mapController: _mapController,
                         options: MapOptions(
@@ -596,7 +578,8 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                                   _currentZoom = position.zoom;
                                 });
                               } else {
-                                _currentZoom = position.zoom; // Actualizar valor silente
+                                _currentZoom =
+                                    position.zoom; // Actualizar valor silente
                               }
                             }
                           },
@@ -606,7 +589,8 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                         ),
                         children: [
                           TileLayer(
-                            urlTemplate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+                            urlTemplate:
+                                'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
                             subdomains: const ['a', 'b', 'c', 'd'],
                             userAgentPackageName: 'com.example.sgeo_pp',
                           ),
@@ -616,253 +600,190 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                                 final coords = zona['centroide']['coordinates'];
                                 final lat = (coords[1] as num).toDouble();
                                 final lng = (coords[0] as num).toDouble();
-                                final radius = (zona['radio_metros'] as num?)?.toDouble() ?? 500.0;
+                                final radius =
+                                    (zona['radio_metros'] as num?)
+                                        ?.toDouble() ??
+                                    500.0;
 
                                 return CircleMarker(
                                   point: LatLng(lat, lng),
-                                  color: _getColorForNivel(zona['nivel_riesgo']),
+                                  color: _getColorForNivel(
+                                    zona['nivel_riesgo'],
+                                  ),
                                   borderStrokeWidth: isDark ? 1 : 2,
-                                  borderColor: _getColorForNivel(zona['nivel_riesgo']).withValues(alpha: isDark ? 0.4 : 0.8),
+                                  borderColor: _getColorForNivel(
+                                    zona['nivel_riesgo'],
+                                  ).withValues(alpha: isDark ? 0.4 : 0.8),
                                   useRadiusInMeter: true,
                                   radius: radius,
                                 );
                               }).toList(),
                             ),
                           MarkerLayer(
-                            markers: [                              // 0. Puntos históricos (SIDPOL + Ciudadanos) al hacer zoom
+                            markers: [
+                              // 0. Puntos históricos (SIDPOL + Ciudadanos) al hacer zoom
                               if (_currentZoom > 15.5)
-                                ..._puntosHistorial.where((punto) {
-                                  final fuente = punto['fuente'] ?? 'sidpol';
-                                  if (fuente == 'ciudadano' && !_showReportesValidados) return false;
-                                  
-                                  if (_filterYear != null || _filterMonth != null) {
-                                    final fechaRaw = punto['fecha_hecho'] as String?;
-                                    if (fechaRaw != null) {
-                                      try {
-                                        final dt = DateTime.parse(fechaRaw);
-                                        if (_filterYear != null && dt.year != _filterYear) return false;
-                                        if (_filterMonth != null && dt.month != _filterMonth) return false;
-                                      } catch (_) {}
-                                    }
-                                  }
-                                  return true;
-                                }).map((punto) {
-                                  final coords = punto['ubicacion']['coordinates'];
-                                  final subTipo = punto['subtipo_hecho'] ?? punto['sub_tipo'] ?? 'Desconocido';
-                                  final fuente = punto['fuente'] ?? 'sidpol';
-                                  final fechaHecho = punto['fecha_hora_hecho'] ?? punto['fecha_hecho'] ?? 'Fecha no disponible';
-                                  final modalidad = punto['modalidad'] ?? 'No especificada';
-                                  final isCitizen = fuente == 'ciudadano';
-
-                                  return Marker(
-                                    point: LatLng(
-                                      (coords[1] as num).toDouble(),
-                                      (coords[0] as num).toDouble(),
-                                    ),
-                                    width: 16,
-                                    height: 16,
-                                    alignment: Alignment.center,
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        showDialog(
-                                          context: context,
-                                          builder: (ctx) => Dialog(
-                                            backgroundColor: Colors.transparent,
-                                            insetPadding: const EdgeInsets.symmetric(horizontal: 20),
-                                            child: ClipRRect(
-                                              borderRadius: BorderRadius.circular(20),
-                                              child: BackdropFilter(
-                                                filter: dart_ui.ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                                                child: Container(
-                                                  padding: const EdgeInsets.all(24),
-                                                  decoration: BoxDecoration(
-                                                    color: isDark ? AppTheme.bgSurface.withValues(alpha: 0.8) : Colors.white.withValues(alpha: 0.9),
-                                                    borderRadius: BorderRadius.circular(20),
-                                                    border: Border.all(color: isDark ? AppTheme.borderTactical : Colors.grey.shade300, width: 1),
-                                                  ),
-                                                  child: Column(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      Row(
-                                                        children: [
-                                                          Icon(
-                                                            isCitizen ? Icons.person_pin_circle : Icons.local_police,
-                                                            color: isCitizen ? AppTheme.accentBlue : AppTheme.alertRed,
-                                                            size: 28,
-                                                          ),
-                                                          const SizedBox(width: 12),
-                                                          Expanded(
-                                                            child: Text(
-                                                              'Detalle Histórico',
-                                                              style: TextStyle(
-                                                                fontSize: 18,
-                                                                fontWeight: FontWeight.bold,
-                                                                color: isDark ? Colors.white : Colors.black87,
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                      const SizedBox(height: 20),
-                                                      Text('Delito: $subTipo', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: isDark ? Colors.white : Colors.black87)),
-                                                      const SizedBox(height: 10),
-                                                      Text('Modalidad: $modalidad', style: TextStyle(fontSize: 14, color: isDark ? AppTheme.textSecondary : Colors.grey[800])),
-                                                      const SizedBox(height: 10),
-                                                      Text('Fecha: $fechaHecho', style: TextStyle(fontSize: 14, color: isDark ? AppTheme.textSecondary : Colors.grey[800])),
-                                                      const SizedBox(height: 10),
-                                                      Text('Origen: ${isCitizen ? "Reporte validado (App)" : "Registro Policial SIDPOL"}', 
-                                                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isCitizen ? AppTheme.accentBlue : AppTheme.alertRed)),
-                                                      const SizedBox(height: 24),
-                                                      Align(
-                                                        alignment: Alignment.centerRight,
-                                                        child: TextButton(
-                                                          style: TextButton.styleFrom(
-                                                            backgroundColor: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey.shade200,
-                                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                                                          ),
-                                                          onPressed: () => Navigator.of(ctx).pop(),
-                                                          child: Text('Cerrar', style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold)),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: isCitizen ? AppTheme.accentBlue : AppTheme.alertRed,
-                                          shape: BoxShape.circle,
-                                          border: Border.all(color: Colors.white, width: 2),
-                                          boxShadow: [
-                                            BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 3),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                }),
-                                // Puntos exactos (reportes ciudadanos) con animación y filtro de proximidad
-                                if (_showReportesValidados)
-                                  ..._puntosExactos.where((punto) {
-                                    if (_filterYear != null || _filterMonth != null) {
-                                      final fechaRaw = punto['fecha_hora_hecho'] as String?;
-                                      if (fechaRaw != null) {
-                                        try {
-                                          final dt = DateTime.parse(fechaRaw);
-                                          if (_filterYear != null && dt.year != _filterYear) return false;
-                                          if (_filterMonth != null && dt.month != _filterMonth) return false;
-                                        } catch (_) {}
+                                ..._puntosHistorial
+                                    .where((punto) {
+                                      final fuente =
+                                          punto['fuente'] ?? 'sidpol';
+                                      if (fuente == 'ciudadano' &&
+                                          !_showReportesValidados) {
+                                        return false;
                                       }
-                                    }
-                                    if (_realUserPosition == null) return true;
-                                    final coords = punto['ubicacion']['coordinates'];
-                                    final lat = (coords[1] as num).toDouble();
-                                    final lng = (coords[0] as num).toDouble();
-                                    final distance = Geolocator.distanceBetween(
-                                      _realUserPosition!.latitude,
-                                      _realUserPosition!.longitude,
-                                      lat,
-                                      lng,
-                                    );
-                                    // Mostrar reportes si están a 3km o menos
-                                    return distance <= 3000;
-                                  }).map((punto) {
-                                  final coords = punto['ubicacion']['coordinates'];
-                                  final estadoStr = (punto['estado'] ?? '').toString().toLowerCase();
-                                  final isPending = estadoStr.contains('pendiente');
-                                  
-                                  final colorPunto = isPending ? AppTheme.alertAmber : (isDark ? Colors.white : Colors.black);
-                                  final subTipo = punto['sub_tipo'] ?? 'Incidente';
 
-                                  return Marker(
-                                    point: LatLng(
-                                      (coords[1] as num).toDouble(),
-                                      (coords[0] as num).toDouble(),
-                                    ),
-                                    width: 50,
-                                    height: 50,
-                                    alignment: Alignment.center,
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        showDialog(
-                                          context: context,
-                                          builder: (ctx) => AlertDialog(
-                                            backgroundColor: isDark ? AppTheme.bgSurface : Colors.white,
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                            title: Row(
-                                              children: [
-                                                Icon(
-                                                  Icons.security,
-                                                  color: colorPunto,
-                                                  size: 28,
-                                                ),
-                                                const SizedBox(width: 10),
-                                                Expanded(
-                                                  child: Text(
-                                                    'Atención Inmediata',
-                                                    style: TextStyle(
-                                                      fontSize: 18,
-                                                      fontWeight: FontWeight.bold,
-                                                      color: isDark ? AppTheme.textPrimary : Colors.black87,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            content: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  'Delito: $subTipo',
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 15,
-                                                    color: isDark ? AppTheme.textPrimary : Colors.black87,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 10),
-                                                Text(
-                                                  punto['direccion'] ?? 'Dirección no especificada.',
-                                                  style: TextStyle(fontSize: 14, color: isDark ? AppTheme.textSecondary : Colors.grey[700]),
-                                                ),
-                                              ],
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () => Navigator.of(ctx).pop(),
-                                                child: Text('Cerrar', style: TextStyle(color: isDark ? AppTheme.textSecondary : Colors.grey)),
-                                              ),
-                                            ],
+                                      if (_filterYear != null ||
+                                          _filterMonth != null) {
+                                        final fechaRaw =
+                                            punto['fecha_hecho'] as String?;
+                                        if (fechaRaw != null) {
+                                          try {
+                                            final dt = DateTime.parse(fechaRaw);
+                                            if (_filterYear != null &&
+                                                dt.year != _filterYear) {
+                                              return false;
+                                            }
+                                            if (_filterMonth != null &&
+                                                dt.month != _filterMonth) {
+                                              return false;
+                                            }
+                                          } catch (_) {}
+                                        }
+                                      }
+                                      return true;
+                                    })
+                                    .map((punto) {
+                                      final coords =
+                                          punto['ubicacion']['coordinates'];
+                                      final subTipo =
+                                          punto['subtipo_hecho'] ??
+                                          punto['sub_tipo'] ??
+                                          'Desconocido';
+                                      final fuente =
+                                          punto['fuente'] ?? 'sidpol';
+                                      final fechaHecho =
+                                          punto['fecha_hora_hecho'] ??
+                                          punto['fecha_hecho'] ??
+                                          'Fecha no disponible';
+                                      final modalidad =
+                                          punto['modalidad'] ??
+                                          'No especificada';
+                                      final isCitizen = fuente == 'ciudadano';
+
+                                      return Marker(
+                                        point: LatLng(
+                                          (coords[1] as num).toDouble(),
+                                          (coords[0] as num).toDouble(),
+                                        ),
+                                        width: 40,
+                                        height: 40,
+                                        alignment: Alignment.center,
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            _showIncidentDetailsBottomSheet(context, {
+                                              'title': 'Detalle Histórico',
+                                              'subTipo': subTipo,
+                                              'modalidad': modalidad,
+                                              'fechaHecho': fechaHecho,
+                                              'origen': isCitizen ? "Reporte validado (App)" : "Registro Policial SIDPOL",
+                                              'isCitizen': isCitizen,
+                                            });
+                                          },
+                                          child: _buildAnimatedMarker(
+                                            isCitizen ? AppTheme.accentBlue : AppTheme.alertRed,
+                                            isCitizen ? Icons.person_pin_circle : Icons.local_police,
                                           ),
-                                        );
-                                      },
-                                      child: Icon(
-                                        Icons.warning_amber_rounded,
-                                        color: colorPunto,
-                                        size: 36.0,
-                                        shadows: [
-                                          Shadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 4),
-                                        ],
-                                      )
-                                      .animate(
-                                        onPlay: (controller) => isPending ? controller.repeat(reverse: true) : null,
-                                      )
-                                      .scale(
-                                        duration: 600.ms,
-                                        curve: Curves.easeInOut,
-                                        begin: const Offset(1, 1),
-                                        end: const Offset(1.2, 1.2),
-                                      ),
-                                    ),
-                                  );
-                                }),
+                                        ),
+                                      );
+                                    }),
+                              // Puntos exactos (reportes ciudadanos) con animación y filtro de proximidad
+                              if (_showReportesValidados)
+                                ..._puntosExactos
+                                    .where((punto) {
+                                      if (_filterYear != null ||
+                                          _filterMonth != null) {
+                                        final fechaRaw =
+                                            punto['fecha_hora_hecho']
+                                                as String?;
+                                        if (fechaRaw != null) {
+                                          try {
+                                            final dt = DateTime.parse(fechaRaw);
+                                            if (_filterYear != null &&
+                                                dt.year != _filterYear) {
+                                              return false;
+                                            }
+                                            if (_filterMonth != null &&
+                                                dt.month != _filterMonth) {
+                                              return false;
+                                            }
+                                          } catch (_) {}
+                                        }
+                                      }
+                                      if (_realUserPosition == null) {
+                                        return true;
+                                      }
+                                      final coords =
+                                          punto['ubicacion']['coordinates'];
+                                      final lat = (coords[1] as num).toDouble();
+                                      final lng = (coords[0] as num).toDouble();
+                                      final distance =
+                                          Geolocator.distanceBetween(
+                                            _realUserPosition!.latitude,
+                                            _realUserPosition!.longitude,
+                                            lat,
+                                            lng,
+                                          );
+                                      // Mostrar reportes si están a 3km o menos
+                                      return distance <= 3000;
+                                    })
+                                    .map((punto) {
+                                      final coords =
+                                          punto['ubicacion']['coordinates'];
+                                      final estadoStr = (punto['estado'] ?? '')
+                                          .toString()
+                                          .toLowerCase();
+                                      final isPending = estadoStr.contains(
+                                        'pendiente',
+                                      );
+
+                                      final colorPunto = isPending
+                                          ? AppTheme.alertAmber
+                                          : (isDark
+                                                ? Colors.white
+                                                : Colors.black);
+                                      final subTipo =
+                                          punto['sub_tipo'] ?? 'Incidente';
+
+                                      return Marker(
+                                        point: LatLng(
+                                          (coords[1] as num).toDouble(),
+                                          (coords[0] as num).toDouble(),
+                                        ),
+                                        width: 50,
+                                        height: 50,
+                                        alignment: Alignment.center,
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            _showIncidentDetailsBottomSheet(context, {
+                                              'title': 'Atención Inmediata',
+                                              'subTipo': subTipo,
+                                              'modalidad': punto['direccion'] ?? 'Dirección no especificada.',
+                                              'fechaHecho': punto['fecha_hora_hecho'] ?? 'Reciente',
+                                              'origen': 'Reporte en curso',
+                                              'isCitizen': true,
+                                              'estadoStr': estadoStr,
+                                              'estadoColor': colorPunto,
+                                              'color': colorPunto,
+                                              'icon': Icons.security,
+                                            });
+                                          },
+                                          child: _buildAnimatedMarker(
+                                            colorPunto,
+                                            Icons.security,
+                                          ),
+                                        ),
+                                      );
+                                    }),
 
                               if (_realUserPosition != null)
                                 Marker(
@@ -877,7 +798,9 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                                         height: 45,
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
-                                          color: AppTheme.accentBlue.withValues(alpha: 0.2),
+                                          color: AppTheme.accentBlue.withValues(
+                                            alpha: 0.2,
+                                          ),
                                         ),
                                       ),
                                       Container(
@@ -885,7 +808,9 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                                         height: 28,
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
-                                          color: AppTheme.accentBlue.withValues(alpha: 0.4),
+                                          color: AppTheme.accentBlue.withValues(
+                                            alpha: 0.4,
+                                          ),
                                         ),
                                       ),
                                       Container(
@@ -894,10 +819,15 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
                                           color: AppTheme.accentBlue,
-                                          border: Border.all(color: Colors.white, width: 2.5),
+                                          border: Border.all(
+                                            color: Colors.white,
+                                            width: 2.5,
+                                          ),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: Colors.black.withValues(alpha: 0.3),
+                                              color: Colors.black.withValues(
+                                                alpha: 0.3,
+                                              ),
                                               blurRadius: 4,
                                               offset: const Offset(0, 2),
                                             ),
@@ -923,7 +853,9 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                         title: 'Filtros Operativos',
                         description: 'Filtra zonas y reportes ciudadanos.',
                         targetPadding: const EdgeInsets.all(8),
-                        tooltipBackgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                        tooltipBackgroundColor: isDark
+                            ? const Color(0xFF1E1E1E)
+                            : Colors.white,
                         textColor: isDark ? Colors.white : Colors.black87,
                         child: FloatingActionButton(
                           heroTag: 'map_filter_btn_police',
@@ -934,51 +866,89 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                               _isFilterMenuOpen = !_isFilterMenuOpen;
                             });
                           },
-                          backgroundColor: isDark ? AppTheme.bgSurface : Colors.white,
+                          backgroundColor: isDark
+                              ? AppTheme.bgSurface
+                              : Colors.white,
                           child: Icon(
                             Icons.layers,
-                            color: _isFilterMenuOpen ? AppTheme.accentBlue : (isDark ? Colors.white : Colors.black87),
+                            color: _isFilterMenuOpen
+                                ? AppTheme.accentBlue
+                                : (isDark ? Colors.white : Colors.black87),
                             size: 20,
                           ),
                         ),
                       ),
                       if (_isFilterMenuOpen)
                         Container(
-                          margin: const EdgeInsets.only(top: 10),
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          decoration: BoxDecoration(
-                            color: isDark ? AppTheme.bgSurface.withValues(alpha: 0.95) : Colors.white.withValues(alpha: 0.95),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: isDark ? AppTheme.borderTactical : Colors.grey.shade200, width: 0.5),
-                            boxShadow: [
-                              BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 10, spreadRadius: 2, offset: const Offset(0, 4)),
-                            ],
-                          ),
-                          width: 220,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildFilterSwitch(
-                                title: 'Zonas de Riesgo',
-                                value: _showZonasRiesgo,
-                                onChanged: (val) => setState(() => _showZonasRiesgo = val),
-                                isDark: isDark,
+                              margin: const EdgeInsets.only(top: 10),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? AppTheme.bgSurface.withValues(alpha: 0.95)
+                                    : Colors.white.withValues(alpha: 0.95),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: isDark
+                                      ? AppTheme.borderTactical
+                                      : Colors.grey.shade200,
+                                  width: 0.5,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.2),
+                                    blurRadius: 10,
+                                    spreadRadius: 2,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
                               ),
-                              Divider(height: 1, color: isDark ? AppTheme.borderSubtle : Colors.grey.shade200, indent: 16, endIndent: 16),
-                              _buildFilterSwitch(
-                                title: 'Reportes Ciudadanos',
-                                value: _showReportesValidados,
-                                onChanged: (val) => setState(() => _showReportesValidados = val),
-                                isDark: isDark,
+                              width: 220,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildFilterSwitch(
+                                    title: 'Zonas de Riesgo',
+                                    value: _showZonasRiesgo,
+                                    onChanged: (val) =>
+                                        setState(() => _showZonasRiesgo = val),
+                                    isDark: isDark,
+                                  ),
+                                  Divider(
+                                    height: 1,
+                                    color: isDark
+                                        ? AppTheme.borderSubtle
+                                        : Colors.grey.shade200,
+                                    indent: 16,
+                                    endIndent: 16,
+                                  ),
+                                  _buildFilterSwitch(
+                                    title: 'Reportes Ciudadanos',
+                                    value: _showReportesValidados,
+                                    onChanged: (val) => setState(
+                                      () => _showReportesValidados = val,
+                                    ),
+                                    isDark: isDark,
+                                  ),
+                                  Divider(
+                                    height: 1,
+                                    color: isDark
+                                        ? AppTheme.borderSubtle
+                                        : Colors.grey.shade200,
+                                    indent: 16,
+                                    endIndent: 16,
+                                  ),
+                                  _buildDateFilters(isDark),
+                                ],
                               ),
-                              Divider(height: 1, color: isDark ? AppTheme.borderSubtle : Colors.grey.shade200, indent: 16, endIndent: 16),
-                              _buildDateFilters(isDark),
-                            ],
-                          ),
-                        )
-                        .animate()
-                        .fadeIn(duration: 200.ms)
-                        .scaleXY(begin: 0.9, end: 1.0, alignment: Alignment.topLeft, duration: 200.ms),
+                            )
+                            .animate()
+                            .fadeIn(duration: 200.ms)
+                            .scaleXY(
+                              begin: 0.9,
+                              end: 1.0,
+                              alignment: Alignment.topLeft,
+                              duration: 200.ms,
+                            ),
                     ],
                   ),
                 ),
@@ -990,7 +960,9 @@ class _PoliceMapViewState extends State<PoliceMapView> {
           floatingActionButton: FloatingActionButton(
             heroTag: 'map_location_police',
             mini: false,
-            backgroundColor: isDark ? AppTheme.bgSurface.withValues(alpha: 0.9) : Colors.white.withValues(alpha: 0.9),
+            backgroundColor: isDark
+                ? AppTheme.bgSurface.withValues(alpha: 0.9)
+                : Colors.white.withValues(alpha: 0.9),
             foregroundColor: isDark ? AppTheme.accentBlue : Colors.black87,
             elevation: 4,
             onPressed: () => _determinePosition(userForced: true),
@@ -1001,7 +973,12 @@ class _PoliceMapViewState extends State<PoliceMapView> {
     );
   }
 
-  Widget _buildFilterSwitch({required String title, required bool value, required ValueChanged<bool> onChanged, required bool isDark}) {
+  Widget _buildFilterSwitch({
+    required String title,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+    required bool isDark,
+  }) {
     return SwitchListTile(
       title: Text(
         title,
@@ -1043,17 +1020,36 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                   isExpanded: true,
                   decoration: InputDecoration(
                     isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                   initialValue: _filterYear,
                   hint: const Text('Año', style: TextStyle(fontSize: 12)),
                   items: [
-                    const DropdownMenuItem<int?>(value: null, child: Text('Todos', style: TextStyle(fontSize: 12))),
-                    ..._availableYears.map((y) => DropdownMenuItem<int?>(value: y, child: Text(y.toString(), style: const TextStyle(fontSize: 12)))),
+                    const DropdownMenuItem<int?>(
+                      value: null,
+                      child: Text('Todos', style: TextStyle(fontSize: 12)),
+                    ),
+                    ..._availableYears.map(
+                      (y) => DropdownMenuItem<int?>(
+                        value: y,
+                        child: Text(
+                          y.toString(),
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ),
                   ],
                   onChanged: (val) => setState(() => _filterYear = val),
-                  style: TextStyle(fontSize: 12, color: isDark ? Colors.white : Colors.black),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
                   dropdownColor: isDark ? AppTheme.bgSurface : Colors.white,
                 ),
               ),
@@ -1063,20 +1059,50 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                   isExpanded: true,
                   decoration: InputDecoration(
                     isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                   initialValue: _filterMonth,
                   hint: const Text('Mes', style: TextStyle(fontSize: 12)),
                   items: [
-                    const DropdownMenuItem<int?>(value: null, child: Text('Todos', style: TextStyle(fontSize: 12))),
+                    const DropdownMenuItem<int?>(
+                      value: null,
+                      child: Text('Todos', style: TextStyle(fontSize: 12)),
+                    ),
                     ...List.generate(12, (i) {
-                      const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-                      return DropdownMenuItem<int?>(value: i + 1, child: Text(meses[i], style: const TextStyle(fontSize: 12)));
+                      const meses = [
+                        'Ene',
+                        'Feb',
+                        'Mar',
+                        'Abr',
+                        'May',
+                        'Jun',
+                        'Jul',
+                        'Ago',
+                        'Sep',
+                        'Oct',
+                        'Nov',
+                        'Dic',
+                      ];
+                      return DropdownMenuItem<int?>(
+                        value: i + 1,
+                        child: Text(
+                          meses[i],
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      );
                     }),
                   ],
                   onChanged: (val) => setState(() => _filterMonth = val),
-                  style: TextStyle(fontSize: 12, color: isDark ? Colors.white : Colors.black),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
                   dropdownColor: isDark ? AppTheme.bgSurface : Colors.white,
                 ),
               ),
@@ -1084,6 +1110,168 @@ class _PoliceMapViewState extends State<PoliceMapView> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showIncidentDetailsBottomSheet(BuildContext context, Map<String, dynamic> data) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final color = data['color'] as Color? ?? (data['isCitizen'] == true ? AppTheme.accentBlue : AppTheme.alertRed);
+    final icon = data['icon'] as IconData? ?? (data['isCitizen'] == true ? Icons.person_pin_circle : Icons.local_police);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.5),
+      isScrollControlled: true,
+      builder: (ctx) => BackdropFilter(
+        filter: dart_ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          margin: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: isDark ? AppTheme.bgSurface.withValues(alpha: 0.85) : Colors.white.withValues(alpha: 0.9),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppTheme.borderTactical, width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.3),
+                blurRadius: 15,
+                spreadRadius: 2,
+              )
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(icon, color: color, size: 28),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      data['title'] ?? 'Detalle del Incidente',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: isDark ? Colors.white : Colors.black87,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              _buildDetailRow(Icons.warning_rounded, 'Tipo', data['subTipo'], isDark),
+              if (data['modalidad'] != null) _buildDetailRow(Icons.info_outline_rounded, 'Modalidad', data['modalidad'], isDark),
+              _buildDetailRow(Icons.access_time_rounded, 'Fecha', data['fechaHecho'], isDark),
+              _buildDetailRow(Icons.source_rounded, 'Origen', data['origen'], isDark, valueColor: color),
+              if (data['estadoStr'] != null)
+                _buildDetailRow(Icons.check_circle_outline_rounded, 'Estado', data['estadoStr'].toString().toUpperCase(), isDark, valueColor: data['estadoColor']),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  style: TextButton.styleFrom(
+                    backgroundColor: isDark ? AppTheme.bgDeep : Colors.grey.shade200,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: Text(
+                    'CERRAR',
+                    style: TextStyle(
+                      color: isDark ? AppTheme.textSecondary : Colors.black54,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(IconData icon, String label, String value, bool isDark, {Color? valueColor}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: isDark ? AppTheme.textMuted : Colors.grey.shade500),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: valueColor ?? (isDark ? Colors.white : Colors.black87),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnimatedMarker(Color color, IconData icon) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: color.withValues(alpha: 0.2),
+          ),
+        ).animate(onPlay: (controller) => controller.repeat(reverse: true))
+         .scale(begin: const Offset(0.8, 0.8), end: const Offset(1.5, 1.5), duration: 1500.ms)
+         .fade(begin: 0.8, end: 0.0, duration: 1500.ms),
+        Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: color.withValues(alpha: 0.5),
+                blurRadius: 8,
+                spreadRadius: 2,
+              )
+            ],
+          ),
+          child: Icon(icon, color: Colors.white, size: 14),
+        ),
+      ],
     );
   }
 }

@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart';
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/views/login_view.dart';
+import 'features/auth/views/splash_view.dart';
 import 'roles/user/home/views/home_view.dart';
 import 'roles/police/home/views/home_view.dart';
 import 'roles/admin/home/views/home_view.dart';
@@ -14,7 +15,7 @@ import 'roles/user/notifications/views/notifications_view.dart';
 import 'core/services/notifications_storage_service.dart';
 import 'core/services/map_service.dart';
 
-// Función global encargada de manejar notificaciones entrantes cuando 
+// Función global encargada de manejar notificaciones entrantes cuando
 // la aplicación se encuentra en segundo plano (Background) o terminada.
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -28,7 +29,8 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 // Instancia requerida para ejecutar y manejar notificaciones locales (Foreground).
-final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
 
 // Llave global del navegador. Se utiliza para redireccionar la vista sin contexto activo.
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -45,7 +47,9 @@ Future<void> _handleNotificationTap(RemoteMessage message) async {
     navigatorKey.currentState!.push(
       MaterialPageRoute(builder: (context) => const NotificationsView()),
     );
-  } else if (type == 'incident' && data.containsKey('lat') && data.containsKey('lng')) {
+  } else if (type == 'incident' &&
+      data.containsKey('lat') &&
+      data.containsKey('lng')) {
     // Almacena las coordenadas y muestra la ubicación en el mapa
     final double? lat = double.tryParse(data['lat'].toString());
     final double? lng = double.tryParse(data['lng'].toString());
@@ -73,7 +77,7 @@ Future<void> _handleNotificationTap(RemoteMessage message) async {
                 initialLocation: LatLng(lat, lng),
               );
             }
-          }
+          },
         ),
       );
     } else {
@@ -93,9 +97,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // 1. Inicialización de los servicios en la nube (Firebase Core)
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // 2. Registro del controlador para notificaciones en segundo plano
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
@@ -103,8 +105,9 @@ void main() async {
   // 3. Configuración y parámetros para Notificaciones Locales (Iconos y apariencia nativa)
   const AndroidInitializationSettings initializationSettingsAndroid =
       AndroidInitializationSettings('@mipmap/ic_launcher');
-  const InitializationSettings initializationSettings =
-      InitializationSettings(android: initializationSettingsAndroid);
+  const InitializationSettings initializationSettings = InitializationSettings(
+    android: initializationSettingsAndroid,
+  );
 
   await flutterLocalNotificationsPlugin.initialize(
     settings: initializationSettings,
@@ -114,12 +117,15 @@ void main() async {
   const AndroidNotificationChannel channel = AndroidNotificationChannel(
     'sgeo_alertas_urgentes',
     'Alertas de Seguridad',
-    description: 'Notificaciones críticas sobre incidentes y zonas de riesgo detectadas.',
+    description:
+        'Notificaciones críticas sobre incidentes y zonas de riesgo detectadas.',
     importance: Importance.max,
   );
 
   await flutterLocalNotificationsPlugin
-      .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+      .resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin
+      >()
       ?.createNotificationChannel(channel);
 
   // 5. Verificación y/o solicitud explícita de permisos de notificación.
@@ -173,7 +179,8 @@ void main() async {
   });
 
   // 9. Interacción de la notificación cuando el servicio se encuentra totalmente terminado.
-  RemoteMessage? initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+  RemoteMessage? initialMessage = await FirebaseMessaging.instance
+      .getInitialMessage();
   if (initialMessage != null) {
     // Retrasar invocación para asegurar la preconstrucción del Material App de Flutter
     Future.delayed(const Duration(milliseconds: 500), () async {
@@ -183,7 +190,7 @@ void main() async {
 
   final prefs = await SharedPreferences.getInstance();
   final bool isLoggedIn = prefs.getBool('is_logged_in') ?? false;
-  
+
   String? userId;
   String? userName;
   String? userRole;
@@ -194,12 +201,14 @@ void main() async {
     userRole = prefs.getString('user_role');
   }
 
-  runApp(MyApp(
-    isLoggedIn: isLoggedIn,
-    userId: userId ?? '',
-    userName: userName ?? '',
-    userRole: userRole ?? 'ciudadano',
-  ));
+  runApp(
+    MyApp(
+      isLoggedIn: isLoggedIn,
+      userId: userId ?? '',
+      userName: userName ?? '',
+      userRole: userRole ?? 'ciudadano',
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -227,14 +236,28 @@ class MyApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
-          themeMode: currentMode,
-          home: isLoggedIn 
-                ? (userRole == 'policia' 
-                    ? PoliceHomeView(userId: userId, userName: userName, userRole: userRole) 
-                    : (userRole == 'admin' || userRole == 'administrador')
-                        ? AdminHomeView(userId: userId, userName: userName, userRole: userRole)
-                        : HomeView(userId: userId, userName: userName, userRole: userRole))
+          themeMode: ThemeMode.dark,
+          home: SplashView(
+            targetHome: isLoggedIn
+                ? (userRole == 'policia'
+                      ? PoliceHomeView(
+                          userId: userId,
+                          userName: userName,
+                          userRole: userRole,
+                        )
+                      : (userRole == 'admin' || userRole == 'administrador')
+                      ? AdminHomeView(
+                          userId: userId,
+                          userName: userName,
+                          userRole: userRole,
+                        )
+                      : HomeView(
+                          userId: userId,
+                          userName: userName,
+                          userRole: userRole,
+                        ))
                 : const LoginView(),
+          ),
         );
       },
     );

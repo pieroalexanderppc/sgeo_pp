@@ -81,7 +81,7 @@ class AppTheme {
           success: Color(0xFF2E7D32),
         ),
       ],
-      textTheme: GoogleFonts.poppinsTextTheme(base.textTheme),
+      textTheme: GoogleFonts.montserratTextTheme(base.textTheme),
       colorScheme: const ColorScheme.light(
         primary: Color(0xFF0061A4),
         onPrimary: Colors.white,
@@ -165,7 +165,7 @@ class AppTheme {
           success: Color(0xFF66BB6A),
         ),
       ],
-      textTheme: GoogleFonts.poppinsTextTheme(
+      textTheme: GoogleFonts.montserratTextTheme(
         base.textTheme,
       ).apply(bodyColor: textPrimary, displayColor: textPrimary),
 
@@ -197,7 +197,7 @@ class AppTheme {
         centerTitle: true,
         surfaceTintColor: Colors.transparent,
         systemOverlayStyle: SystemUiOverlayStyle.light,
-        titleTextStyle: GoogleFonts.poppins(
+        titleTextStyle: GoogleFonts.montserrat(
           fontSize: 18,
           fontWeight: FontWeight.w600,
           color: textPrimary,
@@ -238,7 +238,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(20),
           side: const BorderSide(color: borderTactical, width: 0.5),
         ),
-        titleTextStyle: GoogleFonts.poppins(
+        titleTextStyle: GoogleFonts.montserrat(
           fontSize: 20,
           fontWeight: FontWeight.w600,
           color: textPrimary,
@@ -290,7 +290,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          textStyle: GoogleFonts.poppins(
+          textStyle: GoogleFonts.montserrat(
             fontSize: 16,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.3,
@@ -307,7 +307,7 @@ class AppTheme {
             borderRadius: BorderRadius.circular(12),
           ),
           side: const BorderSide(color: borderTactical, width: 0.5),
-          textStyle: GoogleFonts.poppins(
+          textStyle: GoogleFonts.montserrat(
             fontSize: 16,
             fontWeight: FontWeight.w500,
           ),
@@ -318,7 +318,7 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: accentBlueLight,
-          textStyle: GoogleFonts.poppins(
+          textStyle: GoogleFonts.montserrat(
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -343,7 +343,10 @@ class AppTheme {
       // ── SnackBar ──
       snackBarTheme: SnackBarThemeData(
         backgroundColor: bgElevated,
-        contentTextStyle: GoogleFonts.poppins(color: textPrimary, fontSize: 14),
+        contentTextStyle: GoogleFonts.montserrat(
+          color: textPrimary,
+          fontSize: 14,
+        ),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -374,7 +377,7 @@ class AppTheme {
       chipTheme: ChipThemeData(
         backgroundColor: bgSurface,
         selectedColor: accentBlue.withValues(alpha: 0.2),
-        labelStyle: GoogleFonts.poppins(fontSize: 12, color: textPrimary),
+        labelStyle: GoogleFonts.montserrat(fontSize: 12, color: textPrimary),
         side: const BorderSide(color: borderTactical, width: 0.5),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
@@ -406,7 +409,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: borderTactical, width: 0.5),
         ),
-        textStyle: GoogleFonts.poppins(color: textPrimary, fontSize: 12),
+        textStyle: GoogleFonts.montserrat(color: textPrimary, fontSize: 12),
       ),
     );
   }
