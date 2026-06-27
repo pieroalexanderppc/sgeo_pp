@@ -77,11 +77,11 @@ El sistema busca revolucionar la forma en que los ciudadanos interactúan con la
 
 ### 1.2. Alcance
 El proyecto abarca el desarrollo completo de un ecosistema móvil multiplataforma y un backend inteligente. Las entregas clave incluyen:
-- **Desarrollo Frontend Móvil:** Construcción en Flutter bajo el sistema de diseño "Premium Tactical Dark", separando estricta y nativamente tres interfaces para Ciudadanos, Policías y Administradores.
-- **Implementación de Machine Learning:** Uso de Scikit-Learn para algoritmos de clustering espacial (DBSCAN) para delimitar zonas rojas, y algoritmos de Regresión Lineal para predicciones mensuales.
-- **APIs y Microservicios:** Un robusto backend en FastAPI (Python) para gestionar usuarios, reportes con geoJSON, validación de coordenadas y orquestación de la IA.
-- **Automatización ETL:** Scripts cronometrados (`importador_mensual.py`) para hacer scraping de las plataformas del Estado (SIDPOL y Unidad de Flagrancia) e inyectar data masiva a MongoDB.
-- **Sistema de Geofencing y Alertas Push:** Integración nativa del GPS del celular que triangula proximidad a clústeres de crimen y dispara alertas preventivas usando Firebase Cloud Messaging (FCM).
+- **Desarrollo Frontend Móvil:** Construcción en Flutter (SDK ^3.11.3, Dart) bajo el sistema de diseño "Premium Tactical Dark", separando estrictamente tres interfaces nativas para Ciudadanos, Policías y Administradores, con enrutamiento dinámico basado en el atributo `rol` almacenado en `SharedPreferences`.
+- **Implementación de Machine Learning:** Uso de Scikit-Learn para clustering espacial con el algoritmo **DBSCAN** (`epsilon=150m`, `min_samples=5`, métrica Haversine, `algorithm='ball_tree'`) para delimitar zonas de riesgo con radios dinámicos (150m–350m); **LinearRegression** para predicciones mensuales de incidentes por distrito; y el **Motor Predictivo Contextual** (`predictive_context_engine.py`) con cuatro clases especializadas: `SafetyScoreCalculator`, `TemporalAnalyzer`, `InsightGenerator` y `SafeHoursCalculator`.
+- **APIs REST:** Backend en FastAPI (`fastapi==0.104.1`) con seis módulos de rutas: autenticación (`/api/auth`), reportes (`/api/reportes`), mapas (`/api/map`), predictivo (`/api/predictive` con 5 endpoints), usuarios (`/api/users`) y administración (`/api/admin`).
+- **ETL Histórico:** Scripts `extract_arcgis_data.py` e `import_arcgis_data.py` para ingestión de datos ArcGIS/SIDPOL. Dataset histórico `datos_historicos_tacna.json` (~3.4 MB) con registros criminológicos 2018-2026.
+- **Sistema de Geofencing y Alertas Push:** Servicio `GeofenceService` implementado en Flutter con seguimiento GPS continuo (`distanceFilter=50m`, `LocationAccuracy.high`), detección de ingreso a zonas DBSCAN, cooldown de 30 minutos, y alertas contextuales con información del turno horario. Firebase Cloud Messaging (FCM) para notificaciones push masivas por tópico (`alertas_ciudadanos`).
 
 ### 1.3. Definiciones, Siglas y Abreviaturas
 - **SGEO:** Sistema de Geolocalización de Inseguridad Ciudadana.
@@ -184,12 +184,15 @@ SGEO es un sistema autoconteido y completamente modularizado. Actúa como el cen
 ### 4.2. Resumen de capacidades
 
 | Beneficio para el usuario | Características Técnicas |
-|---------------------------|--------------------------|
-| Prevención pasiva automática | - Geofencing GPS en background.<br>- Alerta sonora local 60 segs de latencia. |
-| Eliminación del ruido policial | - Módulo Táctico Policial.<br>- Solo reportes confirmados nutren el modelo de IA final. |
-| Visualización de Patrones de Crimen | - Algoritmo DBSCAN con renderizado de polígonos/hotspots adaptativos.<br>- Radios de acción (150m-400m). |
-| Administración Proactiva e IA | - Dashboards analíticos (fl_chart).<br>- Regresión Lineal con Scikit-Learn sobre histórico 2018-2026. |
-| Acceso universal y fluido | - Frontend compilado a código de máquina (Flutter) para iOS y Android con tema "Premium Tactical Dark". |
+|---------------------------|-----------------------------|
+| Prevención pasiva automática | - Geofencing GPS continuo (`distanceFilter=50m`, `LocationAccuracy.high`).<br>- Alerta sonora local con cooldown de 30 minutos y mensaje contextual por turno horario (mañana/tarde/noche/madrugada). |
+| Safety Score dinámico | - Cálculo escalar 0-100 en tiempo real basado en 4 factores: proximidad a zonas DBSCAN, densidad de incidentes en radio 1km, factor temporal por turno, tendencia distrital.<br>- Nivel de riesgo: Seguro (≥80, verde), Precaución (50-79, amarillo), Alto Riesgo (<50, rojo). |
+| Eliminación del ruido policial | - Módulo Táctico Policial de validación con radio de 3km.<br>- Solo reportes con estado `confirmado` nutren el historial y el modelo DBSCAN final. |
+| Visualización de Patrones de Crimen | - DBSCAN con `epsilon=150m`, `min_samples=5`, `algorithm='ball_tree'`, `metric='haversine'`.<br>- Radios dinámicos por hotspot (150m–350m) según densidad de incidentes. |
+| Inteligencia Contextual | - 5 endpoints predictivos: `safety_score`, `temporal_analysis`, `context_insights`, `risk_forecast`, `safe_hours`.<br>- Insights automáticos (hasta 6 por consulta) personalizados por ubicación y hora. |
+| Administración Proactiva e IA | - Dashboards analíticos con `fl_chart` (reportes por estado, por tipo).<br>- Predicción de incidentes por distrito a 3 meses vía LinearRegression sobre histórico SIDPOL 2018-2026. |
+| Feed de Noticias de Seguridad | - Módulo de noticias en la interfaz del Ciudadano con contenido de seguridad ciudadana.<br>- Historial de notificaciones persistido localmente con `SharedPreferences`. |
+| Acceso universal y fluido | - Frontend compilado a APK/AAB (Android) con tema "Premium Tactical Dark".<br>- Enrutamiento dinámico por rol (`ciudadano`, `policia`, `admin`/`administrador`). |
 
 ### 4.3. Suposiciones y dependencias
 - **Dependencias externas:** Servicios de MongoDB Atlas operativos, disponibilidad del servicio Google Maps/OSM Tiles, y operatividad del sitio web del SIDPOL (para el scraping mensual).
@@ -215,10 +218,15 @@ SGEO es un sistema autoconteido y completamente modularizado. Actúa como el cen
 ---
 
 ## 5. Características del producto
-- **Motor de IA Espacial DBSCAN:** Configurado a `epsilon = 400m` y `min_samples = 3` para discriminar el "ruido" de reportes aislados y generar un clúster matemático de peligro real.
-- **Predicción Temporal (LinearRegression):** Transforma el timeline anual/mensual de robos en un vector numérico para estimar la criminalidad mes a mes para cada distrito específico.
-- **Geocercas Silenciosas (Geofencing):** Geolocator rastrea en background cada 50 metros desplazados; si el ciudadano cruza el radio calculado por el DBSCAN, la aplicación le notifica sin abrir el móvil.
-- **Autenticación con RBAC Riguroso:** Middleware en Flutter y en FastAPI valida los JWT y el atributo `userRole` (ciudadano, policia, admin) para proteger rutas críticas e inyectar interfaces de navegación distintas.
+- **Motor de IA Espacial DBSCAN:** Configurado con `epsilon=150m` (equivalente a 0.15/6371.0 radianes), `min_samples=5`, `algorithm='ball_tree'` y `metric='haversine'`. Discrimina el "ruido" de reportes aislados y genera hotspots con nivel de riesgo (bajo/medio/alto/crítico) y radio dinámico entre 150m y 350m según el volumen de incidentes. Se ejecuta automáticamente cada vez que un Policía confirma un nuevo reporte, mediante `BackgroundTasks` de FastAPI.
+- **Safety Score Dinámico (0-100):** Cálculo compuesto implementado en `SafetyScoreCalculator` con cuatro factores ponderados: (1) proximidad a zonas DBSCAN, (2) densidad de incidentes en radio 1km, (3) factor temporal por turno horario, (4) tendencia del distrito más cercano vía LinearRegression. Niveles: Seguro (≥80), Precaución (50-79), Alto Riesgo (<50).
+- **Análisis Temporal Avanzado:** `TemporalAnalyzer` calcula distribución por hora (0-23h), día de la semana, turno horario (mañana/tarde/noche/madrugada) y tendencia mensual mediante regresión lineal sobre ventana de 3-6 meses.
+- **Insights Contextuales Automáticos:** `InsightGenerator` genera hasta 6 recomendaciones personalizadas por ubicación y hora, con tipos: temporal, recomendación, tendencia, día_semana, proximidad; y severidades: info, warning, danger.
+- **Predicción Temporal (LinearRegression):** `analytics_service.py` transforma el timeline mensual de incidentes en vectores numéricos para predecir los próximos 3 meses a nivel global y por distrito, identificando el distrito de mayor riesgo proyectado.
+- **Geocercas Contextuales (Geofencing):** `GeofenceService` rastrea en background cada 50 metros desplazados (`distanceFilter=50m`); si el ciudadano cruza el radio calculado por el DBSCAN, emite una alerta local con información del turno horario actual y un cooldown de 30 minutos para evitar spam.
+- **Autenticación con RBAC:** Middleware en Flutter valida el atributo `rol` persistido en `SharedPreferences` para enrutar a las interfaces nativas diferenciadas (`ciudadano`, `policia`, `admin`/`administrador`). El backend valida credenciales mediante Bcrypt y controla el estado de la cuenta (`activo`).
+- **Módulo de Noticias:** Vista dedicada en la interfaz del Ciudadano con contenido de seguridad ciudadana actualizado.
+- **Historial de Notificaciones:** Persistencia local de notificaciones recibidas (push y geofencing) mediante `SharedPreferences` a través del servicio `NotificationsStorageService`.
 
 ---
 

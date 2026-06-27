@@ -313,29 +313,66 @@ A continuacion se detallan exhaustivamente los Requerimientos Funcionales (RF), 
   - **Actor:** Todos
   - **Identificador de Endpoint:** GET /api/map/zonas_riesgo
 
-- **RF-MAP-03: Calculo de Indice de Riesgo Dinamico**
-  - **Descripcion formal:** El sistema debera procesar la coordenada enviada por el cliente cruzandola volumetricamente frente a eventos pasados y horas pico para generar un escalar representativo del peligro actual.
-  - **Identificador de Endpoint:** GET /predictive_routes/safety_score
+- **RF-MAP-03: Calculo de Indice de Riesgo Dinamico (Safety Score)**
+  - **Descripcion formal:** El sistema debera procesar las coordenadas enviadas por el cliente cruzandolas frente a zonas DBSCAN, densidad de incidentes en radio 1km, factor del turno horario actual y la tendencia del distrito mas cercano, para generar un escalar representativo del peligro actual en escala 0-100.
+  - **Identificador de Endpoint:** GET /api/predictive/safety_score
 
-- **RF-MAP-04: Consulta de Tramos Temporales Sugeridos**
-  - **Descripcion formal:** El sistema permitira consultar estimaciones sobre periodos de baja ocurrencia delictiva para coordenadas predeterminadas de interes.
+- **RF-MAP-04: Consulta de Tramos Temporales Sugeridos (Safe Hours)**
+  - **Descripcion formal:** El sistema permitira consultar estimaciones sobre periodos de baja ocurrencia delictiva mediante analisis estadistico por hora, turno y dia de la semana, retornando franjas horarias seguras y de riesgo con recomendacion textual.
+  - **Identificador de Endpoint:** GET /api/predictive/safe_hours
 
 - **RF-MAP-05: Actualizacion Interna del Arbol de Riesgo (Sistema)**
-  - **Descripcion formal:** El sistema debe gatillar autarquicamente calculos de identificacion periodica cada vez que el subsistema recaude una cantidad considerable de factores "Confirmados".
-  - **Actor:** Sistema (Proceso Interno)
+  - **Descripcion formal:** El sistema debe gatillar autonomicamente calculos de identificacion de hotspots mediante DBSCAN cada vez que el subsistema recaude un reporte confirmado, ejecutandose en segundo plano via BackgroundTasks sin bloquear el Event Loop.
+  - **Actor:** Sistema (Proceso Interno — BackgroundTask FastAPI)
+
+- **RF-MAP-06: Analisis Temporal de Incidentes**
+  - **Descripcion formal:** El sistema debe proveer distribucion historica de incidentes por hora del dia, dia de la semana, turno horario y tendencia mensual mediante regresion lineal, filtrable por distrito.
+  - **Identificador de Endpoint:** GET /api/predictive/temporal_analysis
+
+- **RF-MAP-07: Pronostico de Riesgo por Turno y Distrito**
+  - **Descripcion formal:** El sistema debe calcular el porcentaje de incidentes por turno horario y proyectar la tendencia futura del distrito, identificando periodos de mayor riesgo.
+  - **Identificador de Endpoint:** GET /api/predictive/risk_forecast
+
+- **RF-MAP-08: Insights Contextuales Automaticos**
+  - **Descripcion formal:** El sistema debe generar automaticamente hasta 6 recomendaciones personalizadas por ubicacion y hora, con informacion sobre tendencias, zonas de riesgo proximas, horarios seguros y patrones temporales, clasificadas por severidad (info, warning, danger).
+  - **Identificador de Endpoint:** GET /api/predictive/context_insights
 
 #### Modulo 6: Eventos y Notificaciones Push
 
 - **RF-NOT-01: Precepto de Suscripcion Perimetral**
-  - **Descripcion formal:** El sistema debera soportar la inscripcion de terminales moviles activos a canales de distribucion informativa referenciados geoespacialmente.
+  - **Descripcion formal:** El sistema debera soportar la inscripcion de terminales moviles activos a canales de distribucion informativa referenciados geoespacialmente mediante Firebase Cloud Messaging (FCM) con topico `alertas_ciudadanos`.
 
 - **RF-NOT-02: Emision de Alertas Geofencing Inminente**
-  - **Descripcion formal:** El sistema instanciara despachos informativos urgentes a cuentas si el modelo central detecta penetracion o permanencia en cuadrantes recien elevados a alta criticidad operativa.
+  - **Descripcion formal:** El sistema instanciara despachos informativos urgentes a cuentas si el servicio de geolocalización detecta penetracion o permanencia en cuadrantes elevados a alta criticidad operativa por el motor DBSCAN, con cooldown de 30 minutos para evitar saturacion.
 
 - **RF-NOT-03: Alternancia Silenciosa Dispositivo**
   - **Descripcion formal:** El sistema permitira al usuario bloquear la interrupcion acustica y visual proveniente de las advertencias centralizadas.
 
+- **RF-NOT-04: Notificacion Push Masiva de Incidentes Confirmados**
+  - **Descripcion formal:** Al confirmar un reporte policial, el sistema debe emitir automaticamente una notificacion push masiva al topico `alertas_ciudadanos` con el tipo de incidente y las coordenadas GPS exactas del hecho.
+
+- **RF-NOT-05: Notificacion Push de Actualizacion de Mapa**
+  - **Descripcion formal:** Al recalcularse las zonas de riesgo DBSCAN, el sistema debe emitir una notificacion de tipo `update` que instruye a los clientes Flutter a limpiar su cache local y refrescar los datos del mapa.
+
 ---
+
+#### Modulo 7: Noticias de Seguridad Ciudadana
+
+- **RF-NEWS-01: Visualizacion de Feed de Noticias**
+  - **Descripcion formal:** El sistema debe proveer en la interfaz del Ciudadano un modulo de noticias con contenido de seguridad ciudadana actualizado.
+  - **Actor:** Ciudadano
+
+---
+
+#### Modulo 8: Historial y Persistencia de Notificaciones
+
+- **RF-HIST-01: Persistencia Local de Notificaciones**
+  - **Descripcion formal:** El sistema debe almacenar localmente en el dispositivo del usuario todas las notificaciones recibidas (push remoto via FCM y alertas locales de geofencing) mediante SharedPreferences, para consulta posterior en la vista de notificaciones.
+  - **Actor:** Ciudadano / Policia
+
+- **RF-HIST-02: Visualizacion del Historial de Notificaciones**
+  - **Descripcion formal:** El sistema debe exponer una vista con el historial cronologico de notificaciones recibidas, incluyendo titulo, cuerpo, tipo (incident/risk_zone/update) y timestamp.
+  - **Actor:** Ciudadano / Policia
 
 ### d) Reglas de Negocio
 

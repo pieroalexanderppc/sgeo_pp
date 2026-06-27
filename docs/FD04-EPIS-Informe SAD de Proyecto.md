@@ -107,11 +107,11 @@ SGEO se fundamenta en un modelo de capas acoplado al estandar 4+1 de Kruchten:
 - **Patron Observer/Pub-Sub (FCM):** Para la distribucion masiva de las alertas de Geofencing hacia receptores flutter registrados.
 
 ### 2.3 Tecnologias Utilizadas
-- **Backend:** Python 3.10+, FastAPI, Pydantic, Passlib, Uvicorn.
-- **Analitica de Datos:** Scikit-Learn, Pandas, Numpy.
-- **Base de Datos:** MongoDB Atlas (Capa M0/M10, Indices 2dsphere).
-- **Frontend:** Dart 3.x, Flutter, Provider/Riverpod (State Management), flutter_map.
-- **Infraestructura:** Docker, Railway, Firebase Admin SDK.
+- **Backend:** Python 3.11+, `fastapi==0.104.1`, `uvicorn==0.24.0`, `pydantic==2.5.2`, `bcrypt==4.1.1`, `pymongo==4.6.0`, `python-dotenv==1.0.0`, `pytz==2023.3.post1`.
+- **Analitica de Datos:** `scikit-learn==1.3.2`, `pandas==2.1.3`, `numpy==1.26.2`. Algoritmos: DBSCAN (espacial) y LinearRegression (predictivo temporal).
+- **Base de Datos:** MongoDB Atlas (base `geocrimen_tacna`), colecciones: `usuarios`, `reportes_ciudadano`, `historial_delitos`, `zonas_riesgo`. Indices `2dsphere` en campos `ubicacion` y `centroide`.
+- **Frontend:** Dart 3.x, Flutter SDK ^3.11.3. Paquetes principales: `flutter_map ^8.2.2`, `geolocator ^14.0.2`, `firebase_core ^4.7.0`, `firebase_messaging ^16.2.0`, `flutter_local_notifications ^21.0.0`, `fl_chart ^1.2.0`, `flutter_animate ^4.5.2`, `google_fonts ^8.1.0`, `lottie ^3.3.2`, `shared_preferences ^2.5.5`, `showcaseview 3.0.0`, `sliding_up_panel ^2.0.0+1`, `http ^1.6.0`, `latlong2 ^0.9.1`. Gestion de estado: `StatefulWidget` nativo con `SharedPreferences` para persistencia.
+- **Infraestructura:** Railway PaaS (backend con `Procfile`: `web: uvicorn main:app --host 0.0.0.0 --port $PORT`), MongoDB Atlas Replica Set, Firebase Cloud Messaging (FCM) con `firebase-admin==6.3.0`.
 
 ---
 
@@ -412,29 +412,98 @@ Services --> Firebase : Firebase Admin SDK
 
 ```text
 sgeo_pp/
-|-- android/                     # Dependencias Gradle / Compilacion nativa
-|-- ios/                         # Workspace Xcode para entorno Apple
-|-- lib/                         # Codigo Flutter (Client Logic)
-|   |-- core/                    # Logica transversal HTTP, Config, Routing
-|   |-- features/                # Utilidades de UI compartidas
-|   |-- roles/                   # UI dividida por Modulos RBAC
-|   |-- firebase_options.dart    # Configuraciones Firebase Client SDK
-|   +-- main.dart                # Setup inicial y providers de Dart
-|-- backend/                     # Microservicio, IA y Data
-|   |-- scripts_iniciales/       # Procesos ETL y configuracion base (SIDPOL)
-|   |-- firebase_service.py      # Interfaz backend para Firebase Cloud Messaging
-|   |-- main.py                  # Instancia principal FastAPI y Routers
-|   |-- motor_ia_zonas_riesgo.py # Logica clustering espacial DBSCAN
-|   |-- predictive_context_engine.py # Analisis heuristico temporal
-|   |-- predictive_routes.py     # Controladores Geoespaciales
-|   |-- requirements.txt         # Dependencias Pip (FastAPI, PyMongo, scikit-learn)
-|   +-- Procfile                 # Comandos para inicializacion en Railway
-+-- pubspec.yaml                 # Core dependencias de interface (Flutter)
+|-- android/                         # Dependencias Gradle / Compilacion nativa
+|-- ios/                             # Workspace Xcode para entorno Apple
+|-- lib/                             # Codigo Flutter (Client Logic)
+|   |-- core/                        # Logica transversal compartida
+|   |   |-- config/
+|   |   |   +-- api_config.dart      # URL base de la API (ApiConfig.baseUrl)
+|   |   |-- models/
+|   |   |   +-- report_model.dart    # Modelo de datos de reportes
+|   |   |-- services/               # 7 servicios centrales
+|   |   |   |-- auth_service.dart   # Autenticacion y gestion de sesion
+|   |   |   |-- geofence_service.dart # Servicio GPS + deteccion zonas DBSCAN
+|   |   |   |-- map_service.dart    # Cache y consumo de zonas/puntos del mapa
+|   |   |   |-- notifications_storage_service.dart # Persistencia local FCM
+|   |   |   |-- predictive_service.dart # Consumo de 5 endpoints /api/predictive
+|   |   |   |-- report_service.dart # CRUD de reportes ciudadanos
+|   |   |   +-- tutorial_service.dart # Control del tutorial inicial (showcaseview)
+|   |   |-- theme/
+|   |   |   +-- app_theme.dart      # Tema "Premium Tactical Dark" / Light
+|   |   +-- widgets/               # Widgets compartidos de seguridad
+|   |       |-- insights_card.dart  # Tarjeta de insights contextuales
+|   |       |-- safety_button.dart  # Boton de reporte rapido
+|   |       |-- safety_card.dart    # Tarjeta informativa de zona
+|   |       |-- safety_layout.dart  # Layout contenedor de vistas de seguridad
+|   |       |-- safety_score_fab.dart # FAB con Safety Score dinamico
+|   |       |-- safety_score_gauge.dart # Gauge visual del score 0-100
+|   |       +-- safety_widgets.dart # Barrel export de widgets
+|   |-- features/
+|   |   +-- auth/                   # Modulo de autenticacion
+|   |       +-- views/
+|   |           |-- login_view.dart
+|   |           +-- splash_view.dart
+|   |-- roles/                      # UI dividida por RBAC
+|   |   |-- user/                   # Interfaz Ciudadano
+|   |   |   |-- home/views/home_view.dart
+|   |   |   |-- map/views/map_view.dart      # Vista principal del mapa (80KB)
+|   |   |   |-- map/views/widgets/          # Widgets del mapa
+|   |   |   |-- news/                       # Modulo de noticias de seguridad
+|   |   |   |-- notifications/views/notifications_view.dart
+|   |   |   |-- profile/
+|   |   |   +-- reports/views/my_reports_view.dart
+|   |   |-- police/                 # Interfaz Policia
+|   |   |   |-- home/views/home_view.dart
+|   |   |   |-- map/views/map_view.dart
+|   |   |   |-- profile/
+|   |   |   +-- validations/views/validations_view.dart
+|   |   +-- admin/                  # Interfaz Administrador
+|   |       |-- dashboard/views/dashboard_view.dart
+|   |       |-- home/views/home_view.dart
+|   |       |-- profile/
+|   |       +-- users/views/
+|   |-- firebase_options.dart       # Configuracion Firebase Client SDK
+|   +-- main.dart                   # Punto de entrada: FCM, notificaciones, RBAC routing
+|-- backend/                        # Microservicio Python / IA
+|   |-- config/
+|   |   +-- database.py             # DatabaseProxy, indices 2dsphere, colecciones
+|   |-- models/
+|   |   |-- auth_schemas.py         # Pydantic: LoginRequest, RegisterRequest
+|   |   |-- report_schemas.py       # Pydantic: ReporteCiudadano
+|   |   +-- user_schemas.py         # Pydantic: esquemas de usuario
+|   |-- routes/                     # 6 routers FastAPI
+|   |   |-- admin.py                # GET /api/admin/dashboard_stats, sidpol_stats, sidpol_predict
+|   |   |-- auth.py                 # POST /api/auth/login, /register
+|   |   |-- maps.py                 # GET/POST /api/map/zonas_riesgo, puntos_exactos, historial_puntos
+|   |   |-- predictive.py           # GET /api/predictive/safety_score, temporal_analysis, context_insights, risk_forecast, safe_hours
+|   |   |-- reports.py              # POST/GET/DELETE /api/reportes + /confirmar, /rechazar, /policia
+|   |   +-- users.py                # GET/PUT /api/users
+|   |-- services/
+|   |   |-- analytics_service.py    # LinearRegression: prediccion 3 meses por distrito
+|   |   +-- report_service.py       # Logica de negocio de reportes
+|   |-- utils/
+|   |   |-- crypto.py               # Bcrypt hash/verify
+|   |   |-- string_helpers.py       # Normalizacion de strings
+|   |   +-- time_helpers.py         # Turnos horarios y pesos temporales
+|   |-- scripts_iniciales/          # ETL e inicializacion
+|   |   |-- datos_historicos_tacna.json  # ~3.4MB historial SIDPOL 2018-2026
+|   |   |-- extract_arcgis_data.py  # Extraccion datos ArcGIS/SIDPOL
+|   |   |-- import_arcgis_data.py   # Importacion a MongoDB
+|   |   +-- setup_db.py             # Configuracion inicial de BD y esquemas
+|   |-- firebase_service.py         # Firebase Admin SDK: init + send_push_notification
+|   |-- motor_ia_zonas_riesgo.py    # DBSCAN (epsilon=150m, min_samples=5, haversine)
+|   |-- predictive_context_engine.py # SafetyScoreCalculator, TemporalAnalyzer, InsightGenerator, SafeHoursCalculator
+|   |-- main.py                     # FastAPI app + 6 routers + DBSCAN thread en startup
+|   |-- requirements.txt            # Dependencias pip con versiones fijas
+|   |-- Procfile                    # Railway: web: uvicorn main:app --host 0.0.0.0 --port $PORT
+|   +-- .env.example                # Variables: MONGO_URL, SECRET_KEY, FIREBASE_CREDENTIALS_JSON, PORT
++-- pubspec.yaml                    # Dependencias Flutter con versiones fijas
 ```
 
 ### 6.3 Configuracion de Servicios
-- **CORS:** Habilitado irrestrictamente para origenes de desarrollo movil en entorno Dev; restringido a direcciones de confianza en Produccion.
-- **Variables de Entorno (.env):** `MONGO_URI`, `JWT_SECRET_KEY`, `ALGORITHM`, `ACCESS_TOKEN_EXPIRE_MINUTES`, credenciales JSON de Firebase `sgeo-firebase-adminsdk.json`.
+- **CORS:** Habilitado irrestrictamente en entorno de desarrollo (`allow_origins=["*"]`, `allow_methods=["*"]`, `allow_headers=["*"]`). Se recomienda restringir a dominios de confianza en produccion.
+- **Variables de Entorno (.env):** `MONGO_URL` (URI de conexion MongoDB Atlas), `SECRET_KEY` (clave de cifrado), `FIREBASE_CREDENTIALS_JSON` (JSON de credenciales Firebase Admin SDK para Railway), `PORT` (puerto del servidor, default 8000). En entorno local se usa el archivo `sgeo-firebase-adminsdk.json` para las credenciales Firebase.
+- **Inicializacion del Sistema:** Al arrancar, `main.py` conecta a MongoDB, crea los indices `2dsphere` e inicia el motor DBSCAN en un hilo daemon (`threading.Thread`) para el primer calculo de zonas de riesgo.
 
 ---
 

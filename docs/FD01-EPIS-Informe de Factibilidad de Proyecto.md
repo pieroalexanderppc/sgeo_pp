@@ -54,22 +54,22 @@ SGEO — Sistema de Geolocalización de Inseguridad Ciudadana con Machine Learni
 12 meses (Implementación piloto y desarrollo: 6 meses; Despliegue completo y Entrenamiento de Modelos a nivel regional: 6 meses adicionales).
 
 **1.3. Descripción**  
-El proyecto consiste en el desarrollo e implementación de una aplicación móvil híbrida orientada a la participación ciudadana y la acción policial estratégica en la región de Tacna. El sistema registrará, visualizará, predecirá y alertará sobre zonas de inseguridad en tiempo real.
+El proyecto consiste en el desarrollo e implementación de una aplicación móvil multiplataforma orientada a la participación ciudadana y la acción policial estratégica en la región de Tacna, Perú. El sistema registra, visualiza, predice y alerta sobre zonas de inseguridad en tiempo real mediante la integración de reportes comunitarios geolocalizados y datos históricos oficiales del Estado Peruano.
 
-La actual falta de un mapa situacional accesible y dinámico ha generado que los ciudadanos y autoridades transiten por zonas con un inminente riesgo criminal sin contar con la capacidad de prevención adecuada. Esta solución abordará este desafío mediante la combinación de reportes comunitarios en vivo y la extracción automatizada de datos gubernamentales oficiales (SIDPOL / Unidad de Flagrancia).
+La ausencia de un mapa situacional dinámico y accesible ha ocasionado que ciudadanos y autoridades transiten por zonas de alto riesgo criminal sin capacidad de prevención adecuada. SGEO aborda este desafío combinando reportes colaborativos en vivo con la ingestión de datos históricos del Sistema de Información Policial (SIDPOL) y la Unidad de Flagrancia de la región de Tacna.
 
-El sistema incluye una arquitectura avanzada de Machine Learning de 2 fases: Una fase Espacial (mediante el algoritmo DBSCAN) para mapear clusters y definir radios de riesgo en la ciudad; y una fase Predictiva (mediante algoritmos de Regresión Lineal) para analizar grandes volúmenes de datos históricos (2018-2026) y pronosticar riesgos futuros por distritos. Contempla una API RESTful escalable en FastAPI, integración de bases de datos MongoDB, diseño de UI táctico multiplataforma en Flutter y notificaciones preventivas vía Firebase Cloud Messaging (FCM).
+El sistema implementa una arquitectura de Inteligencia Artificial de dos componentes: un **Motor Espacial DBSCAN** (`epsilon=150m`, `min_samples=5`, métrica Haversine) que identifica hotspots geográficos delictivos a partir del historial confirmado; y un **Motor Predictivo Contextual** que combina Análisis Temporal (distribución por hora, turno, día y tendencia mediante Regresión Lineal), un **Safety Score dinámico** (escalar 0-100 basado en proximidad a zonas de riesgo, densidad de incidentes, factor temporal y tendencia distrital), e **Insights Contextuales automáticos** personalizados por ubicación y horario. El backend está implementado sobre FastAPI con Python 3.11, MongoDB Atlas como base de datos NoSQL con índices geoespaciales `2dsphere`, Flutter/Dart para el frontend multiplataforma, y Firebase Cloud Messaging (FCM) para notificaciones push en tiempo real.
 
 **1.4. Objetivos**  
 
 **1.4.1. Objetivo general**  
-Desarrollar e implementar un sistema inteligente de geolocalización criminal que reduzca los tiempos de respuesta policial y aumente la prevención civil en Tacna mediante el uso de inteligencia artificial espacial y predictiva, proporcionando métricas 24/7 a las autoridades.
+Desarrollar e implementar un sistema inteligente de geolocalización criminal que reduzca los tiempos de respuesta policial y aumente la prevención civil en la región de Tacna mediante el uso de inteligencia artificial espacial y predictiva, proporcionando métricas analíticas en tiempo real a las autoridades y herramientas de prevención a la ciudadanía.
 
 **1.4.2. Objetivos Específicos**  
-- **Interfaz Multirrol Táctica:** Diseñar e implementar el sistema visual "Premium Tactical Dark" en Flutter con soporte 100% independiente para ciudadanos, policías y administradores.
-- **Alertas Preventivas de Geofencing:** Lograr que los ciudadanos reciban una alerta push automatizada con menos de 60 segundos de latencia al ingresar a una zona catalogada como de alto riesgo por la Inteligencia Artificial.
-- **Motor Inteligente:** Implementar los algoritmos DBSCAN (espacial) y Linear Regression (predictivo) para procesar más del 90% de los incidentes de las bases de datos oficiales de SIDPOL.
-- **Reducción de Costos Policiales:** Proveer métricas analíticas a los administradores policiales para optimizar los recorridos de patrullaje basándose en las predicciones del modelo, logrando ahorros tangibles de combustible.
+- **Interfaz Multirrol Táctica:** Diseñar e implementar tres interfaces nativas diferenciadas en Flutter bajo el sistema visual "Premium Tactical Dark" para los roles Ciudadano, Policía y Administrador, con enrutamiento estricto basado en el atributo `rol` persistido en `SharedPreferences`.
+- **Alertas Preventivas de Geofencing:** Implementar un servicio de seguimiento GPS continuo (`distanceFilter=50m`) que detecte la entrada del usuario a zonas de riesgo calculadas por DBSCAN y emita alertas locales contextuales con información del turno horario, con un mecanismo de cooldown de 30 minutos para evitar saturación.
+- **Motor de Inteligencia Artificial:** Implementar el algoritmo DBSCAN con parámetros geoespaciales (`epsilon=150m`, `min_samples=5`, métrica Haversine) para clusterización de hotspots, el Safety Score dinámico (0-100) con cuatro factores de cálculo, y la Regresión Lineal para predicción de incidentes a 3 meses por distrito sobre el historial SIDPOL 2018-2026.
+- **Reducción de Costos Policiales:** Proveer dashboards analíticos con `fl_chart` a los administradores policiales para visualizar estadísticas de reportes, tendencias por distrito, y predicciones futuras que optimicen la asignación de recursos de patrullaje.
 
 ---
 
@@ -104,20 +104,20 @@ Los problemas identificados incluyen:
 **3.2. Consideraciones de hardware y software**  
 
 **Hardware disponible y alcanzable:**
-- Servidores virtuales en cloud: Backend desplegado en PaaS (Railway) con redundancia automática.
-- Equipo de desarrollo: Laptop/Estación de trabajo con Windows 10/11, 16GB RAM, procesador multi-núcleo para levantar emuladores de Android y procesar Pandas.
-- Dispositivos móviles físicos: Smartphones Android e iOS de diversas gamas para asegurar el testing del hardware GPS nativo.
+- Servidores virtuales en cloud: Backend desplegado en Railway PaaS, con escalado automático mediante contenedores y `Procfile` de inicio (`uvicorn main:app`).
+- Equipo de desarrollo: Estación de trabajo con Windows 11, procesador multi-núcleo para emuladores Android y procesamiento de DataFrames Pandas sobre datos SIDPOL (~3.4 MB de datos históricos).
+- Dispositivos móviles físicos: Smartphones Android (API 26+) con chip GPS integrado para pruebas del módulo de geofencing y notificaciones push.
 
-**Software posible para implementación:**
-- **Frontend Móvil:** Flutter (Dart) con integración a Google Maps / OpenStreetMap.
-- **Backend / API REST:** Python 3.11+, FastAPI, Uvicorn.
-- **Base de datos NoSQL:** MongoDB 6.0+ (Atlas) usando índices geoespaciales 2dsphere.
-- **Inteligencia Artificial y Big Data:** Scikit-learn, Pandas, NumPy.
-- **Notificaciones:** Firebase Cloud Messaging (FCM).
-- **Tareas Automáticas:** Cron Jobs nativos en servidores para Scraping (BeautifulSoup4).
+**Software implementado (versiones reales):**
+- **Frontend Móvil:** Flutter SDK ^3.11.3 (Dart), con paquetes: `flutter_map ^8.2.2`, `geolocator ^14.0.2`, `firebase_messaging ^16.2.0`, `fl_chart ^1.2.0`, `flutter_animate ^4.5.2`, `google_fonts ^8.1.0`, `lottie ^3.3.2`, `showcaseview 3.0.0`.
+- **Backend / API REST:** Python 3.11+, `fastapi==0.104.1`, `uvicorn==0.24.0`, `pydantic==2.5.2`.
+- **Base de datos NoSQL:** MongoDB Atlas (base `geocrimen_tacna`) con 4 colecciones: `usuarios`, `reportes_ciudadano`, `historial_delitos`, `zonas_riesgo`; índices `2dsphere` sobre campos `ubicacion` y `centroide`.
+- **Inteligencia Artificial:** `scikit-learn==1.3.2`, `pandas==2.1.3`, `numpy==1.26.2`; algoritmos DBSCAN (espacial) y LinearRegression (predictivo).
+- **Notificaciones Push:** `firebase-admin==6.3.0`, Firebase Cloud Messaging (FCM) con tópicos `alertas_ciudadanos`.
+- **ETL Histórico:** Scripts `extract_arcgis_data.py` e `import_arcgis_data.py` para ingestión de datos ArcGIS/SIDPOL.
 
-**Tecnología evaluada:**  
-Se priorizará tecnología open-source moderna y robusta. Python y Scikit-learn son los estándares absolutos de la industria para algoritmos de regresión; Flutter permitirá programar para iOS y Android desde un solo código base; y MongoDB tiene un soporte inigualable para la geolocalización.
+**Tecnología evaluada y adoptada:**  
+Se priorizó tecnología open-source de alta madurez industrial. Scikit-Learn provee los algoritmos DBSCAN y LinearRegression con rendimiento óptimo para datasets criminológicos; Flutter compila a código nativo para Android e iOS desde una única base de código; MongoDB Atlas ofrece soporte nativo para consultas geoespaciales mediante operadores `$nearSphere` y `$geoIntersects` en C++.
 
 ---
 
@@ -128,23 +128,24 @@ Los resultados esperados del estudio de factibilidad incluyen la validación té
 ### 4.1. Factibilidad Técnica
 
 **Recursos tecnológicos disponibles:**  
-La evaluación confirma la disponibilidad absoluta de infraestructura tecnológica y de servicios en la nube para el levantamiento de SGEO.
+La evaluación confirma y la implementación valida la disponibilidad absoluta de infraestructura tecnológica y de servicios en la nube para el levantamiento y operación del sistema SGEO.
 
-**Hardware evaluado:**
-- **Infraestructura local:** Estación de trabajo de alto rendimiento del desarrollador suficiente para emular ambas plataformas (Android/iOS) y procesar en local el pipeline ETL.
-- **Hardware en nube:** Servicios cloud PaaS (Railway) capaces de escalar el procesamiento requerido de las BackgroundTasks en la API en tiempo real.
-- **Hardware externo:** Smartphones comunes de los ciudadanos cuentan hoy en día con un chip GPS preciso integrado de manera universal.
+**Hardware evaluado e implementado:**
+- **Infraestructura local:** Estación de trabajo Windows 11 con procesador multi-núcleo empleada para el desarrollo, emulación Android y procesamiento del pipeline ETL sobre el dataset histórico SIDPOL (~3.4 MB, miles de registros criminológicos georeferenciados).
+- **Hardware en nube:** Railway PaaS con inicio automático vía `Procfile`, capaz de ejecutar los `BackgroundTasks` de FastAPI para el motor DBSCAN sin bloquear el Event Loop de la API.
+- **Hardware externo:** Smartphones Android (API 26+) con GPS de alta precisión para el módulo de geofencing (`LocationAccuracy.high`, `distanceFilter=50m`).
 
-**Software evaluado:**
-- **Plataformas Base:** Framework Flutter v3+, Python 3.11 para algoritmos de alta carga matemática.
-- **Procesamiento AI:** Scikit-Learn. El algoritmo DBSCAN evaluado mostró un rendimiento impecable frente al mapeo geoespacial debido a su técnica basada en densidad y manejo de distancias de haversine.
-- **Persistencia en Nube:** MongoDB Atlas, ideal para queries nativos como `$near` y `$geoIntersects`.
+**Software evaluado e implementado:**
+- **Frontend:** Flutter SDK ^3.11.3 compila a APK/AAB nativo. Implementa `flutter_map` para cartografía OpenStreetMap, `geolocator` para GPS en background, y `firebase_messaging` para recepción de notificaciones push en todos los estados de la app (foreground, background, terminado).
+- **Motor IA Espacial:** DBSCAN de Scikit-Learn con `algorithm='ball_tree'` y `metric='haversine'`, configurado a `epsilon=150m` y `min_samples=5`. Genera hotspots con nivel de riesgo (bajo/medio/alto/crítico) y radio dinámico (150m–350m) en función del volumen de incidentes por clúster.
+- **Motor IA Predictivo:** `predictive_context_engine.py` implementa `SafetyScoreCalculator` (4 factores: proximidad DBSCAN, densidad incidentes, factor temporal por turno, tendencia distrital vía LinearRegression), `TemporalAnalyzer`, `InsightGenerator` y `SafeHoursCalculator`.
+- **Persistencia en Nube:** MongoDB Atlas con base `geocrimen_tacna`, índices `2dsphere` en `ubicacion` (reportes) y `centroide` (zonas_riesgo) para consultas geoespaciales `$nearSphere` en tiempo sub-250ms.
 
-**Integración con sistemas existentes:**  
-Capacidad de ingestar y parsear hojas de cálculo y JSON abiertos del Gobierno Peruano mediante web scraping automatizado.
+**Integración con sistemas externos:**  
+Se implementaron scripts ETL (`extract_arcgis_data.py`, `import_arcgis_data.py`) para la extracción e importación de datos históricos de la plataforma ArcGIS/SIDPOL hacia MongoDB. El archivo `datos_historicos_tacna.json` (~3.4 MB) contiene el historial de delitos 2018-2026 que alimenta los motores predictivos.
 
 **Conclusión técnica:**  
-El proyecto es completamente viable con la infraestructura tecnológica open-source seleccionada, la cual posee la madurez necesaria para soportar geolocalización en milisegundos y entrenamientos robustos de ML en la nube.
+El proyecto se encuentra completamente implementado con la infraestructura tecnológica open-source evaluada. La pila tecnológica real ha demostrado soporte para geolocalización en milisegundos (`$nearSphere`), clustering espacial automático (DBSCAN), análisis predictivo temporal (LinearRegression) y distribución masiva de alertas push (FCM). Todos los componentes han sido validados en entorno de desarrollo con datos reales del SIDPOL de la región de Tacna.
 
 ### 4.2. Factibilidad Económica
 
