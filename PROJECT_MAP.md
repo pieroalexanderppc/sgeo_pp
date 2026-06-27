@@ -17,7 +17,7 @@
 | @report_dialog | lib/roles/user/map/views/widgets/report_dialog.dart | Diálogo de creación de denuncia (tipo, descripción, geocodificación inversa Nominatim) |
 | @models | lib/core/models/report_model.dart | Modelo `ReportModel` tipado (NO existe carpeta `lib/models/` separada) |
 | @api | lib/core/config/api_config.dart | `ApiConfig`: centraliza base URL y rutas de todos los endpoints del backend |
-| @services | lib/core/services/ | `AuthService`, `MapService`, `ReportService`, `GeofenceService`, `PredictiveService`, `NotificationsStorageService`, `TutorialService` |
+| @services | lib/core/services/ | `AuthService`, `MapService`, `ReportService`, `GeofenceService`, `PredictiveService`, `NotificationsStorageService`, `TutorialService`, `UserService` (nuevo — ver Notas del análisis) |
 | @widgets | lib/core/widgets/ | Sistema "Premium Tactical Dark": `SafetyLayout`, `SafetyCard`, `SafetyButton`, `SafetyScoreGauge`, `SafetyScoreFab`, `InsightsCard` |
 | @theme | lib/core/theme/app_theme.dart | `AppTheme`, `themeNotifier` (tema oscuro forzado) |
 | @roles_admin | lib/roles/admin/{dashboard,home,profile,users}/views/ | Dashboard analítico (fl_chart), gestión de usuarios, perfil admin |
@@ -37,6 +37,7 @@
 | @predictive_core | backend/predictive_context_engine.py | `TemporalAnalyzer`, `SafetyScoreCalculator`, `InsightGenerator`, `SafeHoursCalculator` |
 | @firebase_be | backend/firebase_service.py | Inicialización Firebase Admin SDK y envío de push FCM |
 | @etl | backend/scripts_iniciales/ | `setup_db.py`, `extract_arcgis_data.py`, `import_arcgis_data.py` (ETL histórico SIDPOL/ArcGIS) |
+| @tests_be | backend/tests/ | `conftest.py` + `test_reports.py` (nuevo — pytest + mongomock, monta solo el router de `reports` para no disparar el lifespan/IA real) |
 
 ## Endpoints registrados
 | Método | Ruta | Controlador | Descripción |
@@ -75,12 +76,13 @@
 | Registro | — (manejado inline en `register_view.dart`) | backend/models/auth_schemas.py (`RegisterRequest`) | nombre, email, password, rol (default "ciudadano"), is_active |
 | Usuario (update) | — (manejado inline en `profile_view.dart`) | backend/models/user_schemas.py (`UpdateUser`) | nombre, email, telefono |
 
-**`[REVISAR]`**: no existen clases Dart `LoginModel`/`UserModel` tipadas — los datos de usuario se pasan como `Map`/parámetros sueltos entre `AuthService` y las vistas. Si se requiere mantener consistencia estricta Flutter↔Backend, considerar crear modelos Dart equivalentes a `auth_schemas.py`/`user_schemas.py`.
+**`[REVISAR]`**: no existen clases Dart `LoginModel`/`UserModel` tipadas — los datos de usuario se pasan como `Map`/parámetros sueltos entre `AuthService`/`UserService` (nuevo, ver Bloque 2) y las vistas. Se mantuvo así deliberadamente para no introducir una abstracción nueva fuera del alcance pedido; si se requiere consistencia estricta Flutter↔Backend, considerar crear modelos Dart equivalentes a `auth_schemas.py`/`user_schemas.py`.
 
 ## Reglas críticas del proyecto
 - `[REVISAR]` **FlutterMap (`@map_user`, `@map_police`)**: no se encontró ningún comentario "NO MODIFICAR" en el código actual (`lib/roles/user/map/views/map_view.dart`, `lib/roles/police/map/views/map_view.dart`). Es un widget extenso y central (cachés con TTL, geocercas, filtros año/mes) — tratar cambios con cuidado y probar ambos roles, pero no asumir que existe una restricción formal hasta confirmarlo con el equipo.
 - **"Sin tildes ni ñ" — NO aplica**: el código fuente usa tildes y ñ libremente en comentarios y strings de UI en español (ej. `"Iniciar Sesión - SGEO"`, `widget_test.dart:23`). Esta regla del template no está vigente en este repo; no aplicarla a menos que el usuario la confirme explícitamente.
-- **Caché en memoria sin Redis**: `routes/maps.py` y `routes/predictive.py` usan caché en memoria de proceso (TTL 60s / 30s) — comentarios `TODO` explícitos indican que esto rompe en despliegues multi-worker. No asumir que el caché es compartido entre instancias.
+- **Caché en memoria sin Redis**: `routes/maps.py` y `routes/predictive.py` usan caché en memoria de proceso (TTL 60s / 30s) — comentarios `TODO` y advertencias explícitas (agregadas en este pase) indican que esto rompe si se escala a más de un worker/réplica. Hoy el `Procfile` corre `uvicorn main:app` sin `--workers` (1 solo proceso), así que el riesgo está dormido mientras Railway no escale horizontalmente. No asumir que el caché es compartido entre instancias si eso cambia.
+- **Sin JWT/sesión por token**: confirmado — `routes/auth.py` solo verifica credenciales una vez y no emite token; ningún otro endpoint valida sesión, confían en el `user_id`/`usuario_id` que envía el cliente. `SECRET_KEY` en `.env`/`.env.example` está declarada pero sin uso (documentado explícitamente en ambos archivos). Decisión del equipo: no implementar JWT por ahora — cualquier interceptor de error 401 en Flutter sería código muerto hasta que esto cambie.
 - **Límite de 5 reportes/día por usuario**: aplicado en `services/report_service.py::validar_limite_diario` — cualquier cambio al flujo de creación de reportes debe respetar esta regla salvo indicación contraria.
 - **Confirmación de reporte es una operación compuesta**: `confirmar_reporte_en_db` mueve el documento a `historial_delitos`, agrupa reportes cercanos (radio 500m) y dispara el motor IA — comentarios en código (`reports.py`, `report_service.py`) marcan correcciones de bugs previos ("no ignorar IDs de usuario inválidos", "no confirmar si falla el insert a historial_delitos"); mantener ese orden de validaciones.
 - **Solo Android tiene Firebase configurado**: `firebase_options.dart` lanza `UnsupportedError` para iOS/macOS/Windows/Linux. Cualquier feature que dependa de FCM no funcionará en otras plataformas hasta configurar `flutterfire`.
@@ -102,6 +104,12 @@
 | Notificaciones push (FCM) | lib/main.dart + notifications_storage_service.dart | @firebase_be | ✅ completo |
 | Feed de noticias RSS | lib/roles/user/news/ | — (consumo de XML externo, sin endpoint propio) | ✅ completo |
 | ETL histórico SIDPOL/ArcGIS | — | @etl | ✅ completo (ejecución manual/cron, no expuesto vía API) |
+
+**Hardening del rol ciudadano (Bloques 2-4, sin cambio de estado en la tabla — ya estaban en ✅ a nivel de feature, pero tenían bugs internos):**
+- *Reportes ciudadanos*: el límite de 5/día (HTTP 429) estaba silenciado en el cliente (`MapService.crearReporte` descartaba el `statusCode`) — corregido, ahora se muestra "Límite de reportes alcanzado por hoy". `ReportService.deleteReport` también dejó de mostrar mensajes genéricos cuando el backend sí da un detalle específico.
+- *Perfil*: `ProfileView` hacía `http` directo en vez de usar la capa de servicios — se extrajo a `UserService` (nuevo), que además interpreta correctamente `detail` como string u objeto de validación Pydantic.
+- *Notificaciones / Home*: se agregó badge de no leídas en el tab "Alertas" y disparo automático del tutorial guiado en el primer ingreso (el flag `has_seen_map_tutorial` se escribía pero nunca se leía).
+- *Mapa ciudadano*: se desactivó el joystick de pruebas (`_isTestMode`) que había quedado expuesto en producción. No se tocó el widget `FlutterMap`.
 
 ## Dependencias externas críticas
 
@@ -139,6 +147,9 @@
 | pydantic | 2.5.2 (+ pydantic[email]) | models/ | Validación de esquemas |
 | python-dotenv | 1.0.0 | config/database.py, firebase_service.py | Variables de entorno |
 | pytz | 2023.3 | utils/time_helpers.py | Zona horaria America/Lima |
+| pytest | 7.4.3 | @tests_be | Solo test, no runtime |
+| httpx | 0.25.1 | @tests_be | Requerido por `fastapi.testclient.TestClient`, solo test |
+| mongomock | 4.1.2 | @tests_be | MongoDB en memoria para tests, solo test |
 
 ## Convenciones detectadas
 - **Nombrado de archivos:** snake_case en ambos lados (`api_config.dart`, `report_model.dart`, `motor_ia_zonas_riesgo.py`)
@@ -152,10 +163,11 @@
 
 ## Notas del análisis
 - **Discrepancia README vs. código real (colecciones Mongo):** `README.md` documenta 7 colecciones (`usuarios`, `reportes_ciudadano`, `incidentes`, `estadisticas_sidpol`, `estadisticas_flagrancia`, `estadisticas_sidpol_historico`, `zonas_riesgo`, `alertas`), pero `backend/config/database.py` solo crea índices y proxies para 4: `usuarios`, `reportes_ciudadano`, `historial_delitos`, `zonas_riesgo`. El nombre `historial_delitos` tampoco aparece en la lista del README. Tratar el README como aspiracional/desactualizado en este punto; confiar en `config/database.py` y en los `routes/*.py` como fuente de verdad.
-- **`SECRET_KEY` en `.env.example` no parece usarse**: no se encontró JWT ni firma de sesión en las rutas exploradas (`auth.py` solo verifica bcrypt y devuelve el usuario). `[REVISAR]` si hay autenticación por token pendiente de implementar o si la variable es vestigial.
-- **Sin tests de backend**: no se encontraron archivos de test en `backend/` (ni `pytest`, ni carpeta `tests/`). El único test del repo es `test/widget_test.dart` (un smoke test de `LoginView`). Cualquier plan de pruebas nuevo (ver `docs/Plan_de_Pruebas.md`, en progreso) debería partir de cobertura cero en el backend.
-- **CORS abierto a `*`** en `backend/main.py` — aceptable para desarrollo pero a revisar antes de un hardening de seguridad en producción.
-- **Caché en memoria de proceso** en `routes/maps.py` y `routes/predictive.py` (TODOs explícitos para migrar a Redis) — si el despliegue en Railway llega a usar más de un worker/instancia, los datos servidos pueden quedar inconsistentes entre requests.
+- ✅ **RESUELTO** (decisión: documentar, no implementar JWT) — **`SECRET_KEY` en `.env.example` no parece usarse**: confirmado, no hay JWT ni firma de sesión en ninguna ruta (`auth.py` solo verifica bcrypt y devuelve el usuario, una sola vez). Se documentó explícitamente en `.env.example` y `routes/auth.py` que la variable es vestigial y que ningún endpoint valida sesión.
+- ✅ **RESUELTO** — **Sin tests de backend**: se agregó `backend/tests/` (`conftest.py` + `test_reports.py`) con 3 tests del flujo crítico de reportes (crear, listar propios, límite 5/día → 429), usando `mongomock` para no tocar la BD real. Verificados localmente (3/3 passed). Sigue sin haber tests para `maps.py`, `predictive.py`, `users.py`, `admin.py` ni `auth.py` — cobertura parcial, no total.
+- ✅ **RESUELTO** — **CORS abierto a `*`** en `backend/main.py`: ahora depende de `ENV` (`ENV=development` → abierto; cualquier otro valor → lista restringida). **Ojo**: el dominio puesto en la lista restringida es la URL del propio backend (no hay frontend web desplegado hoy, no existe carpeta `web/`) — corregirlo el día que exista un origen real de un cliente web.
+- ⚠️ **PARCIALMENTE RESUELTO** — **Caché en memoria de proceso** en `routes/maps.py` y `routes/predictive.py`: se agregaron advertencias explícitas sobre el riesgo multi-worker/multi-réplica. La migración a Redis (el TODO original) no se hizo. Confirmado que el `Procfile` corre un solo worker hoy, así que el riesgo no está activo mientras Railway no escale horizontalmente.
+- 🆕 **Hallazgo nuevo (no corregido, fuera de alcance del rol user)**: `routes/users.py::obtener_usuario` tiene un `except Exception` que envuelve su propio `HTTPException(404, "Usuario no encontrado")` deliberado y lo re-empaqueta como `400` con un mensaje confuso ("ID Invalido o error: 404: Usuario no encontrado"). Es un bug de backend real, pendiente de decidir si se corrige.
 - **Plataformas soportadas:** el repo tiene carpetas `android/` e `ios/` generadas por Flutter, pero `firebase_options.dart` solo define configuración real para Android (`UnsupportedError` para el resto) — tratar el proyecto como Android-first hasta que se corra `flutterfire configure` para iOS.
 - **No hay carpeta `lib/models/`** como sugiere la plantilla genérica — los modelos Dart viven en `lib/core/models/`. Ajustado el alias `@models` en este mapa para reflejar la ruta real.
 - **Documentación existente paralela:** `docs/SCRUM.md`, `docs/DIAGRAMAS.md`, `docs/Plan_Despliegue_Arquitectura.md` y los informes `FD0X-EPIS-*.md` contienen contexto de gestión de proyecto (Scrum, arquitectura, factibilidad) que complementa este mapa técnico pero no fue usado como fuente para las tablas de endpoints/modelos (se usó el código fuente directamente).

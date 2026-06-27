@@ -1,3 +1,4 @@
+// Se agrega getUnreadCount() para alimentar el badge de notificaciones no leídas en el Home (rol ciudadano).
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,6 +19,12 @@ class NotificationsStorageService {
     
     final List<dynamic> decoded = jsonDecode(data);
     return decoded.map((e) => Map<String, dynamic>.from(e)).toList();
+  }
+
+  // Cuenta las notificaciones sin leer (usado para el badge del tab Alertas en el Home)
+  static Future<int> getUnreadCount() async {
+    final notifications = await getNotifications();
+    return notifications.where((n) => n['isRead'] == false).length;
   }
 
   // Guardar una nueva notificación desde un Push

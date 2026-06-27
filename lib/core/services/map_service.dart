@@ -1,3 +1,4 @@
+// crearReporte ahora retorna detalle (status/mensaje) para distinguir el limite diario (429) de otros errores.
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -56,82 +57,133 @@ class MapService {
     }
   }
 
+  // Se envuelve en try/catch (rethrow) para registrar el error y evitar que una excepcion
+  // cruda de I/O (sin traduccion) se propague sin diagnostico; el cacheo de exito no cambia.
   static Future<List<dynamic>> _doFetchZonas() async {
-    final response = await http.get(Uri.parse(ApiConfig.zonasRiesgo));
-    
-    if (response.statusCode == 200) {
-      final decodedData = await compute(_parseJsonData, response.body);
-      if (decodedData['status'] == 'success') {
-        return decodedData['zonas'] ?? [];
+    try {
+      final response = await http.get(Uri.parse(ApiConfig.zonasRiesgo));
+
+      if (response.statusCode == 200) {
+        final decodedData = await compute(_parseJsonData, response.body);
+        if (decodedData['status'] == 'success') {
+          return decodedData['zonas'] ?? [];
+        } else {
+          throw Exception("Error del servidor: ${decodedData['detail']}");
+        }
       } else {
-        throw Exception("Error del servidor: ${decodedData['detail']}");
+        throw Exception('Error al conectar con el servidor (${response.statusCode})');
       }
-    } else {
-      throw Exception('Error al conectar con el servidor (${response.statusCode})');
+    } catch (e) {
+      debugPrint('Error en MapService._doFetchZonas: $e');
+      rethrow;
     }
   }
 
   // --- OBTENER TODOS LOS PUNTOS HISTORICOS (Zoom in detallado) ---
   static Future<List<dynamic>> fetchPuntosHistorial() async {
-    final response = await http.get(Uri.parse(ApiConfig.historial));
-    
-    if (response.statusCode == 200) {
-      final decodedData = await compute(_parseJsonData, response.body);
-      if (decodedData['status'] == 'success') {
-        return decodedData['puntos'] ?? [];
+    try {
+      final response = await http.get(Uri.parse(ApiConfig.historial));
+
+      if (response.statusCode == 200) {
+        final decodedData = await compute(_parseJsonData, response.body);
+        if (decodedData['status'] == 'success') {
+          return decodedData['puntos'] ?? [];
+        } else {
+          throw Exception("Error del servidor: ${decodedData['detail']}");
+        }
       } else {
-        throw Exception("Error del servidor: ${decodedData['detail']}");
+        throw Exception('Error al conectar con el servidor (${response.statusCode})');
       }
-    } else {
-      throw Exception('Error al conectar con el servidor (${response.statusCode})');
+    } catch (e) {
+      debugPrint('Error en MapService.fetchPuntosHistorial: $e');
+      rethrow;
     }
   }
 
   // --- OBTENER PUNTOS EXACTOS (Reportes/Incidentes) ---
   static Future<List<dynamic>> fetchPuntosExactos() async {
-    final response = await http.get(Uri.parse(ApiConfig.puntosExactos));
-    
-    if (response.statusCode == 200) {
-      final decodedData = await compute(_parseJsonData, response.body);
-      if (decodedData['status'] == 'success') {
-        return decodedData['puntos'] ?? [];
+    try {
+      final response = await http.get(Uri.parse(ApiConfig.puntosExactos));
+
+      if (response.statusCode == 200) {
+        final decodedData = await compute(_parseJsonData, response.body);
+        if (decodedData['status'] == 'success') {
+          return decodedData['puntos'] ?? [];
+        } else {
+          throw Exception("Error del servidor: ${decodedData['detail']}");
+        }
       } else {
-        throw Exception("Error del servidor: ${decodedData['detail']}");
+        throw Exception('Error al conectar con el servidor (${response.statusCode})');
       }
-    } else {
-      throw Exception('Error al conectar con el servidor (${response.statusCode})');
+    } catch (e) {
+      debugPrint('Error en MapService.fetchPuntosExactos: $e');
+      rethrow;
     }
   }
 
   // --- OBTENER REPORTES POLICIA (Pendientes y Confirmados) ---
   static Future<List<dynamic>> fetchPuntosPolicia() async {
-    final response = await http.get(Uri.parse(ApiConfig.reportesPolicia));
-    
-    if (response.statusCode == 200) {
-      final decodedData = await compute(_parseJsonData, response.body);
-      if (decodedData['status'] == 'success') {
-        return decodedData['puntos'] ?? [];
+    try {
+      final response = await http.get(Uri.parse(ApiConfig.reportesPolicia));
+
+      if (response.statusCode == 200) {
+        final decodedData = await compute(_parseJsonData, response.body);
+        if (decodedData['status'] == 'success') {
+          return decodedData['puntos'] ?? [];
+        } else {
+          throw Exception("Error del servidor: ${decodedData['detail']}");
+        }
       } else {
-        throw Exception("Error del servidor: ${decodedData['detail']}");
+        throw Exception('Error al conectar con el servidor (${response.statusCode})');
       }
-    } else {
-      throw Exception('Error al conectar con el servidor (${response.statusCode})');
+    } catch (e) {
+      debugPrint('Error en MapService.fetchPuntosPolicia: $e');
+      rethrow;
     }
   }
 
   // --- ENVIAR REPORTE CIUDADANO ---
-  static Future<bool> crearReporte(Map<String, dynamic> datosReporte) async {
-    final response = await http.post(
-      Uri.parse(ApiConfig.crearReporte),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(datosReporte),
-    );
+  // Retorna detalle (statusCode/mensaje del backend) en lugar de un bool plano,
+  // para que la UI distinga el limite diario (429) de otros errores.
+  static Future<Map<String, dynamic>> crearReporte(Map<String, dynamic> datosReporte) async {
+    try {
+      final response = await http.post(
+        Uri.parse(ApiConfig.crearReporte),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(datosReporte),
+      );
 
-    if (response.statusCode == 200) {
-      ReportService.notifyReportsUpdated();
-      return true;
+      final decoded = response.body.isNotEmpty ? json.decode(response.body) : {};
+
+      if (response.statusCode == 200) {
+        ReportService.notifyReportsUpdated();
+        return {
+          'success': true,
+          'statusCode': 200,
+          'message': decoded['mensaje'] ?? 'Reporte enviado con éxito',
+        };
+      }
+
+      final statusCode = response.statusCode;
+      String mensaje;
+      if (statusCode == 429) {
+        // Limite diario de 5 reportes (backend: services/report_service.py:validar_limite_diario)
+        mensaje = 'Límite de reportes alcanzado por hoy';
+      } else if (statusCode >= 500) {
+        mensaje = 'Error del servidor, intenta más tarde';
+      } else {
+        mensaje = decoded['detail']?.toString() ?? 'Error del servidor ($statusCode)';
+      }
+
+      return {'success': false, 'statusCode': statusCode, 'message': mensaje};
+    } catch (e) {
+      debugPrint('Error en MapService.crearReporte: $e');
+      return {
+        'success': false,
+        'statusCode': null,
+        'message': 'No se pudo conectar con el servidor.',
+      };
     }
-    return false;
   }
 }
 

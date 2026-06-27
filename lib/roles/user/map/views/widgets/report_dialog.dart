@@ -1,3 +1,4 @@
+// Se actualiza el manejo de respuesta de crearReporte para mostrar el mensaje especifico del backend (incluye limite diario).
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'dart:ui' as dart_ui;
@@ -111,28 +112,24 @@ class _ReportDialogState extends State<ReportDialog> {
         },
     };
 
-    try {
-      final success = await MapService.crearReporte(datos);
-      if (success) {
-        if (mounted) {
-          Navigator.of(context).pop(true);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: const Text('¡Reporte enviado exitosamente!'), backgroundColor: AppTheme.successGreen),
-          );
-        }
-      } else {
-        throw Exception("Error del servidor");
-      }
-    } catch (e) {
-      if (mounted) {
+    final resultado = await MapService.crearReporte(datos);
+
+    if (mounted) {
+      if (resultado['success'] == true) {
+        Navigator.of(context).pop(true);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: const Text('Error al enviar el reporte. Intenta de nuevo.'), backgroundColor: AppTheme.alertRed),
+          SnackBar(content: const Text('¡Reporte enviado exitosamente!'), backgroundColor: AppTheme.successGreen),
+        );
+      } else {
+        final mensaje = resultado['message'] ?? 'Error al enviar el reporte. Intenta de nuevo.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(mensaje), backgroundColor: AppTheme.alertRed),
         );
       }
-    } finally {
-      if (mounted) {
-        setState(() { _isSubmitting = false; });
-      }
+    }
+
+    if (mounted) {
+      setState(() { _isSubmitting = false; });
     }
   }
 

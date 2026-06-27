@@ -1,3 +1,4 @@
+// Se actualiza _deleteReport para mostrar el mensaje especifico que retorna ReportService.deleteReport.
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
@@ -77,13 +78,13 @@ class _MyReportsViewState extends State<MyReportsView> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Eliminando reporte...')));
     }
 
-    final success = await ReportService.deleteReport(report.id);
-    
+    final resultado = await ReportService.deleteReport(report.id);
+
     if (mounted) {
-      if (success) {
+      if (resultado['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Reporte eliminado con éxito.'),
+            content: Text(resultado['message'] ?? 'Reporte eliminado con éxito.'),
             backgroundColor: AppTheme.successGreen,
           ),
         );
@@ -91,7 +92,7 @@ class _MyReportsViewState extends State<MyReportsView> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Hubo un error al eliminar el reporte.'),
+            content: Text(resultado['message'] ?? 'Hubo un error al eliminar el reporte.'),
             backgroundColor: AppTheme.alertRed,
           ),
         );

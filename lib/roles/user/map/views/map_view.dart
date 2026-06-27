@@ -1,3 +1,4 @@
+// Se desactiva el joystick de pruebas (_isTestMode) que quedo expuesto en produccion; no se modifica el widget FlutterMap.
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_map/flutter_map.dart';
@@ -57,7 +58,8 @@ class _MapViewState extends State<MapView> {
   bool _showInsightsPanel = false;
 
   // ── TEST MODE JOYSTICK ──
-  final bool _isTestMode = true; // Cambiar a false cuando terminemos las pruebas
+  // Desactivado: este joystick es solo para pruebas internas y no debe exponerse en produccion.
+  final bool _isTestMode = false;
 
   void _moveJoystick(double dLat, double dLng) {
     if (_realUserPosition == null) return;

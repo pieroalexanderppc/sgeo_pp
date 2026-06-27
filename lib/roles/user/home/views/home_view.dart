@@ -1,10 +1,14 @@
+// Se agrega badge de notificaciones no leidas y disparo automatico del tutorial en el primer ingreso (rol ciudadano).
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../map/views/map_view.dart';
 import '../../reports/views/my_reports_view.dart';
 import '../../profile/views/profile_view.dart';
 import '../../news/views/news_view.dart';
 import '../../notifications/views/notifications_view.dart';
 import '../../../../core/services/geofence_service.dart';
+import '../../../../core/services/notifications_storage_service.dart';
+import '../../../../core/services/tutorial_service.dart';
 import '../../../../core/theme/app_theme.dart';
 
 import 'package:latlong2/latlong.dart';
@@ -25,17 +29,42 @@ class _HomeViewState extends State<HomeView> {
   int _currentIndex = 0;
   final Set<int> _visitedPages = {0};
   LatLng? _mapFocusLocation;
+  int _unreadNotifications = 0;
 
   @override
   void initState() {
     super.initState();
     _mapFocusLocation = widget.initialLocation;
     GeofenceService.startTracking();
+    _loadUnreadCount();
+    NotificationsStorageService.updateNotifier.addListener(_onNotificationsChanged);
+    _checkFirstTimeTutorial();
+  }
+
+  void _onNotificationsChanged() {
+    if (mounted) _loadUnreadCount();
+  }
+
+  Future<void> _loadUnreadCount() async {
+    final count = await NotificationsStorageService.getUnreadCount();
+    if (mounted) setState(() => _unreadNotifications = count);
+  }
+
+  // Dispara el tutorial guiado una sola vez, la primera vez que el ciudadano entra al Home
+  Future<void> _checkFirstTimeTutorial() async {
+    final prefs = await SharedPreferences.getInstance();
+    final hasSeenTutorial = prefs.getBool('has_seen_map_tutorial') ?? false;
+    if (!hasSeenTutorial) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) TutorialService.forceStartTutorial('all');
+      });
+    }
   }
 
   @override
   void dispose() {
     GeofenceService.stopTracking();
+    NotificationsStorageService.updateNotifier.removeListener(_onNotificationsChanged);
     super.dispose();
   }
 
@@ -96,28 +125,28 @@ class _HomeViewState extends State<HomeView> {
                 _visitedPages.add(index);
             });
           },
-          items: const [
-            BottomNavigationBarItem(
+          items: [
+            const BottomNavigationBarItem(
               icon: Icon(Icons.map_outlined),
               activeIcon: Icon(Icons.map),
               label: 'Mapa',
             ),
-            BottomNavigationBarItem(
+            const BottomNavigationBarItem(
               icon: Icon(Icons.newspaper_outlined),
               activeIcon: Icon(Icons.newspaper),
               label: 'Noticias',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.notifications_outlined),
-              activeIcon: Icon(Icons.notifications),
+              icon: _buildBadgedIcon(Icons.notifications_outlined, _unreadNotifications),
+              activeIcon: _buildBadgedIcon(Icons.notifications, _unreadNotifications),
               label: 'Alertas',
             ),
-            BottomNavigationBarItem(
+            const BottomNavigationBarItem(
               icon: Icon(Icons.list_alt_outlined),
               activeIcon: Icon(Icons.list_alt),
               label: 'Reportes',
             ),
-            BottomNavigationBarItem(
+            const BottomNavigationBarItem(
               icon: Icon(Icons.person_outline),
               activeIcon: Icon(Icons.person),
               label: 'Perfil',
@@ -125,6 +154,15 @@ class _HomeViewState extends State<HomeView> {
           ],
         ),
       ),
+    );
+  }
+
+  // Envuelve un icono del nav bar con un badge numerico cuando hay notificaciones sin leer
+  Widget _buildBadgedIcon(IconData icon, int count) {
+    if (count <= 0) return Icon(icon);
+    return Badge(
+      label: Text(count > 9 ? '9+' : count.toString()),
+      child: Icon(icon),
     );
   }
 }
