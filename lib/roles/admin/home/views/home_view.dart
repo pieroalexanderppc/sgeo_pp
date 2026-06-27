@@ -1,7 +1,10 @@
+// Se agrega tab "Solicitudes" con badge de policias pendientes (pendingCountNotifier).
 import 'package:flutter/material.dart';
 import '../../dashboard/views/dashboard_view.dart';
+import '../../approvals/views/approvals_view.dart';
 import '../../users/views/users_manage_view.dart';
 import '../../profile/views/profile_view.dart';
+import '../../../../core/services/admin_service.dart';
 import '../../../../core/theme/app_theme.dart';
 
 class AdminHomeView extends StatefulWidget {
@@ -24,9 +27,23 @@ class _AdminHomeViewState extends State<AdminHomeView> {
   int _currentIndex = 0;
   final Set<int> _visitedPages = {0};
 
+  @override
+  void initState() {
+    super.initState();
+    AdminService.refreshPendingCount();
+  }
+
   List<Widget> _buildPages() {
     return [
-      const DashboardView(),
+      DashboardView(
+        onNavigateToApprovals: () {
+          setState(() {
+            _currentIndex = 1;
+            _visitedPages.add(1);
+          });
+        },
+      ),
+      const ApprovalsView(),
       const UsersManageView(),
       AdminProfileView(
         userId: widget.userId,
@@ -40,12 +57,12 @@ class _AdminHomeViewState extends State<AdminHomeView> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final pages = _buildPages();
-    
+
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
         children: List.generate(
-          3,
+          4,
           (index) => _visitedPages.contains(index)
               ? pages[index]
               : const SizedBox.shrink(),
@@ -69,18 +86,23 @@ class _AdminHomeViewState extends State<AdminHomeView> {
               _visitedPages.add(index);
             });
           },
-          items: const [
-            BottomNavigationBarItem(
+          items: [
+            const BottomNavigationBarItem(
               icon: Icon(Icons.dashboard_outlined),
               activeIcon: Icon(Icons.dashboard_rounded),
               label: 'Dashboard',
             ),
             BottomNavigationBarItem(
+              icon: _buildBadgedIcon(Icons.fact_check_outlined),
+              activeIcon: _buildBadgedIcon(Icons.fact_check_rounded),
+              label: 'Solicitudes',
+            ),
+            const BottomNavigationBarItem(
               icon: Icon(Icons.people_outline_rounded),
               activeIcon: Icon(Icons.people_alt_rounded),
               label: 'Usuarios',
             ),
-            BottomNavigationBarItem(
+            const BottomNavigationBarItem(
               icon: Icon(Icons.admin_panel_settings_outlined),
               activeIcon: Icon(Icons.admin_panel_settings_rounded),
               label: 'Perfil',
@@ -88,6 +110,21 @@ class _AdminHomeViewState extends State<AdminHomeView> {
           ],
         ),
       ),
+    );
+  }
+
+  // Envuelve el icono de "Solicitudes" con un badge rojo cuando hay policias pendientes
+  Widget _buildBadgedIcon(IconData icon) {
+    return ValueListenableBuilder<int>(
+      valueListenable: AdminService.pendingCountNotifier,
+      builder: (context, count, _) {
+        if (count <= 0) return Icon(icon);
+        return Badge(
+          backgroundColor: AppTheme.alertRed,
+          label: Text(count > 9 ? '9+' : count.toString()),
+          child: Icon(icon),
+        );
+      },
     );
   }
 }

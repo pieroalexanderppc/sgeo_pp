@@ -1,3 +1,5 @@
+// Rediseño visual v2: fondo con gradiente diagonal propio, card con borderSubtle,
+// boton primario en accentCyan (variant: ButtonVariant.primary).
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -44,13 +46,17 @@ class _LoginViewState extends State<LoginView> {
       // 🔔 Suscribir al topic correcto en Firebase según el rol
       if (userRole == 'policia') {
         await FirebaseMessaging.instance.subscribeToTopic('alertas_policiales');
-        await FirebaseMessaging.instance.unsubscribeFromTopic('alertas_ciudadanos');
+        await FirebaseMessaging.instance.unsubscribeFromTopic(
+          'alertas_ciudadanos',
+        );
       } else {
         // En un futuro podrías sacar el distrito de userData['distrito']
         await FirebaseMessaging.instance.subscribeToTopic('alertas_ciudadanos');
-        await FirebaseMessaging.instance.unsubscribeFromTopic('alertas_policiales');
+        await FirebaseMessaging.instance.unsubscribeFromTopic(
+          'alertas_policiales',
+        );
       }
-      
+
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
@@ -90,203 +96,236 @@ class _LoginViewState extends State<LoginView> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SafetyLayout(
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 28.0, vertical: 24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+      // Fondo propio (gradiente diagonal sutil) en vez del glow radial genérico de SafetyLayout
+      showGradientBackground: false,
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: isDark
+              ? const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [AppTheme.bgDeep, Color(0xFF0D1424)],
+                )
+              : null,
+        ),
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 28.0, vertical: 24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // ── Logo / Ícono táctico ──
+                Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            AppTheme.accentCyan.withValues(alpha: 0.2),
+                            Colors.transparent,
+                          ],
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.shield_outlined,
+                        size: 56,
+                        color: isDark
+                            ? AppTheme.accentCyan
+                            : const Color(0xFF0061A4),
+                      ),
+                    )
+                    .animate()
+                    .fadeIn(duration: 600.ms, curve: Curves.easeOut)
+                    .scale(
+                      begin: const Offset(0.8, 0.8),
+                      end: const Offset(1, 1),
+                      duration: 600.ms,
+                    ),
 
-              // ── Logo / Ícono táctico ──
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      AppTheme.accentBlue.withValues(alpha: 0.2),
-                      Colors.transparent,
-                    ],
+                const SizedBox(height: 20),
+
+                // ── Título ──
+                Text(
+                  'Bienvenido a SGEO',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                    color: isDark ? AppTheme.textPrimary : null,
                   ),
-                ),
-                child: Icon(
-                  Icons.shield_outlined,
-                  size: 56,
-                  color: isDark ? AppTheme.accentBlue : const Color(0xFF0061A4),
-                ),
-              )
-                .animate()
-                .fadeIn(duration: 600.ms, curve: Curves.easeOut)
-                .scale(begin: const Offset(0.8, 0.8), end: const Offset(1, 1), duration: 600.ms),
+                ).animate().fadeIn(delay: 200.ms, duration: 500.ms),
 
-              const SizedBox(height: 20),
+                const SizedBox(height: 6),
 
-              // ── Título ──
-              Text(
-                'Bienvenido a SGEO',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
-                  color: isDark ? AppTheme.textPrimary : null,
-                ),
-              )
-                .animate()
-                .fadeIn(delay: 200.ms, duration: 500.ms),
+                // ── Subtítulo ──
+                Text(
+                  'Sistema de Geolocalización de Inseguridad',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? AppTheme.textSecondary : Colors.grey[600],
+                    letterSpacing: 0.3,
+                  ),
+                ).animate().fadeIn(delay: 350.ms, duration: 500.ms),
 
-              const SizedBox(height: 6),
+                const SizedBox(height: 40),
 
-              // ── Subtítulo ──
-              Text(
-                'Sistema de Geolocalización de Inseguridad',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: isDark ? AppTheme.textSecondary : Colors.grey[600],
-                  letterSpacing: 0.3,
-                ),
-              )
-                .animate()
-                .fadeIn(delay: 350.ms, duration: 500.ms),
+                // ── Card del formulario ──
+                SafetyCard(
+                      glassEffect: isDark,
+                      padding: const EdgeInsets.all(24),
+                      animateEntry: true,
+                      borderColor: AppTheme.borderSubtle,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // ── Encabezado del formulario ──
+                          Text(
+                            'Inicia Sesión',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? AppTheme.textPrimary : null,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Ingresa tus credenciales para acceder',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isDark
+                                  ? AppTheme.textSecondary
+                                  : Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(height: 24),
 
-              const SizedBox(height: 40),
+                          // ── Campo: Email ──
+                          // El InputDecoration hereda automáticamente del inputDecorationTheme
+                          TextField(
+                            controller: _emailController,
+                            decoration: const InputDecoration(
+                              labelText: 'Correo Electrónico',
+                              prefixIcon: Icon(Icons.email_outlined),
+                              hintText: 'correo@ejemplo.com',
+                            ),
+                            keyboardType: TextInputType.emailAddress,
+                          ),
+                          const SizedBox(height: 16),
 
-              // ── Card del formulario ──
-              SafetyCard(
-                glassEffect: isDark,
-                padding: const EdgeInsets.all(24),
-                animateEntry: true,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                          // ── Campo: Contraseña ──
+                          TextField(
+                            controller: _passwordController,
+                            decoration: InputDecoration(
+                              labelText: 'Contraseña',
+                              prefixIcon: const Icon(Icons.lock_outline),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _obscurePassword = !_obscurePassword;
+                                  });
+                                },
+                              ),
+                            ),
+                            obscureText: _obscurePassword,
+                          ),
+
+                          const SizedBox(height: 8),
+
+                          // ── Olvidé contraseña (alineado a la derecha) ──
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: () {},
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 2,
+                                ),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              child: Text(
+                                '¿Olvidaste tu contraseña?',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark
+                                      ? AppTheme.textMuted
+                                      : Colors.grey,
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // ── Botón de Login ──
+                          SafetyButton(
+                            label: _isLoading
+                                ? 'Ingresando...'
+                                : 'Iniciar Sesión',
+                            icon: _isLoading ? null : Icons.login,
+                            isLoading: _isLoading,
+                            variant: ButtonVariant.primary,
+                            onPressed: _isLoading ? null : _login,
+                          ),
+                        ],
+                      ),
+                    )
+                    .animate()
+                    .fadeIn(duration: 400.ms)
+                    .slideY(
+                      begin: 0.08,
+                      end: 0,
+                      duration: 400.ms,
+                      curve: Curves.easeOutCubic,
+                    ),
+
+                const SizedBox(height: 28),
+
+                // ── Link a Registro ──
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // ── Encabezado del formulario ──
                     Text(
-                      'Inicia Sesión',
+                      '¿No tienes cuenta? ',
                       style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? AppTheme.textPrimary : null,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Ingresa tus credenciales para acceder',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: isDark ? AppTheme.textSecondary : Colors.grey[600],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // ── Campo: Email ──
-                    // El InputDecoration hereda automáticamente del inputDecorationTheme
-                    TextField(
-                      controller: _emailController,
-                      decoration: const InputDecoration(
-                        labelText: 'Correo Electrónico',
-                        prefixIcon: Icon(Icons.email_outlined),
-                        hintText: 'correo@ejemplo.com',
-                      ),
-                      keyboardType: TextInputType.emailAddress,
-                    ),
-                    const SizedBox(height: 16),
-
-                    // ── Campo: Contraseña ──
-                    TextField(
-                      controller: _passwordController,
-                      decoration: InputDecoration(
-                        labelText: 'Contraseña',
-                        prefixIcon: const Icon(Icons.lock_outline),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_off_outlined
-                                : Icons.visibility_outlined,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
-                        ),
-                      ),
-                      obscureText: _obscurePassword,
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    // ── Olvidé contraseña (alineado a la derecha) ──
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () {},
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        child: Text(
-                          '¿Olvidaste tu contraseña?',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark ? AppTheme.textMuted : Colors.grey,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // ── Botón de Login ──
-                    SafetyButton(
-                      label: _isLoading ? 'Ingresando...' : 'Iniciar Sesión',
-                      icon: _isLoading ? null : Icons.login,
-                      isLoading: _isLoading,
-                      onPressed: _isLoading ? null : _login,
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 28),
-
-              // ── Link a Registro ──
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    '¿No tienes cuenta? ',
-                    style: TextStyle(
-                      color: isDark ? AppTheme.textSecondary : Colors.grey,
-                      fontSize: 14,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const RegisterView(),
-                        ),
-                      );
-                    },
-                    child: Text(
-                      'Regístrate aquí',
-                      style: TextStyle(
-                        color: isDark ? AppTheme.accentBlueLight : const Color(0xFF0061A4),
-                        fontWeight: FontWeight.w600,
+                        color: isDark ? AppTheme.textSecondary : Colors.grey,
                         fontSize: 14,
                       ),
                     ),
-                  ),
-                ],
-              )
-                .animate()
-                .fadeIn(delay: 600.ms, duration: 400.ms),
-            ],
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const RegisterView(),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        'Regístrate aquí',
+                        style: TextStyle(
+                          color: isDark
+                              ? AppTheme.accentBlue
+                              : const Color(0xFF0061A4),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
+                ).animate().fadeIn(delay: 600.ms, duration: 400.ms),
+              ],
+            ),
           ),
         ),
       ),

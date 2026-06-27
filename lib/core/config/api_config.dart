@@ -1,3 +1,4 @@
+// Se agregan rutas de administracion de usuarios (flujo de aprobacion policial).
 class ApiConfig {
   static const String baseUrl = "https://sgeo-backend-production.up.railway.app";
 
@@ -27,4 +28,11 @@ class ApiConfig {
   static const String dashboardStats = "$baseUrl/api/admin/dashboard_stats";
   static const String sidpolStats    = "$baseUrl/api/admin/sidpol_stats";
   static const String sidpolPredict  = "$baseUrl/api/admin/sidpol_predict";
+
+  // Admin — gestión de usuarios (flujo de aprobación policial)
+  static const String adminUsuarios = "$baseUrl/api/admin/usuarios";
+  static String adminAprobar(String id) => "$baseUrl/api/admin/usuarios/$id/aprobar";
+  static String adminRechazar(String id) => "$baseUrl/api/admin/usuarios/$id/rechazar";
+  static String adminEliminar(String id) => "$baseUrl/api/admin/usuarios/$id";
+  static String adminSuspender(String id) => "$baseUrl/api/admin/usuarios/$id/suspender";
 }

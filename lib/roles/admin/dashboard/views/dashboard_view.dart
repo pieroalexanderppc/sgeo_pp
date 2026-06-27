@@ -1,14 +1,15 @@
+// Se reemplazan las llamadas http directas por AdminService (ahora exige header X-User-Role),
+// y se agrega la fila de KPIs de usuarios (ciudadanos/policias activos/pendientes).
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import '../../../../core/services/admin_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/safety_layout.dart';
 import '../../../../core/widgets/safety_card.dart';
-import 'package:sgeo_pp/core/config/api_config.dart';
 
 class DashboardView extends StatefulWidget {
-  const DashboardView({super.key});
+  final VoidCallback? onNavigateToApprovals;
+  const DashboardView({super.key, this.onNavigateToApprovals});
 
   @override
   State<DashboardView> createState() => _DashboardViewState();
@@ -31,12 +32,19 @@ class _DashboardViewState extends State<DashboardView> with SingleTickerProvider
   Map<String, dynamic> _sidpolStats = {};
   Map<String, dynamic> _sidpolPred = {};
 
+  // KPIs de usuarios (fila fija arriba de los tabs)
+  bool _isLoadingUserKPIs = true;
+  int _totalCiudadanos = 0;
+  int _totalPoliciasActivos = 0;
+  int _totalPendientes = 0;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _fetchLiveStats();
     _fetchBigDataStats();
+    _fetchUserKPIs();
   }
 
   @override
@@ -47,48 +55,49 @@ class _DashboardViewState extends State<DashboardView> with SingleTickerProvider
 
   Future<void> _fetchLiveStats() async {
     setState(() => _isLoadingLive = true);
-    try {
-      final res = await http.get(
-        Uri.parse('${ApiConfig.dashboardStats}?filtro_tiempo=$_selectedFiltroTiempo'),
-      );
-      if (res.statusCode == 200) {
-        final data = json.decode(res.body);
-        if (data['status'] == 'success') {
-          if (!mounted) return;
-          setState(() {
-            _liveStats = data['stats'];
-          });
-        }
+    final resultado = await AdminService.getDashboardStats(filtroTiempo: _selectedFiltroTiempo);
+    if (mounted) {
+      if (resultado['success'] == true) {
+        setState(() => _liveStats = resultado['stats']);
+      } else {
+        debugPrint('Error live stats: ${resultado['message']}');
       }
-    } catch (e) {
-      debugPrint("Error live stats: $e");
-    } finally {
-      if (mounted) setState(() => _isLoadingLive = false);
+      setState(() => _isLoadingLive = false);
     }
   }
 
   Future<void> _fetchBigDataStats() async {
     setState(() => _isLoadingBigData = true);
-    try {
-      final resStats = await http.get(Uri.parse(ApiConfig.sidpolStats));
-      final resPred = await http.get(Uri.parse(ApiConfig.sidpolPredict));
-      
-      if (resStats.statusCode == 200 && resPred.statusCode == 200) {
-        final dStats = json.decode(resStats.body);
-        final dPred = json.decode(resPred.body);
-        
-        if (dStats['status'] == 'success' && dPred['status'] == 'success') {
-          if (!mounted) return;
-          setState(() {
-            _sidpolStats = dStats['stats'];
-            _sidpolPred = dPred;
-          });
-        }
+    final statsResultado = await AdminService.getSidpolStats();
+    final predResultado = await AdminService.getSidpolPredict();
+    if (mounted) {
+      if (statsResultado['success'] == true && predResultado['success'] == true) {
+        setState(() {
+          _sidpolStats = statsResultado['stats'];
+          _sidpolPred = predResultado['data'];
+        });
+      } else {
+        debugPrint('Error big data: ${statsResultado['message'] ?? predResultado['message']}');
       }
-    } catch (e) {
-      debugPrint("Error big data: $e");
-    } finally {
-      if (mounted) setState(() => _isLoadingBigData = false);
+      setState(() => _isLoadingBigData = false);
+    }
+  }
+
+  Future<void> _fetchUserKPIs() async {
+    setState(() => _isLoadingUserKPIs = true);
+    final resultado = await AdminService.getUsuarios();
+    if (mounted) {
+      if (resultado['success'] == true) {
+        final usuarios = resultado['usuarios'] as List;
+        setState(() {
+          _totalCiudadanos = usuarios.where((u) => (u['rol'] ?? '').toString().toLowerCase() == 'ciudadano').length;
+          _totalPoliciasActivos = usuarios.where((u) => (u['rol'] ?? '').toString().toLowerCase() == 'policia' && u['activo'] != false).length;
+          _totalPendientes = usuarios.where((u) => u['aprobacion_pendiente'] == true).length;
+        });
+      } else {
+        debugPrint('Error KPIs de usuarios: ${resultado['message']}');
+      }
+      setState(() => _isLoadingUserKPIs = false);
     }
   }
 
@@ -112,11 +121,66 @@ class _DashboardViewState extends State<DashboardView> with SingleTickerProvider
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          _buildLiveTab(isDark),
-          _buildBigDataTab(isDark),
+          _buildUserKPIRow(isDark),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildLiveTab(isDark),
+                _buildBigDataTab(isDark),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUserKPIRow(bool isDark) {
+    if (_isLoadingUserKPIs) {
+      return const Padding(
+        padding: EdgeInsets.all(20),
+        child: Center(child: SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 2))),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildKPICard(
+              title: 'Ciudadanos',
+              value: _totalCiudadanos.toString(),
+              icon: Icons.groups_rounded,
+              color: AppTheme.accentBlue,
+              isDark: isDark,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildKPICard(
+              title: 'Policías Activos',
+              value: _totalPoliciasActivos.toString(),
+              icon: Icons.local_police_rounded,
+              color: AppTheme.successGreen,
+              isDark: isDark,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: GestureDetector(
+              onTap: widget.onNavigateToApprovals,
+              child: _buildKPICard(
+                title: 'Pendientes',
+                value: _totalPendientes.toString(),
+                icon: Icons.pending_actions_rounded,
+                color: AppTheme.alertAmber,
+                isDark: isDark,
+              ),
+            ),
+          ),
         ],
       ),
     );

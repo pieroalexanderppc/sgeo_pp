@@ -1,4 +1,5 @@
 // Se agrega badge de notificaciones no leidas y disparo automatico del tutorial en el primer ingreso (rol ciudadano).
+// Rediseño visual v2: borde superior borderSubtle, selectedItemColor accentCyan.
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../map/views/map_view.dart';
@@ -109,15 +110,18 @@ class _HomeViewState extends State<HomeView> {
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
+          color: isDark ? AppTheme.bgSurface : null,
           border: Border(
             top: BorderSide(
-              color: isDark ? AppTheme.borderTactical : Colors.grey.shade200,
-              width: 0.5,
+              color: isDark ? AppTheme.borderSubtle : Colors.grey.shade200,
+              width: 1,
             ),
           ),
         ),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
+          selectedItemColor: AppTheme.accentCyan,
+          unselectedItemColor: AppTheme.textMuted,
           type: BottomNavigationBarType.fixed, // Esto es muy importante cuando hay más de 3 items
           onTap: (index) {
             setState(() {

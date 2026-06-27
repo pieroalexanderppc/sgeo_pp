@@ -1,4 +1,6 @@
 // Se reemplazan las llamadas http directas por UserService, mostrando los mensajes de error reales del backend.
+// Rediseño visual v2: avatar con inicial (antes icono generico), RoleBadge, InfoRow
+// para los campos en modo lectura, boton "Editar Perfil" como variant secondary.
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../../features/auth/views/login_view.dart';
@@ -8,6 +10,8 @@ import '../../../../core/services/tutorial_service.dart';
 import '../../../../core/services/user_service.dart';
 import '../../../../core/widgets/safety_card.dart';
 import '../../../../core/widgets/safety_button.dart';
+import '../../../../core/widgets/role_badge.dart';
+import '../../../../core/widgets/info_row.dart';
 
 class ProfileView extends StatefulWidget {
   final String? userName;
@@ -275,59 +279,44 @@ class _ProfileViewState extends State<ProfileView> {
         padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 30.0),
         child: Column(
           children: [
-            // ── Avatar con glow táctico ──
-            Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: isDark
-                    ? [
-                        BoxShadow(
-                          color: AppTheme.accentBlue.withValues(alpha: 0.2),
-                          blurRadius: 24,
-                          spreadRadius: -4,
-                        ),
-                      ]
-                    : null,
-              ),
-              child: CircleAvatar(
-                radius: 50,
-                backgroundColor: isDark ? AppTheme.accentBlue : const Color(0xFF0061A4),
-                child: const Icon(Icons.person, size: 50, color: Colors.white),
+            // ── Avatar con inicial del nombre ──
+            CircleAvatar(
+              radius: 36,
+              backgroundColor: AppTheme.bgElevated,
+              child: Text(
+                (_nombre != null && _nombre!.isNotEmpty) ? _nombre![0].toUpperCase() : '?',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.accentCyan,
+                ),
               ),
             )
             .animate()
             .fadeIn(duration: 500.ms)
             .scale(begin: const Offset(0.85, 0.85), end: const Offset(1, 1), duration: 500.ms),
-            
+
             const SizedBox(height: 16),
             if (!_isEditing) ...[
               Text(
                 _nombre ?? 'Mi Perfil',
                 style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
                   color: isDark ? AppTheme.textPrimary : null,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 6),
-              if (_rol != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppTheme.accentBlue.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    _rol!.toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? AppTheme.accentBlueLight : AppTheme.accentBlue,
-                      letterSpacing: 1,
-                    ),
-                  ),
+              if (_email != null && _email!.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(
+                  _email!,
+                  style: TextStyle(fontSize: 14, color: AppTheme.textMuted),
+                  textAlign: TextAlign.center,
                 ),
+              ],
+              const SizedBox(height: 8),
+              if (_rol != null) RoleBadge(role: _rol!),
             ],
 
             const SizedBox(height: 28),
@@ -395,7 +384,7 @@ class _ProfileViewState extends State<ProfileView> {
                 ],
               )
             else
-              SafetyButton(
+              SafetyButton.secondary(
                 label: 'Editar Perfil',
                 icon: Icons.edit_outlined,
                 onPressed: () => setState(() => _isEditing = true),
@@ -487,6 +476,9 @@ class _ProfileViewState extends State<ProfileView> {
     required TextEditingController controller,
     required bool isDark,
   }) {
+    if (!_isEditing) {
+      return InfoRow(label: label, value: value, icon: icon);
+    }
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: Container(

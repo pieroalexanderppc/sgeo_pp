@@ -1,9 +1,12 @@
+// Se agrega tab "Inicio" (resumen del dia) y badge de pendientes en "Validar" (pendingReportsNotifier).
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
+import '../../inicio/views/inicio_view.dart';
 import '../../map/views/map_view.dart';
 import '../../validations/views/validations_view.dart';
 import '../../profile/views/profile_view.dart';
 import '../../../../roles/user/notifications/views/notifications_view.dart';
+import '../../../../core/services/police_service.dart';
 import '../../../../core/theme/app_theme.dart';
 
 class PoliceHomeView extends StatefulWidget {
@@ -27,8 +30,15 @@ class _PoliceHomeViewState extends State<PoliceHomeView> {
   final Set<int> _visitedPages = {0};
   LatLng? _selectedLocationToNavigate;
 
+  @override
+  void initState() {
+    super.initState();
+    PoliceService.refreshPendingCount();
+  }
+
   List<Widget> _buildPages() {
     return [
+      const PoliceInicioView(),
       PoliceMapView(
         userId: widget.userId,
         initialLocation: _selectedLocationToNavigate,
@@ -38,8 +48,8 @@ class _PoliceHomeViewState extends State<PoliceHomeView> {
         onNavigateToMap: (LatLng loc) {
           setState(() {
             _selectedLocationToNavigate = loc;
-            _currentIndex = 0;
-            _visitedPages.add(0);
+            _currentIndex = 1;
+            _visitedPages.add(1);
           });
         },
       ),
@@ -61,7 +71,7 @@ class _PoliceHomeViewState extends State<PoliceHomeView> {
       body: IndexedStack(
         index: _currentIndex,
         children: List.generate(
-          4,
+          5,
           (index) => _visitedPages.contains(index)
               ? pages[index]
               : const SizedBox.shrink(),
@@ -85,23 +95,28 @@ class _PoliceHomeViewState extends State<PoliceHomeView> {
               _visitedPages.add(index);
             });
           },
-          items: const [
-            BottomNavigationBarItem(
+          items: [
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home_rounded),
+              label: 'Inicio',
+            ),
+            const BottomNavigationBarItem(
               icon: Icon(Icons.map_outlined),
               activeIcon: Icon(Icons.map),
               label: 'Mapa',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.verified_user_outlined),
-              activeIcon: Icon(Icons.verified_user),
+              icon: _buildBadgedIcon(Icons.verified_user_outlined),
+              activeIcon: _buildBadgedIcon(Icons.verified_user),
               label: 'Validar',
             ),
-            BottomNavigationBarItem(
+            const BottomNavigationBarItem(
               icon: Icon(Icons.notifications_outlined),
               activeIcon: Icon(Icons.notifications),
               label: 'Alertas',
             ),
-            BottomNavigationBarItem(
+            const BottomNavigationBarItem(
               icon: Icon(Icons.person_outline),
               activeIcon: Icon(Icons.person),
               label: 'Perfil',
@@ -109,6 +124,20 @@ class _PoliceHomeViewState extends State<PoliceHomeView> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildBadgedIcon(IconData icon) {
+    return ValueListenableBuilder<int>(
+      valueListenable: PoliceService.pendingReportsNotifier,
+      builder: (context, count, _) {
+        if (count <= 0) return Icon(icon);
+        return Badge(
+          backgroundColor: AppTheme.alertAmber,
+          label: Text(count > 9 ? '9+' : count.toString()),
+          child: Icon(icon),
+        );
+      },
     );
   }
 }

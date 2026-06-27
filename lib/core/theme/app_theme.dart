@@ -36,6 +36,13 @@ class AppTheme {
     0xFF1A73E8,
   ); // Azul para iconos/detalles
 
+  // ── Acento nuevo (Rediseño visual v2) ──
+  // No se renombraron bgDeep/alertRed/alertAmber/accentBlue (decisión: evitar romper
+  // los ~20+ archivos que ya los usan). accentCyan es el único color nuevo agregado;
+  // se usa de forma selectiva (SafetyButton.variant, StatusBadge "aprobado", RoleBadge "admin"),
+  // no reemplaza a accentBlue como color por defecto del ThemeData.
+  static const Color accentCyan = Color(0xFF00D4FF);
+
   // ── Alertas ──
   static const Color alertRed = Color(0xFFE53935); // Rojo de alerta (sólido)
   static const Color alertRedBg = Color(
@@ -66,6 +73,40 @@ class AppTheme {
   ); // Borde que se desvanece al bgDeep
 
   // ══════════════════════════════════════════════════════════════════════════
+  //  TIPOGRAFÍA ESPECIAL (uso selectivo, no global — ver textTheme para el body)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /// Fuente "táctica" para títulos hero (Splash, AppBars de rol). No se aplica
+  /// globalmente al AppBarTheme para no forzar este estilo en títulos genéricos
+  /// como "Editar Perfil" — se usa explícitamente donde el diseño lo pide.
+  static TextStyle displayFont({
+    double fontSize = 22,
+    FontWeight weight = FontWeight.bold,
+    Color? color,
+    double? letterSpacing,
+  }) {
+    return GoogleFonts.rajdhani(
+      fontSize: fontSize,
+      fontWeight: weight,
+      color: color ?? textPrimary,
+      letterSpacing: letterSpacing,
+    );
+  }
+
+  /// Fuente monoespaciada para datos numéricos (scores, coordenadas GPS, conteos).
+  static TextStyle monoFont({
+    double fontSize = 14,
+    FontWeight weight = FontWeight.w600,
+    Color? color,
+  }) {
+    return GoogleFonts.jetBrainsMono(
+      fontSize: fontSize,
+      fontWeight: weight,
+      color: color ?? textPrimary,
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
   //  TEMA CLARO (Light Mode)
   // ══════════════════════════════════════════════════════════════════════════
   static ThemeData get lightTheme {
@@ -81,7 +122,7 @@ class AppTheme {
           success: Color(0xFF2E7D32),
         ),
       ],
-      textTheme: GoogleFonts.montserratTextTheme(base.textTheme),
+      textTheme: GoogleFonts.interTextTheme(base.textTheme),
       colorScheme: const ColorScheme.light(
         primary: Color(0xFF0061A4),
         onPrimary: Colors.white,
@@ -165,7 +206,7 @@ class AppTheme {
           success: Color(0xFF66BB6A),
         ),
       ],
-      textTheme: GoogleFonts.montserratTextTheme(
+      textTheme: GoogleFonts.interTextTheme(
         base.textTheme,
       ).apply(bodyColor: textPrimary, displayColor: textPrimary),
 
@@ -197,7 +238,7 @@ class AppTheme {
         centerTitle: true,
         surfaceTintColor: Colors.transparent,
         systemOverlayStyle: SystemUiOverlayStyle.light,
-        titleTextStyle: GoogleFonts.montserrat(
+        titleTextStyle: GoogleFonts.inter(
           fontSize: 18,
           fontWeight: FontWeight.w600,
           color: textPrimary,
@@ -238,7 +279,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(20),
           side: const BorderSide(color: borderTactical, width: 0.5),
         ),
-        titleTextStyle: GoogleFonts.montserrat(
+        titleTextStyle: GoogleFonts.inter(
           fontSize: 20,
           fontWeight: FontWeight.w600,
           color: textPrimary,
@@ -246,24 +287,28 @@ class AppTheme {
       ),
 
       // ── InputDecoration (formularios modernos) ──
+      // Rediseño v2: fillColor -> bgElevated, borde inactivo -> borderSubtle,
+      // foco -> accentCyan, labels/iconos -> textMuted (antes textSecondary).
+      // Es un cambio global (afecta todo TextField de la app), no solo @auth,
+      // a propósito: es la misma idea de "los widgets heredan del theme" de BLOQUE 1A.
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFF0D1117),
+        fillColor: bgElevated,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 20,
           vertical: 18,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: borderTactical, width: 0.5),
+          borderSide: const BorderSide(color: borderSubtle, width: 1),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: borderTactical, width: 0.5),
+          borderSide: const BorderSide(color: borderSubtle, width: 1),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: accentBlue, width: 1.5),
+          borderSide: const BorderSide(color: accentCyan, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -273,11 +318,11 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: alertRed, width: 1.5),
         ),
-        labelStyle: const TextStyle(color: textSecondary, fontSize: 14),
+        labelStyle: const TextStyle(color: textMuted, fontSize: 14),
         hintStyle: const TextStyle(color: textMuted, fontSize: 14),
-        prefixIconColor: textSecondary,
-        suffixIconColor: textSecondary,
-        floatingLabelStyle: const TextStyle(color: accentBlueLight),
+        prefixIconColor: textMuted,
+        suffixIconColor: textMuted,
+        floatingLabelStyle: const TextStyle(color: accentCyan),
       ),
 
       // ── ElevatedButton (con gradiente táctico implícito) ──
@@ -290,7 +335,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          textStyle: GoogleFonts.montserrat(
+          textStyle: GoogleFonts.inter(
             fontSize: 16,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.3,
@@ -307,7 +352,7 @@ class AppTheme {
             borderRadius: BorderRadius.circular(12),
           ),
           side: const BorderSide(color: borderTactical, width: 0.5),
-          textStyle: GoogleFonts.montserrat(
+          textStyle: GoogleFonts.inter(
             fontSize: 16,
             fontWeight: FontWeight.w500,
           ),
@@ -318,7 +363,7 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: accentBlueLight,
-          textStyle: GoogleFonts.montserrat(
+          textStyle: GoogleFonts.inter(
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -343,7 +388,7 @@ class AppTheme {
       // ── SnackBar ──
       snackBarTheme: SnackBarThemeData(
         backgroundColor: bgElevated,
-        contentTextStyle: GoogleFonts.montserrat(
+        contentTextStyle: GoogleFonts.inter(
           color: textPrimary,
           fontSize: 14,
         ),
@@ -377,7 +422,7 @@ class AppTheme {
       chipTheme: ChipThemeData(
         backgroundColor: bgSurface,
         selectedColor: accentBlue.withValues(alpha: 0.2),
-        labelStyle: GoogleFonts.montserrat(fontSize: 12, color: textPrimary),
+        labelStyle: GoogleFonts.inter(fontSize: 12, color: textPrimary),
         side: const BorderSide(color: borderTactical, width: 0.5),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
@@ -409,7 +454,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: borderTactical, width: 0.5),
         ),
-        textStyle: GoogleFonts.montserrat(color: textPrimary, fontSize: 12),
+        textStyle: GoogleFonts.inter(color: textPrimary, fontSize: 12),
       ),
     );
   }

@@ -1,4 +1,7 @@
 // Se actualiza _deleteReport para mostrar el mensaje especifico que retorna ReportService.deleteReport.
+// Rediseño visual v2: usa StatusBadge, agrega boton directo de eliminar en la card (antes
+// solo estaba dentro del detalle), boton "Ir al mapa" en el estado vacio (onNavigateToMap
+// ahora acepta LatLng? para poder navegar al mapa sin centrar en ningun reporte especifico).
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
@@ -10,11 +13,12 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/safety_layout.dart';
 import '../../../../core/widgets/safety_card.dart';
 import '../../../../core/widgets/safety_button.dart';
+import '../../../../core/widgets/status_badge.dart';
 
 class MyReportsView extends StatefulWidget {
   final String userId;
-  final Function(LatLng) onNavigateToMap; 
-  
+  final Function(LatLng?) onNavigateToMap;
+
   const MyReportsView({super.key, required this.userId, required this.onNavigateToMap});
 
   @override
@@ -142,7 +146,6 @@ class _MyReportsViewState extends State<MyReportsView> {
   void _showReportDetails(BuildContext context, ReportModel report, String formattedDate, String direccionStr) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isPending = report.estado.toLowerCase() == 'pendiente';
-    final statusColor = _getStatusColor(report.estado);
 
     showModalBottomSheet(
       context: context,
@@ -188,22 +191,7 @@ class _MyReportsViewState extends State<MyReportsView> {
                         ),
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: statusColor.withValues(alpha: 0.3), width: 0.5),
-                      ),
-                      child: Text(
-                        report.estado.toUpperCase(),
-                        style: TextStyle(
-                          color: statusColor,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12,
-                        ),
-                      ),
-                    )
+                    StatusBadge(status: report.estado),
                   ],
                 ),
                 const SizedBox(height: 20),
@@ -291,6 +279,7 @@ class _MyReportsViewState extends State<MyReportsView> {
         ],
       ),
       body: RefreshIndicator(
+        color: AppTheme.accentCyan,
         onRefresh: _fetchMyReports,
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
@@ -332,6 +321,13 @@ class _MyReportsViewState extends State<MyReportsView> {
                                   fontSize: 13,
                                   color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
                                 ),
+                              ),
+                              const SizedBox(height: 20),
+                              SafetyButton.ghost(
+                                label: 'Ir al mapa',
+                                icon: Icons.map_outlined,
+                                expand: false,
+                                onPressed: () => widget.onNavigateToMap(null),
                               ),
                             ],
                           )
@@ -425,32 +421,25 @@ class _MyReportsViewState extends State<MyReportsView> {
                             ),
                           ),
 
-                          // ── Estado badge + flecha ──
+                          // ── Estado badge + acción rápida (eliminar si esta pendiente) ──
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: statusColor.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  report.estado.toUpperCase(),
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w700,
-                                    color: statusColor,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ),
+                              StatusBadge(status: report.estado),
                               const SizedBox(height: 6),
-                              Icon(
-                                Icons.chevron_right,
-                                size: 18,
-                                color: isDark ? AppTheme.textMuted : Colors.grey,
-                              ),
+                              report.estado.toLowerCase() == 'pendiente'
+                                  ? IconButton(
+                                      icon: Icon(Icons.delete_outline, color: AppTheme.alertRed, size: 20),
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                      tooltip: 'Eliminar reporte',
+                                      onPressed: () => _deleteReport(report),
+                                    )
+                                  : Icon(
+                                      Icons.chevron_right,
+                                      size: 18,
+                                      color: isDark ? AppTheme.textMuted : Colors.grey,
+                                    ),
                             ],
                           ),
                         ],

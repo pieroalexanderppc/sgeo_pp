@@ -72,6 +72,10 @@ class SafetyCard extends StatefulWidget {
   /// Elevación de sombra suave. 0 = sin sombra.
   final double shadowBlur;
 
+  /// Si es `true`, intensifica la sombra (más blur y opacidad) sin necesidad
+  /// de calcular `shadowBlur` manualmente. Agregado en el rediseño visual v2.
+  final bool elevated;
+
   const SafetyCard({
     super.key,
     required this.child,
@@ -89,6 +93,7 @@ class SafetyCard extends StatefulWidget {
     this.animateEntry = true,
     this.animationDuration = const Duration(milliseconds: 350),
     this.shadowBlur = 12.0,
+    this.elevated = false,
   });
 
   @override
@@ -189,8 +194,8 @@ class _SafetyCardState extends State<SafetyCard>
         boxShadow: widget.shadowBlur > 0 && isDark
             ? [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  blurRadius: widget.shadowBlur,
+                  color: Colors.black.withValues(alpha: widget.elevated ? 0.45 : 0.3),
+                  blurRadius: widget.elevated ? widget.shadowBlur * 1.6 : widget.shadowBlur,
                   offset: const Offset(0, 4),
                   spreadRadius: -2,
                 ),
@@ -198,8 +203,8 @@ class _SafetyCardState extends State<SafetyCard>
             : widget.shadowBlur > 0
                 ? [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
-                      blurRadius: widget.shadowBlur,
+                      color: Colors.black.withValues(alpha: widget.elevated ? 0.16 : 0.08),
+                      blurRadius: widget.elevated ? widget.shadowBlur * 1.6 : widget.shadowBlur,
                       offset: const Offset(0, 2),
                     ),
                   ]

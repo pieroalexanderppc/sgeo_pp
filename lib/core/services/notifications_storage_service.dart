@@ -90,4 +90,13 @@ class NotificationsStorageService {
     await prefs.remove(_key);
     updateNotifier.value++;
   }
+
+  // Borrar una sola notificación (usado por el swipe-to-dismiss del rediseño v2)
+  static Future<void> deleteNotification(String id) async {
+    final current = await getNotifications();
+    current.removeWhere((n) => n['id'].toString() == id);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_key, jsonEncode(current));
+    updateNotifier.value++;
+  }
 }

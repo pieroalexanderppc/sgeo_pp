@@ -1,14 +1,13 @@
+// Se reemplazan las llamadas http directas por UserService, mostrando los mensajes de error reales del backend.
 import 'package:flutter/material.dart';
 import '../../../../features/auth/views/login_view.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/auth_service.dart';
+import '../../../../core/services/user_service.dart';
 import '../../../../core/widgets/safety_layout.dart';
 import '../../../../core/widgets/safety_card.dart';
 import '../../../../core/widgets/safety_button.dart';
-import 'package:http/http.dart' as http;
 import 'package:flutter_animate/flutter_animate.dart';
-import 'dart:convert';
-import 'package:sgeo_pp/core/config/api_config.dart';
 
 class PoliceProfileView extends StatefulWidget {
   final String userId;
@@ -60,70 +59,54 @@ class _PoliceProfileViewState extends State<PoliceProfileView> {
   }
 
   Future<void> _loadProfileData() async {
-    try {
-      final response = await http.get(
-        Uri.parse(ApiConfig.usuario(widget.userId)),
-      );
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['status'] == 'success') {
-          setState(() {
-            _nombre = data['user']['nombre'] ?? widget.userName;
-            _email = data['user']['email'];
-            _telefono = data['user']['telefono'] ?? '';
-            _rol = data['user']['rol'] ?? widget.userRole;
+    final resultado = await UserService.getUsuario(widget.userId);
+    if (mounted) {
+      if (resultado['success'] == true) {
+        final user = resultado['user'];
+        setState(() {
+          _nombre = user['nombre'] ?? widget.userName;
+          _email = user['email'];
+          _telefono = user['telefono'] ?? '';
+          _rol = user['rol'] ?? widget.userRole;
 
-            _nameController.text = _nombre ?? '';
-            _emailController.text = _email ?? '';
-            _phoneController.text = _telefono ?? '';
-          });
-        }
+          _nameController.text = _nombre ?? '';
+          _emailController.text = _email ?? '';
+          _phoneController.text = _telefono ?? '';
+        });
+      } else {
+        debugPrint('Error cargando perfil policía: ${resultado['message']}');
       }
-    } catch (e) {
-      debugPrint('Error cargando perfil policía: $e');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+      setState(() => _isLoading = false);
     }
   }
 
   Future<void> _saveChanges() async {
     setState(() => _isLoading = true);
-    try {
-      final response = await http.put(
-        Uri.parse(ApiConfig.usuario(widget.userId)),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'nombre': _nameController.text.trim(),
-          'email': _emailController.text.trim(),
-          'telefono': _phoneController.text.trim(),
-        }),
-      );
 
-      if (response.statusCode == 200) {
+    final resultado = await UserService.actualizarUsuario(
+      widget.userId,
+      nombre: _nameController.text.trim(),
+      email: _emailController.text.trim(),
+      telefono: _phoneController.text.trim(),
+    );
+
+    if (mounted) {
+      if (resultado['success'] == true) {
         setState(() {
           _nombre = _nameController.text.trim();
           _email = _emailController.text.trim();
           _telefono = _phoneController.text.trim();
           _isEditing = false;
         });
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: const Text('Perfil policial actualizado con éxito'), backgroundColor: AppTheme.successGreen),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(resultado['message'] ?? 'Perfil policial actualizado con éxito'), backgroundColor: AppTheme.successGreen),
+        );
       } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: const Text('Error al actualizar datos'), backgroundColor: AppTheme.alertRed),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(resultado['message'] ?? 'Error al actualizar datos'), backgroundColor: AppTheme.alertRed),
+        );
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error de red: $e'), backgroundColor: AppTheme.alertRed));
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+      setState(() => _isLoading = false);
     }
   }
 

@@ -14,3 +14,9 @@ export '../theme/app_theme.dart';
 export 'safety_layout.dart';
 export 'safety_card.dart';
 export 'safety_button.dart';
+
+// Widgets nuevos (Rediseño visual v2)
+export 'status_badge.dart';
+export 'role_badge.dart';
+export 'section_header.dart';
+export 'info_row.dart';

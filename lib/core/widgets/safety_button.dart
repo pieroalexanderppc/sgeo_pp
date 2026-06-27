@@ -28,7 +28,17 @@ import '../theme/app_theme.dart';
 //     isLoading: true,
 //     onPressed: null,
 //   )
+//
+//   SafetyButton(label: 'Confirmar', variant: ButtonVariant.primary, onPressed: () {})
+//   SafetyButton.secondary(label: 'Aprobar', onPressed: () {})
+//   SafetyButton.ghost(label: 'Más tarde', onPressed: () {})
+//   (variant es un alias agregado en el rediseño visual v2: no cambia ni reemplaza
+//   isOutline/isDanger/.outline()/.danger(), que siguen funcionando exactamente igual)
 // ============================================================================
+
+/// Variantes nuevas del botón (Rediseño visual v2). Opcional: si no se pasa `variant`,
+/// el botón se comporta exactamente como antes (isOutline/isDanger).
+enum ButtonVariant { primary, secondary, danger, ghost }
 
 class SafetyButton extends StatefulWidget {
   /// Texto del botón.
@@ -67,6 +77,10 @@ class SafetyButton extends StatefulWidget {
   /// Tamaño del texto.
   final double fontSize;
 
+  /// Variante nueva (Rediseño visual v2), opcional. Si es `null`, el botón usa
+  /// exactamente la lógica anterior (isOutline/isDanger) sin ningún cambio.
+  final ButtonVariant? variant;
+
   const SafetyButton({
     super.key,
     required this.label,
@@ -81,6 +95,7 @@ class SafetyButton extends StatefulWidget {
     this.borderRadius = 12.0,
     this.expand = true,
     this.fontSize = 16,
+    this.variant,
   });
 
   /// Constructor nombrado para variante outline.
@@ -97,7 +112,7 @@ class SafetyButton extends StatefulWidget {
     this.borderRadius = 12.0,
     this.expand = true,
     this.fontSize = 16,
-  }) : isOutline = true;
+  }) : isOutline = true, variant = null;
 
   /// Constructor nombrado para variante de peligro.
   const SafetyButton.danger({
@@ -113,7 +128,39 @@ class SafetyButton extends StatefulWidget {
     this.borderRadius = 12.0,
     this.expand = true,
     this.fontSize = 16,
-  }) : isDanger = true;
+  }) : isDanger = true, variant = null;
+
+  /// Constructor nuevo (v2): fondo transparente, borde accentBlue, texto accentBlue.
+  /// Distinto visualmente de `.outline()` (que usa borderTactical/accentBlueLight) —
+  /// es un look nuevo, no un reemplazo.
+  const SafetyButton.secondary({
+    super.key,
+    required this.label,
+    this.icon,
+    this.onPressed,
+    this.backgroundColor,
+    this.foregroundColor,
+    this.isLoading = false,
+    this.padding = const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+    this.borderRadius = 12.0,
+    this.expand = true,
+    this.fontSize = 15,
+  }) : isOutline = false, isDanger = false, variant = ButtonVariant.secondary;
+
+  /// Constructor nuevo (v2): sin fondo, sin borde, texto textSecondary.
+  const SafetyButton.ghost({
+    super.key,
+    required this.label,
+    this.icon,
+    this.onPressed,
+    this.backgroundColor,
+    this.foregroundColor,
+    this.isLoading = false,
+    this.padding = const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+    this.borderRadius = 12.0,
+    this.expand = true,
+    this.fontSize = 15,
+  }) : isOutline = false, isDanger = false, variant = ButtonVariant.ghost;
 
   @override
   State<SafetyButton> createState() => _SafetyButtonState();
@@ -123,14 +170,38 @@ class _SafetyButtonState extends State<SafetyButton>
     with SingleTickerProviderStateMixin {
   bool _isPressed = false;
 
-  // Colores resueltos según variante
+  // Colores resueltos según variante. Si widget.variant no es null, tiene prioridad
+  // (API nueva v2); si es null, se mantiene exactamente la lógica original isOutline/isDanger.
   Color _resolveBackground(bool isDark) {
+    switch (widget.variant) {
+      case ButtonVariant.primary:
+        return widget.backgroundColor ?? AppTheme.accentCyan;
+      case ButtonVariant.secondary:
+      case ButtonVariant.ghost:
+        return Colors.transparent;
+      case ButtonVariant.danger:
+        return widget.backgroundColor ?? AppTheme.alertRed.withValues(alpha: 0.15);
+      case null:
+        break;
+    }
     if (widget.isOutline) return Colors.transparent;
     if (widget.isDanger) return widget.backgroundColor ?? AppTheme.alertRed;
     return widget.backgroundColor ?? AppTheme.accentBlue;
   }
 
   Color _resolveForeground(bool isDark) {
+    switch (widget.variant) {
+      case ButtonVariant.primary:
+        return widget.foregroundColor ?? AppTheme.bgDeep;
+      case ButtonVariant.secondary:
+        return widget.foregroundColor ?? AppTheme.accentBlue;
+      case ButtonVariant.danger:
+        return widget.foregroundColor ?? AppTheme.alertRed;
+      case ButtonVariant.ghost:
+        return widget.foregroundColor ?? AppTheme.textSecondary;
+      case null:
+        break;
+    }
     if (widget.isOutline) {
       if (widget.isDanger) return AppTheme.alertRed;
       return widget.foregroundColor ?? AppTheme.accentBlueLight;
@@ -139,11 +210,29 @@ class _SafetyButtonState extends State<SafetyButton>
   }
 
   Color _resolveBorderColor(bool isDark) {
+    switch (widget.variant) {
+      case ButtonVariant.primary:
+      case ButtonVariant.ghost:
+        return Colors.transparent;
+      case ButtonVariant.secondary:
+        return AppTheme.accentBlue;
+      case ButtonVariant.danger:
+        return AppTheme.alertRed;
+      case null:
+        break;
+    }
     if (widget.isOutline) {
       if (widget.isDanger) return AppTheme.alertRed.withValues(alpha: 0.5);
       return AppTheme.borderTactical;
     }
     return Colors.transparent;
+  }
+
+  double _resolveBorderWidth() {
+    if (widget.variant == ButtonVariant.secondary) return 1.5;
+    if (widget.variant == ButtonVariant.danger) return 1.0;
+    if (widget.variant != null) return 0;
+    return widget.isOutline ? 0.5 : 0;
   }
 
   @override
@@ -229,10 +318,10 @@ class _SafetyButtonState extends State<SafetyButton>
           borderRadius: BorderRadius.circular(widget.borderRadius),
           border: Border.all(
             color: isDisabled ? borderColor.withValues(alpha: 0.3) : borderColor,
-            width: widget.isOutline ? 0.5 : 0,
+            width: _resolveBorderWidth(),
           ),
           // Glow sutil al presionar en dark mode
-          boxShadow: _isPressed && isDark && !widget.isOutline
+          boxShadow: _isPressed && isDark && !widget.isOutline && widget.variant != ButtonVariant.secondary && widget.variant != ButtonVariant.ghost && widget.variant != ButtonVariant.danger
               ? [
                   BoxShadow(
                     color: bgColor.withValues(alpha: 0.3),

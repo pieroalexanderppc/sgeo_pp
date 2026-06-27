@@ -1,89 +1,93 @@
+// Reescrito: se agrega tab Historial, se usa PoliceService para confirmar/rechazar (compartido
+// con el mapa), y se corrigen campos que no coincidian con el backend (sub_tipo/direccion/
+// fecha_hecho -> subtipo_hecho/direccion_hecho/fecha_hora_hecho), que dejaban el subtipo y la
+// direccion siempre en blanco.
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
+import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
+import '../../../../core/services/map_service.dart';
+import '../../../../core/services/police_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/safety_layout.dart';
 import '../../../../core/widgets/safety_card.dart';
-import 'package:sgeo_pp/core/config/api_config.dart';
 
 class ValidationsView extends StatefulWidget {
   final String userId;
   final Function(LatLng)? onNavigateToMap;
-  
+
   const ValidationsView({super.key, required this.userId, this.onNavigateToMap});
 
   @override
   State<ValidationsView> createState() => _ValidationsViewState();
 }
 
-class _ValidationsViewState extends State<ValidationsView> {
+class _ValidationsViewState extends State<ValidationsView> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   bool _isLoading = true;
-  List<dynamic> _pendingReports = [];
+  List<dynamic> _pendingGrouped = [];
+  List<dynamic> _historial = [];
 
   @override
   void initState() {
     super.initState();
-    _fetchPendingReports();
+    _tabController = TabController(length: 2, vsync: this);
+    _fetchReportes();
   }
 
-  Future<void> _fetchPendingReports() async {
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchReportes() async {
     setState(() => _isLoading = true);
     try {
-      final res = await http.get(
-        Uri.parse(
-          ApiConfig.reportesPolicia,
-        ),
-      );
-      if (res.statusCode == 200) {
-        final data = json.decode(res.body);
-        if (data['status'] == 'success' && mounted) {
-          final allPending = (data['reportes'] as List)
-              .where((r) => r['estado'].toString().toLowerCase() == 'pendiente')
-              .toList();
+      final reportes = await MapService.fetchPuntosPolicia();
 
-          // Agrupación visual en la UI (500 metros)
-          List<dynamic> grouped = [];
-          for (var report in allPending) {
-            bool added = false;
-            for (var group in grouped) {
-              if (group['sub_tipo'] == report['sub_tipo']) {
-                try {
-                  final c1 = report['ubicacion']['coordinates'];
-                  final c2 = group['ubicacion']['coordinates'];
-                  final distance = Geolocator.distanceBetween(
-                    c1[1] as double, c1[0] as double,
-                    c2[1] as double, c2[0] as double,
-                  );
-                  if (distance <= 500) {
-                    group['cantidad_agrupada'] = (group['cantidad_agrupada'] ?? 1) + 1;
-                    if (group['agrupados_list'] == null) {
-                      group['agrupados_list'] = [Map.from(group)]; // Add self to list if first time
-                    }
-                    group['agrupados_list'].add(report);
-                    added = true;
-                    break;
-                  }
-                } catch (_) {}
+      final pendientes = reportes.where((r) => (r['estado'] ?? '').toString().toLowerCase() == 'pendiente').toList();
+      final historial = reportes
+          .where((r) => ['confirmado', 'rechazado'].contains((r['estado'] ?? '').toString().toLowerCase()))
+          .toList();
+
+      // Agrupación visual de pendientes por proximidad (500 metros) y mismo subtipo
+      final List<dynamic> grouped = [];
+      for (var report in pendientes) {
+        bool added = false;
+        for (var group in grouped) {
+          if (group['subtipo_hecho'] == report['subtipo_hecho']) {
+            try {
+              final c1 = report['ubicacion']['coordinates'];
+              final c2 = group['ubicacion']['coordinates'];
+              final distance = Geolocator.distanceBetween(
+                c1[1] as double, c1[0] as double,
+                c2[1] as double, c2[0] as double,
+              );
+              if (distance <= 500) {
+                group['cantidad_agrupada'] = (group['cantidad_agrupada'] ?? 1) + 1;
+                group['agrupados_list'] ??= [Map.from(group)];
+                group['agrupados_list'].add(report);
+                added = true;
+                break;
               }
-            }
-            if (!added) {
-              report['cantidad_agrupada'] = 1;
-              
-              // Evitar referencia circular copiando el mapa limpiamente
-              final cleanReport = Map<String, dynamic>.from(report);
-              report['agrupados_list'] = [cleanReport]; 
-              
-              grouped.add(report);
-            }
+            } catch (_) {}
           }
-
-          setState(() {
-            _pendingReports = grouped;
-          });
         }
+        if (!added) {
+          report['cantidad_agrupada'] = 1;
+          report['agrupados_list'] = [Map<String, dynamic>.from(report)];
+          grouped.add(report);
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _pendingGrouped = grouped;
+          _historial = historial;
+        });
+        PoliceService.pendingReportsNotifier.value = pendientes.length;
       }
     } catch (e) {
       debugPrint('Error listando reportes: $e');
@@ -92,17 +96,13 @@ class _ValidationsViewState extends State<ValidationsView> {
     }
   }
 
-  Future<void> _updateStatus(String reportId, String newStatus) async {
+  Future<void> _updateStatus(String reportId, {required bool confirmar}) async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    // Mostramos un dialog de confirmación antes de validar o rechazar
-    final isValidation = newStatus == 'VALIDADO';
-    final accentColor = isValidation ? AppTheme.successGreen : AppTheme.alertRed;
-    final iconData = isValidation ? Icons.check_circle_outline : Icons.cancel_outlined;
-    final title = isValidation ? 'Validar Incidente' : 'Rechazar Incidente';
-    final message = isValidation 
-      ? '¿Estás seguro de que deseas confirmar este reporte? Será visible para todos los ciudadanos.' 
-      : '¿Estás seguro de rechazar este reporte?';
+    final accentColor = confirmar ? AppTheme.successGreen : AppTheme.alertRed;
+    final title = confirmar ? 'Validar Incidente' : 'Rechazar Incidente';
+    final message = confirmar
+        ? '¿Estás seguro de que deseas confirmar este reporte? Será visible para todos los ciudadanos.'
+        : '¿Estás seguro de rechazar este reporte?';
 
     final confirm = await showDialog<bool>(
       context: context,
@@ -111,7 +111,7 @@ class _ValidationsViewState extends State<ValidationsView> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: AppTheme.borderTactical, width: 0.5)),
         title: Row(
           children: [
-            Icon(iconData, color: accentColor, size: 28),
+            Icon(confirmar ? Icons.check_circle_outline : Icons.cancel_outlined, color: accentColor, size: 28),
             const SizedBox(width: 10),
             Expanded(child: Text(title, style: TextStyle(color: isDark ? AppTheme.textPrimary : Colors.black87, fontWeight: FontWeight.bold))),
           ],
@@ -125,7 +125,7 @@ class _ValidationsViewState extends State<ValidationsView> {
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: accentColor, foregroundColor: Colors.white, elevation: 0),
-            child: Text(isValidation ? 'Validar' : 'Rechazar', style: const TextStyle(fontWeight: FontWeight.bold)),
+            child: Text(confirmar ? 'Validar' : 'Rechazar', style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -137,24 +137,22 @@ class _ValidationsViewState extends State<ValidationsView> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Procesando...')));
     }
 
-    try {
-      final String uri = newStatus == 'VALIDADO' 
-        ? ApiConfig.confirmar(reportId)
-        : ApiConfig.rechazar(reportId);
-        
-      final res = await http.post(
-        Uri.parse(uri),
+    final resultado = confirmar
+        ? await PoliceService.confirmarReporte(reportId)
+        : await PoliceService.rechazarReporte(reportId);
+
+    if (!mounted) return;
+
+    if (resultado['success'] == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(resultado['message']), backgroundColor: accentColor),
       );
-      if (res.statusCode == 200 && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Reporte $newStatus exitosamente'),
-            backgroundColor: isValidation ? AppTheme.successGreen : AppTheme.alertRed,
-          ),
-        );
-        _fetchPendingReports();
-      }
-    } catch (_) {}
+      _fetchReportes(); // Recalcula pendientes/historial y el badge
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(resultado['message'] ?? 'No se pudo procesar el reporte.'), backgroundColor: AppTheme.alertRed),
+      );
+    }
   }
 
   void _showGroupDetails(BuildContext context, List<dynamic> group) {
@@ -221,13 +219,13 @@ class _ValidationsViewState extends State<ValidationsView> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(rep['direccion'] ?? 'GPS desconocido', style: TextStyle(fontWeight: FontWeight.w600, color: isDark ? AppTheme.textPrimary : Colors.black87)),
+                              Text(rep['direccion_hecho'] ?? 'GPS desconocido', style: TextStyle(fontWeight: FontWeight.w600, color: isDark ? AppTheme.textPrimary : Colors.black87)),
                               if (desc.isNotEmpty) ...[
                                 const SizedBox(height: 4),
                                 Text(desc, style: TextStyle(fontSize: 13, color: isDark ? AppTheme.textSecondary : Colors.grey[700])),
                               ],
                               const SizedBox(height: 4),
-                              Text('Fecha: ${rep['fecha_hecho']?.toString().split("T").first ?? "Desconocida"}', style: TextStyle(fontSize: 12, color: AppTheme.accentBlueLight)),
+                              Text(_formatFecha(rep['fecha_hora_hecho']), style: TextStyle(fontSize: 12, color: AppTheme.accentBlueLight)),
                             ],
                           ),
                         ),
@@ -243,6 +241,26 @@ class _ValidationsViewState extends State<ValidationsView> {
     );
   }
 
+  String _formatFecha(dynamic raw) {
+    if (raw == null) return 'Fecha desconocida';
+    try {
+      return DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(raw.toString()).toLocal());
+    } catch (_) {
+      return 'Fecha desconocida';
+    }
+  }
+
+  Color _gravedadColor(dynamic gravedad) {
+    switch ((gravedad ?? '').toString().toUpperCase()) {
+      case 'ALTA':
+        return AppTheme.alertRed;
+      case 'BAJA':
+        return AppTheme.successGreen;
+      default:
+        return AppTheme.alertAmber;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -252,185 +270,234 @@ class _ValidationsViewState extends State<ValidationsView> {
       appBar: AppBar(
         title: const Text('Auditoría de Incidentes'),
         centerTitle: true,
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: AppTheme.accentBlue,
+          labelColor: isDark ? AppTheme.accentBlueLight : AppTheme.accentBlue,
+          unselectedLabelColor: isDark ? Colors.grey[500] : Colors.grey[700],
+          tabs: const [
+            Tab(text: 'Pendientes'),
+            Tab(text: 'Historial'),
+          ],
+        ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.sync_rounded),
-            onPressed: _fetchPendingReports,
-          ),
+          IconButton(icon: const Icon(Icons.sync_rounded), onPressed: _fetchReportes),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _fetchPendingReports,
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : _pendingReports.isEmpty
-            ? ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                children: [
-                  SizedBox(
-                    height: MediaQuery.of(context).size.height * 0.7,
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : TabBarView(
+              controller: _tabController,
+              children: [
+                _buildPendientesTab(isDark),
+                _buildHistorialTab(isDark),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildPendientesTab(bool isDark) {
+    return RefreshIndicator(
+      onRefresh: _fetchReportes,
+      child: _pendingGrouped.isEmpty
+          ? _buildEmptyState(isDark, 'No hay reportes pendientes de validación')
+          : ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              itemCount: _pendingGrouped.length,
+              itemBuilder: (ctx, i) {
+                final req = _pendingGrouped[i];
+                final int count = req['cantidad_agrupada'] ?? 1;
+                final String subTipo = req['subtipo_hecho'] ?? 'Incidente';
+                final gravedadColor = _gravedadColor(req['gravedad']);
+
+                return SafetyCard(
+                  accentColor: AppTheme.alertAmber,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(24),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: isDark ? AppTheme.bgSurface : Colors.grey.shade100,
-                            ),
-                            child: Icon(
-                              Icons.verified_user_outlined,
-                              size: 56,
-                              color: AppTheme.successGreen.withValues(alpha: 0.8),
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(color: AppTheme.alertAmber.withValues(alpha: 0.15), shape: BoxShape.circle),
+                            child: Icon(Icons.warning_rounded, color: AppTheme.alertAmber, size: 24),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  count > 1 ? '$subTipo ($count alertas)' : subTipo,
+                                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: isDark ? AppTheme.textPrimary : Colors.black87),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  req['direccion_hecho'] ?? 'Ubicación GPS desconocida',
+                                  style: TextStyle(fontSize: 13, color: isDark ? AppTheme.textSecondary : Colors.grey[700]),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _formatFecha(req['fecha_hora_hecho']),
+                                  style: TextStyle(fontSize: 12, color: isDark ? AppTheme.textMuted : Colors.grey[500]),
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 20),
-                          Text(
-                            "Todo en orden",
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: isDark ? AppTheme.textPrimary : Colors.black87,
+                          if (count > 1)
+                            IconButton(
+                              icon: Icon(Icons.list_alt, color: isDark ? AppTheme.textSecondary : Colors.grey, size: 24),
+                              tooltip: "Ver detalles agrupados",
+                              onPressed: () => _showGroupDetails(context, req['agrupados_list'] ?? []),
                             ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(color: gravedadColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
+                        child: Text(
+                          'GRAVEDAD: ${(req['gravedad'] ?? 'MEDIA').toString().toUpperCase()}',
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: gravedadColor, letterSpacing: 0.5),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton.icon(
+                            onPressed: () {
+                              final coords = req['ubicacion']['coordinates'];
+                              final lng = coords[0] as double;
+                              final lat = coords[1] as double;
+                              widget.onNavigateToMap?.call(LatLng(lat, lng));
+                            },
+                            icon: Icon(Icons.map_outlined, color: AppTheme.accentBlueLight, size: 18),
+                            label: Text("Ver", style: TextStyle(color: AppTheme.accentBlueLight)),
+                            style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12), minimumSize: Size.zero),
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            "No hay incidentes pendientes por validar.\n¡Buen trabajo!",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: isDark ? AppTheme.textSecondary : Colors.grey.shade600,
-                              height: 1.4,
+                          const Spacer(),
+                          IconButton(
+                            onPressed: () => _updateStatus(req['_id'].toString(), confirmar: false),
+                            icon: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(color: AppTheme.alertRed.withValues(alpha: 0.1), shape: BoxShape.circle),
+                              child: Icon(Icons.close_rounded, color: AppTheme.alertRed, size: 22),
                             ),
+                            tooltip: "Rechazar",
+                          ),
+                          IconButton(
+                            onPressed: () => _updateStatus(req['_id'].toString(), confirmar: true),
+                            icon: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(color: AppTheme.successGreen.withValues(alpha: 0.15), shape: BoxShape.circle),
+                              child: Icon(Icons.check_rounded, color: AppTheme.successGreen, size: 22),
+                            ),
+                            tooltip: "Validar",
                           ),
                         ],
-                      )
-                      .animate()
-                      .fadeIn(duration: 500.ms)
-                      .scale(begin: const Offset(0.9, 0.9), end: const Offset(1, 1), duration: 500.ms),
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              )
-            : ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                itemCount: _pendingReports.length,
-                itemBuilder: (ctx, i) {
-                  final req = _pendingReports[i];
-                  final int count = req['cantidad_agrupada'] ?? 1;
-                  final String subTipo = req['sub_tipo'] ?? 'Incidente';
-
-                  return SafetyCard(
-                    accentColor: AppTheme.alertAmber,
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Header de la tarjeta
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: AppTheme.alertAmber.withValues(alpha: 0.15),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(Icons.warning_rounded, color: AppTheme.alertAmber, size: 24),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    count > 1 ? '$subTipo ($count alertas)' : subTipo,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 16,
-                                      color: isDark ? AppTheme.textPrimary : Colors.black87,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    req['direccion'] ?? 'Ubicación GPS desconocida',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: isDark ? AppTheme.textSecondary : Colors.grey[700],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            if (count > 1)
-                              IconButton(
-                                icon: Icon(Icons.list_alt, color: isDark ? AppTheme.textSecondary : Colors.grey, size: 24),
-                                tooltip: "Ver detalles agrupados",
-                                onPressed: () {
-                                  _showGroupDetails(context, req['agrupados_list'] ?? []);
-                                },
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        
-                        // Acciones de validación
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            TextButton.icon(
-                              onPressed: () {
-                                final coords = req['ubicacion']['coordinates'];
-                                final lng = coords[0] as double;
-                                final lat = coords[1] as double;
-                                if (widget.onNavigateToMap != null) {
-                                  widget.onNavigateToMap!(LatLng(lat, lng));
-                                }
-                              },
-                              icon: Icon(Icons.map_outlined, color: AppTheme.accentBlueLight, size: 18),
-                              label: Text("Ver", style: TextStyle(color: AppTheme.accentBlueLight)),
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                                minimumSize: Size.zero,
-                              ),
-                            ),
-                            const Spacer(),
-                            IconButton(
-                              onPressed: () => _updateStatus(req['_id'].toString(), 'RECHAZADO'),
-                              icon: Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.alertRed.withValues(alpha: 0.1),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(Icons.close_rounded, color: AppTheme.alertRed, size: 22),
-                              ),
-                              tooltip: "Rechazar",
-                            ),
-                            IconButton(
-                              onPressed: () => _updateStatus(req['_id'].toString(), 'VALIDADO'),
-                              icon: Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.successGreen.withValues(alpha: 0.15),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(Icons.check_rounded, color: AppTheme.successGreen, size: 22),
-                              ),
-                              tooltip: "Validar",
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  )
+                )
                     .animate()
                     .fadeIn(delay: Duration(milliseconds: 50 * i), duration: 300.ms)
                     .slideY(begin: 0.05, end: 0, duration: 300.ms, curve: Curves.easeOut);
-                },
-              ),
-      ),
+              },
+            ),
+    );
+  }
+
+  Widget _buildHistorialTab(bool isDark) {
+    return RefreshIndicator(
+      onRefresh: _fetchReportes,
+      child: _historial.isEmpty
+          ? _buildEmptyState(isDark, 'Aún no hay reportes confirmados o rechazados')
+          : ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              itemCount: _historial.length,
+              itemBuilder: (ctx, i) {
+                final rep = _historial[i];
+                final estado = (rep['estado'] ?? '').toString().toLowerCase();
+                final isConfirmado = estado == 'confirmado';
+                final estadoColor = isConfirmado ? AppTheme.successGreen : AppTheme.alertRed;
+                final fecha = isConfirmado ? rep['confirmado_en'] : rep['rechazado_en'];
+
+                return SafetyCard(
+                  accentColor: estadoColor,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(color: estadoColor.withValues(alpha: 0.15), shape: BoxShape.circle),
+                        child: Icon(isConfirmado ? Icons.check_circle_rounded : Icons.cancel_rounded, color: estadoColor, size: 22),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              rep['subtipo_hecho'] ?? 'Incidente',
+                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: isDark ? AppTheme.textPrimary : Colors.black87),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              rep['direccion_hecho'] ?? 'Ubicación GPS desconocida',
+                              style: TextStyle(fontSize: 12, color: isDark ? AppTheme.textSecondary : Colors.grey[700]),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(_formatFecha(fecha), style: TextStyle(fontSize: 11, color: isDark ? AppTheme.textMuted : Colors.grey[500])),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(color: estadoColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
+                        child: Text(
+                          estado.toUpperCase(),
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: estadoColor, letterSpacing: 0.5),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+                    .animate()
+                    .fadeIn(delay: Duration(milliseconds: 30 * i), duration: 250.ms);
+              },
+            ),
+    );
+  }
+
+  Widget _buildEmptyState(bool isDark, String message) {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        SizedBox(
+          height: MediaQuery.of(context).size.height * 0.65,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(shape: BoxShape.circle, color: isDark ? AppTheme.bgSurface : Colors.grey.shade100),
+                  child: Icon(Icons.verified_user_outlined, size: 56, color: AppTheme.successGreen.withValues(alpha: 0.8)),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: isDark ? AppTheme.textSecondary : Colors.grey.shade600, height: 1.4),
+                ),
+              ],
+            ).animate().fadeIn(duration: 500.ms).scale(begin: const Offset(0.9, 0.9), end: const Offset(1, 1), duration: 500.ms),
+          ),
+        ),
+      ],
     );
   }
 }

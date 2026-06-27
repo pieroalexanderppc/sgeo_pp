@@ -1,3 +1,6 @@
+// Se agrega circulo de 3km, joystick de simulacion (solo rol policia) y Confirmar/Rechazar
+// desde el bottom sheet del mapa. Se corrigen campos que no coincidian con el backend
+// (sub_tipo/direccion -> subtipo_hecho/direccion_hecho). No se modifica el widget FlutterMap.
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_map/flutter_map.dart';
@@ -9,9 +12,11 @@ import 'package:sliding_up_panel/sliding_up_panel.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:showcaseview/showcaseview.dart';
 import '../../../../core/services/map_service.dart';
+import '../../../../core/services/police_service.dart';
 import '../../../../core/services/report_service.dart';
 import '../../../../core/services/tutorial_service.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/safety_button.dart';
 
 class PoliceMapView extends StatefulWidget {
   final String userId;
@@ -40,6 +45,28 @@ class _PoliceMapViewState extends State<PoliceMapView> {
   int? _filterYear;
   int? _filterMonth;
   double _currentZoom = 15.0;
+
+  // ── Joystick de simulacion (solo rol policia) ──
+  // _simulatedPosition reemplaza al GPS real en filtros/distancias mientras este activo,
+  // pero nunca se usa para mover la camara ni el initialCenter de FlutterMap.
+  bool _isTestMode = false;
+  LatLng? _simulatedPosition;
+
+  LatLng? get _effectivePosition => (_isTestMode && _simulatedPosition != null) ? _simulatedPosition : _realUserPosition;
+
+  void _toggleTestMode() {
+    setState(() {
+      _isTestMode = !_isTestMode;
+      _simulatedPosition = _isTestMode ? (_realUserPosition ?? _currentPosition) : null;
+    });
+  }
+
+  void _moveSimulatedPosition(double dLat, double dLng) {
+    if (_simulatedPosition == null) return;
+    setState(() {
+      _simulatedPosition = LatLng(_simulatedPosition!.latitude + dLat, _simulatedPosition!.longitude + dLng);
+    });
+  }
 
   List<int> get _availableYears {
     final Set<int> years = {};
@@ -594,6 +621,21 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                             subdomains: const ['a', 'b', 'c', 'd'],
                             userAgentPackageName: 'com.example.sgeo_pp',
                           ),
+                          // Perimetro visual de 3km alrededor de la posicion del policia
+                          // (usa _effectivePosition: real o simulada por el joystick, nunca la camara)
+                          if (_effectivePosition != null)
+                            CircleLayer(
+                              circles: [
+                                CircleMarker(
+                                  point: _effectivePosition!,
+                                  radius: 3000,
+                                  useRadiusInMeter: true,
+                                  color: AppTheme.accentBlue.withValues(alpha: 0.04),
+                                  borderColor: AppTheme.accentBlue.withValues(alpha: isDark ? 0.35 : 0.5),
+                                  borderStrokeWidth: 1.5,
+                                ),
+                              ],
+                            ),
                           if (_showZonasRiesgo && _zonasRiesgo.isNotEmpty)
                             CircleLayer(
                               circles: _zonasRiesgo.map<CircleMarker>((zona) {
@@ -666,6 +708,7 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                                           punto['fecha_hecho'] ??
                                           'Fecha no disponible';
                                       final modalidad =
+                                          punto['modalidad_hecho'] ??
                                           punto['modalidad'] ??
                                           'No especificada';
                                       final isCitizen = fuente == 'ciudadano';
@@ -696,10 +739,14 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                                         ),
                                       );
                                     }),
-                              // Puntos exactos (reportes ciudadanos) con animación y filtro de proximidad
+                              // Puntos exactos (reportes ciudadanos) con animación y filtro de proximidad (3km)
                               if (_showReportesValidados)
                                 ..._puntosExactos
                                     .where((punto) {
+                                      final estado = (punto['estado'] ?? '').toString().toLowerCase();
+                                      // Los rechazados no se muestran como marcador operativo (solo en Historial)
+                                      if (estado == 'rechazado') return false;
+
                                       if (_filterYear != null ||
                                           _filterMonth != null) {
                                         final fechaRaw =
@@ -719,7 +766,8 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                                           } catch (_) {}
                                         }
                                       }
-                                      if (_realUserPosition == null) {
+                                      final base = _effectivePosition;
+                                      if (base == null) {
                                         return true;
                                       }
                                       final coords =
@@ -728,8 +776,8 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                                       final lng = (coords[0] as num).toDouble();
                                       final distance =
                                           Geolocator.distanceBetween(
-                                            _realUserPosition!.latitude,
-                                            _realUserPosition!.longitude,
+                                            base.latitude,
+                                            base.longitude,
                                             lat,
                                             lng,
                                           );
@@ -752,7 +800,7 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                                                 ? Colors.white
                                                 : Colors.black);
                                       final subTipo =
-                                          punto['sub_tipo'] ?? 'Incidente';
+                                          punto['subtipo_hecho'] ?? 'Incidente';
 
                                       return Marker(
                                         point: LatLng(
@@ -767,14 +815,17 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                                             _showIncidentDetailsBottomSheet(context, {
                                               'title': 'Atención Inmediata',
                                               'subTipo': subTipo,
-                                              'modalidad': punto['direccion'] ?? 'Dirección no especificada.',
+                                              'modalidad': punto['direccion_hecho'] ?? 'Dirección no especificada.',
                                               'fechaHecho': punto['fecha_hora_hecho'] ?? 'Reciente',
+                                              'gravedad': punto['gravedad'],
                                               'origen': 'Reporte en curso',
                                               'isCitizen': true,
                                               'estadoStr': estadoStr,
                                               'estadoColor': colorPunto,
                                               'color': colorPunto,
                                               'icon': Icons.security,
+                                              'reporteId': punto['_id']?.toString(),
+                                              'isPending': isPending,
                                             });
                                           },
                                           child: _buildAnimatedMarker(
@@ -785,9 +836,9 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                                       );
                                     }),
 
-                              if (_realUserPosition != null)
+                              if (_effectivePosition != null)
                                 Marker(
-                                  point: _realUserPosition!,
+                                  point: _effectivePosition!,
                                   width: 80,
                                   height: 80,
                                   child: Stack(
@@ -798,7 +849,7 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                                         height: 45,
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
-                                          color: AppTheme.accentBlue.withValues(
+                                          color: (_isTestMode ? AppTheme.alertAmber : AppTheme.accentBlue).withValues(
                                             alpha: 0.2,
                                           ),
                                         ),
@@ -808,7 +859,7 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                                         height: 28,
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
-                                          color: AppTheme.accentBlue.withValues(
+                                          color: (_isTestMode ? AppTheme.alertAmber : AppTheme.accentBlue).withValues(
                                             alpha: 0.4,
                                           ),
                                         ),
@@ -818,7 +869,7 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                                         height: 16,
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
-                                          color: AppTheme.accentBlue,
+                                          color: _isTestMode ? AppTheme.alertAmber : AppTheme.accentBlue,
                                           border: Border.all(
                                             color: Colors.white,
                                             width: 2.5,
@@ -953,7 +1004,85 @@ class _PoliceMapViewState extends State<PoliceMapView> {
                   ),
                 ),
 
-                // ====== SE ELIMINÓ EL JOYSTICK FALSO TEMPORAL ======
+                // ====== JOYSTICK DE SIMULACION (rol policia) ======
+                Positioned(
+                  bottom: 100,
+                  right: 16,
+                  child: FloatingActionButton(
+                    heroTag: 'joystick_toggle_police',
+                    mini: true,
+                    elevation: 4,
+                    backgroundColor: _isTestMode
+                        ? AppTheme.alertAmber
+                        : (isDark ? AppTheme.bgSurface : Colors.white),
+                    onPressed: _toggleTestMode,
+                    tooltip: _isTestMode ? 'Desactivar simulación de posición' : 'Simular posición (pruebas)',
+                    child: Icon(
+                      Icons.sports_esports_rounded,
+                      color: _isTestMode ? Colors.white : (isDark ? Colors.white70 : Colors.black54),
+                      size: 20,
+                    ),
+                  ),
+                ),
+                if (_isTestMode)
+                  Positioned(
+                    bottom: 160,
+                    right: 16,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppTheme.bgElevated.withValues(alpha: 0.9)
+                            : Colors.white.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(40),
+                        border: Border.all(color: AppTheme.alertAmber.withValues(alpha: 0.4)),
+                        boxShadow: const [
+                          BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 4)),
+                        ],
+                      ),
+                      padding: const EdgeInsets.all(4),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.keyboard_arrow_up, size: 26),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            color: AppTheme.alertAmber,
+                            onPressed: () => _moveSimulatedPosition(0.0005, 0),
+                          ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.keyboard_arrow_left, size: 26),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                color: AppTheme.alertAmber,
+                                onPressed: () => _moveSimulatedPosition(0, -0.0005),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.adjust_rounded, size: 18, color: Colors.grey),
+                              const SizedBox(width: 4),
+                              IconButton(
+                                icon: const Icon(Icons.keyboard_arrow_right, size: 26),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                color: AppTheme.alertAmber,
+                                onPressed: () => _moveSimulatedPosition(0, 0.0005),
+                              ),
+                            ],
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.keyboard_arrow_down, size: 26),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            color: AppTheme.alertAmber,
+                            onPressed: () => _moveSimulatedPosition(-0.0005, 0),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -1172,34 +1301,109 @@ class _PoliceMapViewState extends State<PoliceMapView> {
               _buildDetailRow(Icons.warning_rounded, 'Tipo', data['subTipo'], isDark),
               if (data['modalidad'] != null) _buildDetailRow(Icons.info_outline_rounded, 'Modalidad', data['modalidad'], isDark),
               _buildDetailRow(Icons.access_time_rounded, 'Fecha', data['fechaHecho'], isDark),
+              if (data['gravedad'] != null) _buildDetailRow(Icons.priority_high_rounded, 'Gravedad', data['gravedad'].toString().toUpperCase(), isDark),
               _buildDetailRow(Icons.source_rounded, 'Origen', data['origen'], isDark, valueColor: color),
               if (data['estadoStr'] != null)
                 _buildDetailRow(Icons.check_circle_outline_rounded, 'Estado', data['estadoStr'].toString().toUpperCase(), isDark, valueColor: data['estadoColor']),
-              const SizedBox(height: 32),
-              SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                  style: TextButton.styleFrom(
-                    backgroundColor: isDark ? AppTheme.bgDeep : Colors.grey.shade200,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: Text(
-                    'CERRAR',
-                    style: TextStyle(
-                      color: isDark ? AppTheme.textSecondary : Colors.black54,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.2,
+              const SizedBox(height: 24),
+              if (data['isPending'] == true && data['reporteId'] != null)
+                Row(
+                  children: [
+                    Expanded(
+                      child: SafetyButton.outline(
+                        label: 'Rechazar',
+                        icon: Icons.close_rounded,
+                        isDanger: true,
+                        foregroundColor: AppTheme.alertRed,
+                        onPressed: () {
+                          Navigator.of(ctx).pop();
+                          _confirmarORechazarDesdeMapa(data['reporteId'].toString(), confirmar: false);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: SafetyButton(
+                        label: 'Confirmar',
+                        icon: Icons.check_rounded,
+                        onPressed: () {
+                          Navigator.of(ctx).pop();
+                          _confirmarORechazarDesdeMapa(data['reporteId'].toString(), confirmar: true);
+                        },
+                      ),
+                    ),
+                  ],
+                )
+              else
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    style: TextButton.styleFrom(
+                      backgroundColor: isDark ? AppTheme.bgDeep : Colors.grey.shade200,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: Text(
+                      'CERRAR',
+                      style: TextStyle(
+                        color: isDark ? AppTheme.textSecondary : Colors.black54,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.2,
+                      ),
                     ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _confirmarORechazarDesdeMapa(String reporteId, {required bool confirmar}) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accentColor = confirmar ? AppTheme.successGreen : AppTheme.alertRed;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? AppTheme.bgSurface : Colors.white,
+        title: Text(confirmar ? 'Confirmar incidente' : 'Rechazar incidente'),
+        content: Text(
+          confirmar
+              ? '¿Confirmas este reporte? Será visible para todos los ciudadanos.'
+              : '¿Estás seguro de rechazar este reporte?',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: accentColor, foregroundColor: Colors.white),
+            child: Text(confirmar ? 'Confirmar' : 'Rechazar'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
+    final resultado = confirmar
+        ? await PoliceService.confirmarReporte(reporteId)
+        : await PoliceService.rechazarReporte(reporteId);
+
+    if (!mounted) return;
+
+    if (resultado['success'] == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(resultado['message']), backgroundColor: accentColor),
+      );
+      PoliceService.pendingReportsNotifier.value = (PoliceService.pendingReportsNotifier.value - 1).clamp(0, 999999);
+      _loadPuntosExactos();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(resultado['message'] ?? 'No se pudo procesar el reporte.'), backgroundColor: AppTheme.alertRed),
+      );
+    }
   }
 
   Widget _buildDetailRow(IconData icon, String label, String value, bool isDark, {Color? valueColor}) {

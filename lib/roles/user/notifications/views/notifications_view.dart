@@ -1,3 +1,6 @@
+// Rediseño visual v2: swipe-to-dismiss por notificacion (nuevo
+// NotificationsStorageService.deleteNotification), leidas con opacidad 70%,
+// "Marcar todas" ahora es un TextButton en accentCyan (antes IconButton).
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../../core/services/notifications_storage_service.dart';
@@ -61,6 +64,12 @@ class _NotificationsViewState extends State<NotificationsView> {
   // Método opcional para limpiar
   Future<void> _clearAll() async {
     await NotificationsStorageService.clearAll();
+    await _loadNotifications();
+  }
+
+  // Swipe-to-dismiss: borra una sola notificación
+  Future<void> _deleteOne(String id) async {
+    await NotificationsStorageService.deleteNotification(id);
     await _loadNotifications();
   }
 
@@ -129,13 +138,15 @@ class _NotificationsViewState extends State<NotificationsView> {
             onPressed: _clearAll,
             tooltip: "Borrar todas",
           ),
-          IconButton(
-            icon: Icon(
-              Icons.done_all_rounded,
-              color: isDark ? AppTheme.accentBlueLight : null,
-            ),
+          TextButton(
             onPressed: _markAllAsRead,
-            tooltip: "Marcar todas como leídas",
+            child: const Text(
+              'Marcar todas',
+              style: TextStyle(
+                color: AppTheme.accentCyan,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
@@ -144,6 +155,7 @@ class _NotificationsViewState extends State<NotificationsView> {
           : _notifications.isEmpty
           ? _buildEmptyView(isDark)
           : RefreshIndicator(
+              color: AppTheme.accentCyan,
               onRefresh: _loadNotifications,
               child: ListView.builder(
                 padding: const EdgeInsets.symmetric(
@@ -158,111 +170,131 @@ class _NotificationsViewState extends State<NotificationsView> {
                   final iconColor = _getIconColor(type, context);
                   final iconBg = _getIconBgColor(type, isDark, context);
 
-                  return Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        decoration: BoxDecoration(
-                          color: isRead
-                              ? (isDark
-                                    ? AppTheme.bgSurface
-                                    : Theme.of(context).cardColor)
-                              : (isDark
-                                    ? AppTheme.bgElevated
-                                    : Colors.blue.withValues(alpha: 0.05)),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isRead
-                                ? AppTheme.borderTactical
-                                : iconColor.withValues(alpha: 0.2),
-                            width: 0.5,
+                  return Dismissible(
+                        key: ValueKey(notif['id']),
+                        direction: DismissDirection.endToStart,
+                        onDismissed: (_) => _deleteOne(notif['id'].toString()),
+                        background: Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          alignment: Alignment.centerRight,
+                          decoration: BoxDecoration(
+                            color: AppTheme.alertRed,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.white,
                           ),
                         ),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(16),
-                          onTap: () => _markAsRead(index),
-                          child: Padding(
-                            padding: const EdgeInsets.all(14),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Ícono con fondo circular
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: iconBg,
-                                    shape: BoxShape.circle,
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          decoration: BoxDecoration(
+                            color: isRead
+                                ? (isDark
+                                      ? AppTheme.bgSurface.withValues(
+                                          alpha: 0.7,
+                                        )
+                                      : Theme.of(context).cardColor)
+                                : (isDark
+                                      ? AppTheme.bgElevated
+                                      : Colors.blue.withValues(alpha: 0.05)),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isRead
+                                  ? AppTheme.borderSubtle
+                                  : iconColor.withValues(alpha: 0.2),
+                              width: 0.5,
+                            ),
+                          ),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: () => _markAsRead(index),
+                            child: Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Ícono con fondo circular
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: iconBg,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      _getIconForType(type),
+                                      color: iconColor,
+                                      size: 22,
+                                    ),
                                   ),
-                                  child: Icon(
-                                    _getIconForType(type),
-                                    color: iconColor,
-                                    size: 22,
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
+                                  const SizedBox(width: 14),
 
-                                // Textos
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              notif['title'],
-                                              style: TextStyle(
-                                                fontSize: 15,
-                                                fontWeight: isRead
-                                                    ? FontWeight.w500
-                                                    : FontWeight.w700,
-                                                color: isDark
-                                                    ? AppTheme.textPrimary
-                                                    : null,
+                                  // Textos
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                notif['title'],
+                                                style: TextStyle(
+                                                  fontSize: 15,
+                                                  fontWeight: isRead
+                                                      ? FontWeight.w500
+                                                      : FontWeight.w700,
+                                                  color: isDark
+                                                      ? AppTheme.textPrimary
+                                                      : null,
+                                                ),
                                               ),
                                             ),
+                                            if (!isRead)
+                                              Container(
+                                                width: 8,
+                                                height: 8,
+                                                margin: const EdgeInsets.only(
+                                                  left: 8,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: iconColor,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          notif['message'],
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: isDark
+                                                ? AppTheme.textSecondary
+                                                : Colors.grey[600],
+                                            height: 1.4,
                                           ),
-                                          if (!isRead)
-                                            Container(
-                                              width: 8,
-                                              height: 8,
-                                              margin: const EdgeInsets.only(
-                                                left: 8,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: iconColor,
-                                                shape: BoxShape.circle,
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        notif['message'],
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: isDark
-                                              ? AppTheme.textSecondary
-                                              : Colors.grey[600],
-                                          height: 1.4,
                                         ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        notif['time'],
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w500,
-                                          color: isDark
-                                              ? AppTheme.accentBlueLight
-                                              : Theme.of(
-                                                  context,
-                                                ).colorScheme.primary,
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          notif['time'],
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w500,
+                                            color: isDark
+                                                ? AppTheme.accentBlueLight
+                                                : Theme.of(
+                                                    context,
+                                                  ).colorScheme.primary,
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),
