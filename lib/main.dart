@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -111,6 +112,14 @@ void main() async {
 
   await flutterLocalNotificationsPlugin.initialize(
     settings: initializationSettings,
+    onDidReceiveNotificationResponse: (NotificationResponse response) async {
+      if (response.payload != null) {
+        try {
+          final data = jsonDecode(response.payload!) as Map<String, dynamic>;
+          await _handleNotificationTap(RemoteMessage(data: data));
+        } catch (_) {}
+      }
+    },
   );
 
   // 4. Creación del Canal de Notificaciones para dispositivos con Android 8.0 o superior
@@ -169,6 +178,7 @@ void main() async {
             priority: Priority.high,
           ),
         ),
+        payload: jsonEncode(message.data),
       );
     }
   });

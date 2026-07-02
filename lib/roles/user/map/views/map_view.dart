@@ -19,7 +19,6 @@ import '../../../../core/services/tutorial_service.dart';
 import 'dart:ui' as dart_ui;
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/safety_score_fab.dart';
-import '../../../../core/widgets/insights_card.dart';
 import '../../../../core/widgets/safety_button.dart';
 import 'widgets/report_dialog.dart';
 
@@ -57,7 +56,6 @@ class _MapViewState extends State<MapView> {
   // ── Predictive Context Engine ──
   Map<String, dynamic>? _safetyScoreData;
   List<Map<String, dynamic>> _insightsData = [];
-  bool _showInsightsPanel = false;
 
   // ── TEST MODE JOYSTICK ──
   // Habilitado a peticion del usuario, vía un boton toggle (igual que en el mapa de policia).
@@ -146,7 +144,12 @@ class _MapViewState extends State<MapView> {
         }
       } catch (_) {}
     }
-    if (years.isEmpty) years.add(DateTime.now().year);
+    // Siempre ofrecer el año actual y el del periodo de las zonas IA
+    years.add(DateTime.now().year);
+    for (var z in _zonasRiesgo) {
+      final anio = z['anio_periodo'];
+      if (anio is num) years.add(anio.toInt());
+    }
     final sorted = years.toList()..sort();
     return sorted.reversed.toList(); // Newest first
   }
@@ -319,8 +322,17 @@ class _MapViewState extends State<MapView> {
       if (!mounted) return;
       setState(() {
         _zonasRiesgo = zonas;
+        // Auto-filtrar al periodo que usó el motor IA (año+mes de las zonas generadas)
+        if (zonas.isNotEmpty && _filterYear == null) {
+          final z = zonas.first;
+          final anio = z['anio_periodo'];
+          final mes  = z['mes_periodo'];
+          if (anio != null) {
+            _filterYear  = (anio as num).toInt();
+            _filterMonth = mes != null ? (mes as num).toInt() : null;
+          }
+        }
       });
-      // Sincronizamos directamente con el servicio de geocerca para pruebas locales
       GeofenceService.syncZonesDirectly(_zonasRiesgo);
     } catch (e) {
       debugPrint("❌ Error cargando zonas de riesgo: $e");
@@ -812,8 +824,9 @@ class _MapViewState extends State<MapView> {
                             ),
                           MarkerLayer(
                             markers: [
-                              // 0. Puntos históricos (SIDPOL + Ciudadanos) al hacer zoom
-                              if (_currentZoom > 15.5)
+                              // 0. Puntos históricos (SIDPOL + Ciudadanos) al hacer zoom.
+                              // Obedecen al chip "Reportes" junto con las alertas en vivo.
+                              if (_showReportesValidados && _currentZoom > 15.5)
                                 ..._puntosHistorial
                                     .where((punto) {
                                       final fuente =
@@ -896,28 +909,11 @@ class _MapViewState extends State<MapView> {
                                       );
                                     }),
 
-                              // 1. Puntos exactos reportados
+                              // 1. Puntos exactos reportados.
+                              // Son alertas operativas EN CURSO: no se filtran por
+                              // periodo (el filtro de fecha es para el historial).
                               if (_showReportesValidados)
                                 ..._puntosExactos
-                                    .where((punto) {
-                                      if (_filterYear != null ||
-                                          _filterMonth != null) {
-                                        final dt = _extractDate(punto);
-                                        if (dt != null) {
-                                          if (_filterYear != null &&
-                                              dt.year != _filterYear) {
-                                            return false;
-                                          }
-                                          if (_filterMonth != null &&
-                                              dt.month != _filterMonth) {
-                                            return false;
-                                          }
-                                        } else {
-                                          return false; // Si no hay fecha, no pasa el filtro
-                                        }
-                                      }
-                                      return true;
-                                    })
                                     .map((punto) {
                                       final coords =
                                           punto['ubicacion']['coordinates'];
@@ -927,9 +923,7 @@ class _MapViewState extends State<MapView> {
                                       final colorPunto =
                                           estadoStr.contains('pendiente')
                                           ? AppTheme.alertAmber
-                                          : (isDark
-                                                ? Colors.white
-                                                : Colors.black);
+                                          : AppTheme.successGreen;
                                       final subTipo =
                                           punto['subtipo_hecho'] ?? 'Incidente';
 
@@ -972,37 +966,10 @@ class _MapViewState extends State<MapView> {
                                       );
                                     }),
 
-                              // 1.5. Propios reportes pendientes del usuario (Azul tactico)
+                              // 1.5. Propios reportes pendientes del usuario (Azul tactico).
+                              // Tambien son datos vivos: exentos del filtro de periodo.
                               if (_showMisReportes)
                                 ..._misReportesPendientes
-                                    .where((reporte) {
-                                      if (_filterYear != null ||
-                                          _filterMonth != null) {
-                                        final fechaRaw =
-                                            reporte.fechaCompleta ??
-                                            reporte.creadoEn;
-                                        if (fechaRaw != null) {
-                                          try {
-                                            final dt = DateTime.parse(
-                                              fechaRaw.toString(),
-                                            );
-                                            if (_filterYear != null &&
-                                                dt.year != _filterYear) {
-                                              return false;
-                                            }
-                                            if (_filterMonth != null &&
-                                                dt.month != _filterMonth) {
-                                              return false;
-                                            }
-                                          } catch (_) {
-                                            return false;
-                                          }
-                                        } else {
-                                          return false;
-                                        }
-                                      }
-                                      return true;
-                                    })
                                     .map((reporte) {
                                       return Marker(
                                         // Key estable: mismo motivo que en los otros grupos.
@@ -1107,142 +1074,19 @@ class _MapViewState extends State<MapView> {
                         ],
                       ),
 
-                // ── HUD SUPERIOR PREMIUM (Buscador y Filtros en Glassmorphism) ──
+                // ── HUD: Botón Reportar + chips de filtro en una fila ──
                 Positioned(
-                  top: MediaQuery.of(context).padding.top + 16,
+                  top: MediaQuery.of(context).padding.top + 12,
                   left: 16,
                   right: 16,
                   child: Column(
                     children: [
-                      // 1. Barra de Búsqueda Flotante
-                      // 1. Barra de Búsqueda y Botón Reportar
+                      // Chips de capas en fila completa (scroll horizontal)
                       SizedBox(
-                        height: 52,
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(16),
-                              child: BackdropFilter(
-                                filter: dart_ui.ImageFilter.blur(
-                                  sigmaX: 12,
-                                  sigmaY: 12,
-                                ),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: isDark
-                                        ? AppTheme.bgSurface.withValues(alpha: 0.6)
-                                        : Colors.white.withValues(alpha: 0.8),
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: isDark
-                                          ? AppTheme.borderTactical
-                                          : Colors.grey.shade300,
-                                      width: 1,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.1),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      const SizedBox(width: 16),
-                                      Icon(
-                                        Icons.menu,
-                                        color: isDark
-                                            ? Colors.white70
-                                            : Colors.black54,
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Text(
-                                          "Buscar zonas...",
-                                          style: TextStyle(
-                                            color: isDark
-                                                ? Colors.white54
-                                                : Colors.black54,
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                      Container(
-                                        width: 1,
-                                        height: 24,
-                                        color: isDark
-                                            ? AppTheme.borderTactical
-                                            : Colors.grey.shade300,
-                                      ),
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                        ),
-                                        child: Icon(
-                                          Icons.search,
-                                          color: AppTheme.accentBlue,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          SizedBox(
-                            width: 140,
-                            child: Showcase(
-                              key: TutorialService.mapReportBtnKey,
-                              title: 'Reportar Incidente',
-                              description:
-                                  'Presiona aquí para reportar un incidente en tu ubicación actual.',
-                              targetPadding: const EdgeInsets.all(8),
-                              tooltipBackgroundColor: isDark
-                                  ? const Color(0xFF1E1E1E)
-                                  : Colors.white,
-                              textColor: isDark ? Colors.white : Colors.black87,
-                              child: SafetyButton.danger(
-                                label: 'REPORTAR',
-                                icon: Icons.campaign_rounded,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                ),
-                                fontSize: 13,
-                                borderRadius: 16,
-                                onPressed: () {
-                                  if (_realUserPosition != null) {
-                                    _abrirFormularioReporte(_realUserPosition!);
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Esperando tu ubicación GPS...'),
-                                        duration: Duration(seconds: 3),
-                                      ),
-                                    );
-                                  }
-                                },
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      // 2. Chips de Filtros (Scroll Horizontal Deslizable)
-                      SizedBox(
-                        height: 36,
+                        height: 40,
                         child: ListView(
                           scrollDirection: Axis.horizontal,
-                          physics: const BouncingScrollPhysics(),
+                          physics: const ClampingScrollPhysics(),
                           children: [
                             _buildGlassChip(
                               title: "Zonas de Riesgo",
@@ -1274,41 +1118,70 @@ class _MapViewState extends State<MapView> {
                               ),
                               isDark: isDark,
                             ),
-                            // Se incluye filtro de fecha si se necesita
                             const SizedBox(width: 8),
                             _buildGlassChip(
-                              title: "Año ${_filterYear ?? 'Todos'}",
+                              title: _filterMonth != null &&
+                                      _filterYear != null
+                                  ? "${_filterMonth!.toString().padLeft(2, '0')}/$_filterYear"
+                                  : _filterYear != null
+                                      ? "Año $_filterYear"
+                                      : "Período",
                               icon: Icons.calendar_month,
                               isActive: _filterYear != null,
-                              onTap: () => setState(() {
-                                _isFilterMenuOpen = !_isFilterMenuOpen;
-                              }),
+                              onTap: () => setState(() =>
+                                  _isFilterMenuOpen = !_isFilterMenuOpen),
                               isDark: isDark,
                             ),
                           ],
                         ),
                       ),
 
-                      // Contenedor extra si se da tap en "Fechas"
+                      // Panel de filtro por periodo (glass premium)
                       if (_isFilterMenuOpen)
-                        Container(
-                          margin: const EdgeInsets.only(top: 12),
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? AppTheme.bgSurface.withValues(alpha: 0.8)
-                                : Colors.white.withValues(alpha: 0.8),
-                            borderRadius: BorderRadius.circular(12),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: BackdropFilter(
+                            filter: dart_ui.ImageFilter.blur(
+                              sigmaX: 12,
+                              sigmaY: 12,
+                            ),
+                            child: Container(
+                              margin: const EdgeInsets.only(top: 10),
+                              padding: const EdgeInsets.fromLTRB(
+                                  14, 10, 14, 14),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? AppTheme.bgSurface.withValues(alpha: 0.85)
+                                    : Colors.white.withValues(alpha: 0.92),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: isDark
+                                      ? AppTheme.borderTactical
+                                      : Colors.grey.shade300,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color:
+                                        Colors.black.withValues(alpha: 0.15),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: _buildDateFilters(isDark),
+                            ),
                           ),
-                          child: _buildDateFilters(isDark),
-                        ).animate().fadeIn(),
+                        )
+                            .animate()
+                            .fadeIn(duration: 200.ms)
+                            .slideY(begin: -0.1, end: 0),
                     ],
                   ),
                 ),
 
                 // ====== JOYSTICK DE SIMULACION (boton toggle) ======
                 Positioned(
-                  bottom: 222,
+                  bottom: 104,
                   left: 16,
                   child: FloatingActionButton(
                     heroTag: 'joystick_toggle_user',
@@ -1336,8 +1209,7 @@ class _MapViewState extends State<MapView> {
                 // ====== JOYSTICK PARA TEST DE NOTIFICACIONES ======
                 if (_isTestMode)
                   Positioned(
-                    bottom:
-                        120, // Aumentado significativamente para saltar la barra de navegación del celular
+                    bottom: 156,
                     left: 16,
                     child: Container(
                       decoration: BoxDecoration(
@@ -1414,13 +1286,59 @@ class _MapViewState extends State<MapView> {
                     ),
                   ),
 
+                // ── BOTÓN REPORTAR (Acción principal, centrado abajo) ──
+                // bottom alto: el body del SlidingUpPanel usa la altura completa
+                // de pantalla, así que la barra de navegación tapa los ~80px inferiores.
+                Positioned(
+                  bottom: 104,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: Showcase(
+                      key: TutorialService.mapReportBtnKey,
+                      title: 'Reportar Incidente',
+                      description:
+                          'Presiona aquí para reportar un incidente en tu ubicación actual.',
+                      targetPadding: const EdgeInsets.all(8),
+                      tooltipBackgroundColor: isDark
+                          ? const Color(0xFF1E1E1E)
+                          : Colors.white,
+                      textColor: isDark ? Colors.white : Colors.black87,
+                      child: SafetyButton.danger(
+                        label: 'REPORTAR',
+                        icon: Icons.campaign_rounded,
+                        expand: false,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                        fontSize: 13.5,
+                        borderRadius: 24,
+                        onPressed: () {
+                          if (_realUserPosition != null) {
+                            _abrirFormularioReporte(_realUserPosition!);
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content:
+                                    Text('Esperando tu ubicación GPS...'),
+                                duration: Duration(seconds: 3),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+
                 // ── SAFETY SCORE FAB (Compacto, flotante a la derecha) ──
                 if (_safetyScoreData != null && !_isLoading)
                   AnimatedPositioned(
                     duration: const Duration(milliseconds: 300),
                     curve: Curves.easeOutCubic,
                     top: MediaQuery.of(context).padding.top +
-                        (_isFilterMenuOpen ? 210 : 132),
+                        (_isFilterMenuOpen ? 200 : 68),
                     right: 16,
                     child: SafetyScoreFab(
                       score:
@@ -1439,16 +1357,20 @@ class _MapViewState extends State<MapView> {
               ],
             ),
           ),
-          floatingActionButton: FloatingActionButton(
-            heroTag: 'map_location',
-            mini: false,
-            backgroundColor: isDark
-                ? AppTheme.bgSurface.withValues(alpha: 0.9)
-                : Colors.white.withValues(alpha: 0.9),
-            foregroundColor: isDark ? AppTheme.accentBlue : Colors.black87,
-            elevation: 4,
-            onPressed: () => _determinePosition(userForced: true),
-            child: const Icon(Icons.my_location, size: 24),
+          // Alineado con el botón REPORTAR (que vive en el Stack desbordado)
+          floatingActionButton: Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: FloatingActionButton(
+              heroTag: 'map_location',
+              mini: false,
+              backgroundColor: isDark
+                  ? AppTheme.bgSurface.withValues(alpha: 0.9)
+                  : Colors.white.withValues(alpha: 0.9),
+              foregroundColor: isDark ? AppTheme.accentBlue : Colors.black87,
+              elevation: 4,
+              onPressed: () => _determinePosition(userForced: true),
+              child: const Icon(Icons.my_location, size: 24),
+            ),
           ),
         );
       },
@@ -1456,21 +1378,71 @@ class _MapViewState extends State<MapView> {
   }
 
   Widget _buildDateFilters(bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Filtro por Fecha',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: isDark ? AppTheme.textSecondary : Colors.grey.shade600,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.history_rounded,
+              size: 15,
+              color: AppTheme.accentBlue,
             ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                'PERIODO DEL HISTORIAL',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.1,
+                  color:
+                      isDark ? AppTheme.textSecondary : Colors.grey.shade600,
+                ),
+              ),
+            ),
+            if (_filterYear != null || _filterMonth != null)
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => setState(() {
+                  _filterYear = null;
+                  _filterMonth = null;
+                }),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 6, vertical: 2),
+                  child: Text(
+                    'Limpiar',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.accentBlue,
+                    ),
+                  ),
+                ),
+              ),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => setState(() => _isFilterMenuOpen = false),
+              child: Icon(
+                Icons.close_rounded,
+                size: 17,
+                color: isDark ? Colors.white54 : Colors.black45,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Aplica a los puntos históricos del mapa. Los reportes en vivo siempre se muestran.',
+          style: TextStyle(
+            fontSize: 10.5,
+            color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
           ),
-          const SizedBox(height: 8.0),
-          Row(
+        ),
+        const SizedBox(height: 10.0),
+        Row(
             children: [
               Expanded(
                 child: DropdownButtonFormField<int?>(
@@ -1565,8 +1537,7 @@ class _MapViewState extends State<MapView> {
               ),
             ],
           ),
-        ],
-      ),
+      ],
     );
   }
 
@@ -1580,6 +1551,7 @@ class _MapViewState extends State<MapView> {
   }) {
     return GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
