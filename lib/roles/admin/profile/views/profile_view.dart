@@ -1,4 +1,9 @@
 // Se reemplazan las llamadas http directas por UserService, mostrando los mensajes de error reales del backend.
+// Rediseño visual v2: RoleBadge ("Admin" en accentCyan) reemplaza el chip de rol armado a
+// mano, e InfoRow para los campos en modo lectura (consistente con los otros 2 roles).
+// El resto de la identidad visual de esta pantalla (avatar, boton danger) se deja en alertRed
+// a proposito: es una señal de "panel sensible/destructivo", distinta del accentCyan de
+// navegacion.
 import 'package:flutter/material.dart';
 import '../../../../features/auth/views/login_view.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -7,6 +12,8 @@ import '../../../../core/services/user_service.dart';
 import '../../../../core/widgets/safety_layout.dart';
 import '../../../../core/widgets/safety_card.dart';
 import '../../../../core/widgets/safety_button.dart';
+import '../../../../core/widgets/role_badge.dart';
+import '../../../../core/widgets/info_row.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class AdminProfileView extends StatefulWidget {
@@ -99,11 +106,20 @@ class _AdminProfileViewState extends State<AdminProfileView> {
           _isEditing = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(resultado['message'] ?? 'Perfil administrador actualizado con éxito'), backgroundColor: AppTheme.successGreen),
+          SnackBar(
+            content: Text(
+              resultado['message'] ??
+                  'Perfil administrador actualizado con éxito',
+            ),
+            backgroundColor: AppTheme.successGreen,
+          ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(resultado['message'] ?? 'Error al actualizar datos'), backgroundColor: AppTheme.alertRed),
+          SnackBar(
+            content: Text(resultado['message'] ?? 'Error al actualizar datos'),
+            backgroundColor: AppTheme.alertRed,
+          ),
         );
       }
       setState(() => _isLoading = false);
@@ -141,40 +157,57 @@ class _AdminProfileViewState extends State<AdminProfileView> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 20.0,
+              ),
               child: Column(
                 children: [
                   // --- AVATAR TÁCTICO ADMIN ---
                   Center(
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isDark ? AppTheme.alertRed.withValues(alpha: 0.5) : AppTheme.alertRed,
-                          width: 2,
+                    child:
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isDark
+                                  ? AppTheme.alertRed.withValues(alpha: 0.5)
+                                  : AppTheme.alertRed,
+                              width: 2,
+                            ),
+                            boxShadow: isDark
+                                ? [
+                                    BoxShadow(
+                                      color: AppTheme.alertRed.withValues(
+                                        alpha: 0.3,
+                                      ),
+                                      blurRadius: 20,
+                                      spreadRadius: 2,
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                          child: CircleAvatar(
+                            radius: 50,
+                            backgroundColor: isDark
+                                ? AppTheme.bgElevated
+                                : Colors.red.shade50,
+                            child: Icon(
+                              Icons.admin_panel_settings_rounded,
+                              size: 55,
+                              color: isDark
+                                  ? Colors.redAccent.shade100
+                                  : AppTheme.alertRed,
+                            ),
+                          ),
+                        ).animate().scale(
+                          duration: 400.ms,
+                          curve: Curves.easeOutBack,
                         ),
-                        boxShadow: isDark ? [
-                          BoxShadow(
-                            color: AppTheme.alertRed.withValues(alpha: 0.3),
-                            blurRadius: 20,
-                            spreadRadius: 2,
-                          )
-                        ] : null,
-                      ),
-                      child: CircleAvatar(
-                        radius: 50,
-                        backgroundColor: isDark ? AppTheme.bgElevated : Colors.red.shade50,
-                        child: Icon(
-                          Icons.admin_panel_settings_rounded, 
-                          size: 55, 
-                          color: isDark ? Colors.redAccent.shade100 : AppTheme.alertRed
-                        ),
-                      ),
-                    ).animate().scale(duration: 400.ms, curve: Curves.easeOutBack),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   if (!_isEditing) ...[
                     Text(
                       _nombre ?? 'Administrador',
@@ -185,23 +218,9 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                       ),
                       textAlign: TextAlign.center,
                     ).animate().fadeIn(delay: 100.ms),
-                    const SizedBox(height: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppTheme.alertRed.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppTheme.alertRed.withValues(alpha: 0.3)),
-                      ),
-                      child: Text(
-                        (_rol ?? 'ADMINISTRADOR').toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 12, 
-                          fontWeight: FontWeight.w800, 
-                          color: isDark ? Colors.redAccent.shade100 : AppTheme.alertRed,
-                          letterSpacing: 1.0,
-                        ),
-                      ),
+                    const SizedBox(height: 8),
+                    RoleBadge(
+                      role: _rol ?? 'admin',
                     ).animate().fadeIn(delay: 200.ms),
                   ],
 
@@ -218,7 +237,9 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
-                            color: isDark ? Colors.redAccent.shade100 : AppTheme.alertRed,
+                            color: isDark
+                                ? Colors.redAccent.shade100
+                                : AppTheme.alertRed,
                             letterSpacing: 1.5,
                           ),
                         ),
@@ -235,7 +256,9 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                         _buildProfileItem(
                           icon: Icons.email_outlined,
                           title: 'Correo de Acceso',
-                          value: (_email == null || _email!.isEmpty) ? 'No especificado' : _email!,
+                          value: (_email == null || _email!.isEmpty)
+                              ? 'No especificado'
+                              : _email!,
                           controller: _emailController,
                           isEditing: _isEditing,
                           isDark: isDark,
@@ -245,7 +268,9 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                         _buildProfileItem(
                           icon: Icons.phone_outlined,
                           title: 'Teléfono',
-                          value: (_telefono == null || _telefono!.isEmpty) ? 'No especificado' : _telefono!,
+                          value: (_telefono == null || _telefono!.isEmpty)
+                              ? 'No especificado'
+                              : _telefono!,
                           controller: _phoneController,
                           isEditing: _isEditing,
                           isDark: isDark,
@@ -293,26 +318,45 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                         builder: (context, currentMode, child) {
                           final isDarkMode = currentMode == ThemeMode.dark;
                           return SwitchListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 4,
+                            ),
                             title: Text(
                               'Modo Táctico (Oscuro)',
-                              style: TextStyle(fontWeight: FontWeight.w600, color: isDark ? AppTheme.textPrimary : Colors.black87),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: isDark
+                                    ? AppTheme.textPrimary
+                                    : Colors.black87,
+                              ),
                             ),
                             secondary: Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: isDark ? Colors.indigo.withValues(alpha: 0.2) : Colors.indigo.shade50,
+                                color: isDark
+                                    ? Colors.indigo.withValues(alpha: 0.2)
+                                    : Colors.indigo.shade50,
                                 shape: BoxShape.circle,
                               ),
-                              child: Icon(isDarkMode ? Icons.dark_mode : Icons.light_mode, color: Colors.indigo),
+                              child: Icon(
+                                isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                                color: Colors.indigo,
+                              ),
                             ),
                             value: isDarkMode,
                             activeThumbColor: AppTheme.alertRed,
                             activeTrackColor: Colors.white,
-                            inactiveThumbColor: isDark ? Colors.grey.shade400 : Colors.grey.shade300,
-                            inactiveTrackColor: isDark ? AppTheme.bgDeep : Colors.grey.shade400,
+                            inactiveThumbColor: isDark
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade300,
+                            inactiveTrackColor: isDark
+                                ? AppTheme.bgDeep
+                                : Colors.grey.shade400,
                             onChanged: (value) {
-                              AppTheme.themeNotifier.value = value ? ThemeMode.dark : ThemeMode.light;
+                              AppTheme.themeNotifier.value = value
+                                  ? ThemeMode.dark
+                                  : ThemeMode.light;
                             },
                           );
                         },
@@ -328,7 +372,9 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                         if (!context.mounted) return;
                         Navigator.pushAndRemoveUntil(
                           context,
-                          MaterialPageRoute(builder: (context) => const LoginView()),
+                          MaterialPageRoute(
+                            builder: (context) => const LoginView(),
+                          ),
                           (route) => false,
                         );
                       },
@@ -350,6 +396,9 @@ class _AdminProfileViewState extends State<AdminProfileView> {
     required bool isDark,
     TextInputType? keyboardType,
   }) {
+    if (!isEditing) {
+      return InfoRow(label: title, value: value, icon: icon);
+    }
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -359,36 +408,28 @@ class _AdminProfileViewState extends State<AdminProfileView> {
             color: isDark ? AppTheme.bgDeep : Colors.grey.shade100,
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: isDark ? AppTheme.textSecondary : Colors.grey[700], size: 20),
+          child: Icon(
+            icon,
+            color: isDark ? AppTheme.textSecondary : Colors.grey[700],
+            size: 20,
+          ),
         ),
         const SizedBox(width: 16),
         Expanded(
-          child: isEditing
-              ? TextField(
-                  controller: controller,
-                  keyboardType: keyboardType,
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: isDark ? AppTheme.textPrimary : Colors.black87),
-                  decoration: InputDecoration(
-                    labelText: title,
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                  ),
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: TextStyle(fontSize: 12, color: isDark ? AppTheme.textSecondary : Colors.grey[600])),
-                    const SizedBox(height: 4),
-                    Text(
-                      value,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? AppTheme.textPrimary : Colors.black87,
-                      ),
-                    ),
-                  ],
-                ),
+          child: TextField(
+            controller: controller,
+            keyboardType: keyboardType,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: isDark ? AppTheme.textPrimary : Colors.black87,
+            ),
+            decoration: InputDecoration(
+              labelText: title,
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(vertical: 8),
+            ),
+          ),
         ),
       ],
     );

@@ -19,7 +19,13 @@ class ProfileView extends StatefulWidget {
   final String? userId;
   final VoidCallback? onNavigateToMap;
 
-  const ProfileView({super.key, this.userName, this.userRole, this.userId, this.onNavigateToMap});
+  const ProfileView({
+    super.key,
+    this.userName,
+    this.userRole,
+    this.userId,
+    this.onNavigateToMap,
+  });
 
   @override
   State<ProfileView> createState() => _ProfileViewState();
@@ -106,11 +112,17 @@ class _ProfileViewState extends State<ProfileView> {
           _isEditing = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(resultado['message'] ?? 'Perfil actualizado con éxito')),
+          SnackBar(
+            content: Text(
+              resultado['message'] ?? 'Perfil actualizado con éxito',
+            ),
+          ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(resultado['message'] ?? 'Error al actualizar datos')),
+          SnackBar(
+            content: Text(resultado['message'] ?? 'Error al actualizar datos'),
+          ),
         );
       }
       setState(() => _isLoading = false);
@@ -128,7 +140,7 @@ class _ProfileViewState extends State<ProfileView> {
           decoration: BoxDecoration(
             color: isDark ? AppTheme.bgSurface : Colors.white,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            border: Border.all(color: AppTheme.borderTactical, width: 0.5),
+            border: Border.all(color: AppTheme.borderSubtle, width: 1),
           ),
           child: SafeArea(
             child: Column(
@@ -157,7 +169,8 @@ class _ProfileViewState extends State<ProfileView> {
                   ctx: ctx,
                   icon: Icons.touch_app,
                   title: 'Cómo reportar un incidente',
-                  subtitle: 'Aprende a ubicar un delito en el mapa interactivo.',
+                  subtitle:
+                      'Aprende a ubicar un delito en el mapa interactivo.',
                   isDark: isDark,
                   onTap: () {
                     Navigator.pop(ctx);
@@ -185,12 +198,17 @@ class _ProfileViewState extends State<ProfileView> {
                   ctx: ctx,
                   icon: Icons.history,
                   title: 'Cómo revisar el estado de un reporte',
-                  subtitle: 'Sigue el estado de un caso en la pestaña Reportes.',
+                  subtitle:
+                      'Sigue el estado de un caso en la pestaña Reportes.',
                   isDark: isDark,
                   onTap: () {
                     Navigator.pop(ctx);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Este tutorial estará disponible pronto.')),
+                      const SnackBar(
+                        content: Text(
+                          'Este tutorial estará disponible pronto.',
+                        ),
+                      ),
                     );
                   },
                 ),
@@ -203,7 +221,11 @@ class _ProfileViewState extends State<ProfileView> {
                   onTap: () {
                     Navigator.pop(ctx);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Este tutorial estará disponible pronto.')),
+                      const SnackBar(
+                        content: Text(
+                          'Este tutorial estará disponible pronto.',
+                        ),
+                      ),
                     );
                   },
                 ),
@@ -281,20 +303,26 @@ class _ProfileViewState extends State<ProfileView> {
           children: [
             // ── Avatar con inicial del nombre ──
             CircleAvatar(
-              radius: 36,
-              backgroundColor: AppTheme.bgElevated,
-              child: Text(
-                (_nombre != null && _nombre!.isNotEmpty) ? _nombre![0].toUpperCase() : '?',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.accentCyan,
+                  radius: 36,
+                  backgroundColor: AppTheme.bgElevated,
+                  child: Text(
+                    (_nombre != null && _nombre!.isNotEmpty)
+                        ? _nombre![0].toUpperCase()
+                        : '?',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.accentCyan,
+                    ),
+                  ),
+                )
+                .animate()
+                .fadeIn(duration: 500.ms)
+                .scale(
+                  begin: const Offset(0.85, 0.85),
+                  end: const Offset(1, 1),
+                  duration: 500.ms,
                 ),
-              ),
-            )
-            .animate()
-            .fadeIn(duration: 500.ms)
-            .scale(begin: const Offset(0.85, 0.85), end: const Offset(1, 1), duration: 500.ms),
 
             const SizedBox(height: 16),
             if (!_isEditing) ...[
@@ -334,19 +362,33 @@ class _ProfileViewState extends State<ProfileView> {
                     controller: _nameController,
                     isDark: isDark,
                   ),
-                  Divider(height: 1, color: isDark ? AppTheme.borderSubtle : Colors.grey.shade200),
+                  Divider(
+                    height: 1,
+                    color: isDark
+                        ? AppTheme.borderSubtle
+                        : Colors.grey.shade200,
+                  ),
                   _buildProfileField(
                     icon: Icons.email_outlined,
                     label: 'Correo',
-                    value: (_email == null || _email!.isEmpty) ? 'No especificado' : _email!,
+                    value: (_email == null || _email!.isEmpty)
+                        ? 'No especificado'
+                        : _email!,
                     controller: _emailController,
                     isDark: isDark,
                   ),
-                  Divider(height: 1, color: isDark ? AppTheme.borderSubtle : Colors.grey.shade200),
+                  Divider(
+                    height: 1,
+                    color: isDark
+                        ? AppTheme.borderSubtle
+                        : Colors.grey.shade200,
+                  ),
                   _buildProfileField(
                     icon: Icons.phone_outlined,
                     label: 'Teléfono',
-                    value: (_telefono == null || _telefono!.isEmpty) ? 'No especificado' : _telefono!,
+                    value: (_telefono == null || _telefono!.isEmpty)
+                        ? 'No especificado'
+                        : _telefono!,
                     controller: _phoneController,
                     isDark: isDark,
                   ),
@@ -419,7 +461,9 @@ class _ProfileViewState extends State<ProfileView> {
                       ),
                       child: Icon(
                         isDarkMode ? Icons.dark_mode : Icons.light_mode,
-                        color: isDarkMode ? AppTheme.accentBlueLight : Colors.amber.shade700,
+                        color: isDarkMode
+                            ? AppTheme.accentBlueLight
+                            : Colors.amber.shade700,
                         size: 22,
                       ),
                     ),
@@ -487,7 +531,11 @@ class _ProfileViewState extends State<ProfileView> {
           color: isDark ? AppTheme.bgDeep : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(icon, color: isDark ? AppTheme.textSecondary : Colors.grey[600], size: 22),
+        child: Icon(
+          icon,
+          color: isDark ? AppTheme.textSecondary : Colors.grey[600],
+          size: 22,
+        ),
       ),
       title: _isEditing
           ? TextField(

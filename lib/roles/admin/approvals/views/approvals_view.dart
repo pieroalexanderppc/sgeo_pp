@@ -1,4 +1,5 @@
 // Nueva pantalla: panel de aprobacion/rechazo de policias pendientes (rol admin).
+// Rediseño visual v2: StatusBadge reemplaza el chip "PENDIENTE DE VERIFICACIÓN" armado a mano.
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
@@ -7,6 +8,8 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/safety_layout.dart';
 import '../../../../core/widgets/safety_card.dart';
 import '../../../../core/widgets/safety_button.dart';
+import '../../../../core/widgets/status_badge.dart';
+import '../../../../core/widgets/skeleton_loader.dart';
 
 class ApprovalsView extends StatefulWidget {
   const ApprovalsView({super.key});
@@ -38,7 +41,12 @@ class _ApprovalsViewState extends State<ApprovalsView> {
       } else {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(resultado['message'] ?? 'No se pudo cargar la lista.'), backgroundColor: AppTheme.alertRed),
+          SnackBar(
+            content: Text(
+              resultado['message'] ?? 'No se pudo cargar la lista.',
+            ),
+            backgroundColor: AppTheme.alertRed,
+          ),
         );
       }
     }
@@ -56,10 +64,16 @@ class _ApprovalsViewState extends State<ApprovalsView> {
         title: const Text('Aprobar solicitud'),
         content: Text('¿Aprobar la cuenta de ${user['nombre']}?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.successGreen, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.successGreen,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Aprobar'),
           ),
         ],
@@ -73,14 +87,21 @@ class _ApprovalsViewState extends State<ApprovalsView> {
     if (resultado['success'] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Cuenta aprobada. Se envió notificación a ${user['email']}'),
+          content: Text(
+            'Cuenta aprobada. Se envió notificación a ${user['email']}',
+          ),
           backgroundColor: AppTheme.successGreen,
         ),
       );
       _removeFromList(user);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(resultado['message'] ?? 'No se pudo aprobar la cuenta.'), backgroundColor: AppTheme.alertRed),
+        SnackBar(
+          content: Text(
+            resultado['message'] ?? 'No se pudo aprobar la cuenta.',
+          ),
+          backgroundColor: AppTheme.alertRed,
+        ),
       );
     }
   }
@@ -106,19 +127,29 @@ class _ApprovalsViewState extends State<ApprovalsView> {
                     controller: motivoController,
                     autofocus: true,
                     maxLines: 3,
-                    onChanged: (val) => setDialogState(() => motivoValido = val.trim().isNotEmpty),
+                    onChanged: (val) => setDialogState(
+                      () => motivoValido = val.trim().isNotEmpty,
+                    ),
                     decoration: const InputDecoration(
-                      hintText: 'Ej: Los datos enviados no coinciden con su DNI',
-                      border: OutlineInputBorder(),
+                      hintText:
+                          'Ej: Los datos enviados no coinciden con su DNI',
                     ),
                   ),
                 ],
               ),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancelar'),
+                ),
                 ElevatedButton(
-                  onPressed: motivoValido ? () => Navigator.pop(ctx, true) : null,
-                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.alertRed, foregroundColor: Colors.white),
+                  onPressed: motivoValido
+                      ? () => Navigator.pop(ctx, true)
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.alertRed,
+                    foregroundColor: Colors.white,
+                  ),
                   child: const Text('Rechazar'),
                 ),
               ],
@@ -145,7 +176,12 @@ class _ApprovalsViewState extends State<ApprovalsView> {
       _removeFromList(user);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(resultado['message'] ?? 'No se pudo rechazar la cuenta.'), backgroundColor: AppTheme.alertRed),
+        SnackBar(
+          content: Text(
+            resultado['message'] ?? 'No se pudo rechazar la cuenta.',
+          ),
+          backgroundColor: AppTheme.alertRed,
+        ),
       );
     }
   }
@@ -153,7 +189,9 @@ class _ApprovalsViewState extends State<ApprovalsView> {
   String _formatFecha(dynamic raw) {
     if (raw == null) return 'Fecha desconocida';
     try {
-      return DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(raw.toString()).toLocal());
+      return DateFormat(
+        'dd/MM/yyyy HH:mm',
+      ).format(DateTime.parse(raw.toString()).toLocal());
     } catch (_) {
       return 'Fecha desconocida';
     }
@@ -169,21 +207,24 @@ class _ApprovalsViewState extends State<ApprovalsView> {
         title: const Text('Solicitudes Policiales'),
         centerTitle: true,
         actions: [
-          IconButton(icon: const Icon(Icons.sync_rounded), onPressed: _fetchPending),
+          IconButton(
+            icon: const Icon(Icons.sync_rounded),
+            onPressed: _fetchPending,
+          ),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: _fetchPending,
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const SkeletonLoader()
             : _pendingUsers.isEmpty
-                ? _buildEmptyState(isDark)
-                : ListView.builder(
-                    padding: const EdgeInsets.all(14.0),
-                    itemCount: _pendingUsers.length,
-                    itemBuilder: (context, index) {
-                      final user = _pendingUsers[index] as Map<String, dynamic>;
-                      return SafetyCard(
+            ? _buildEmptyState(isDark)
+            : ListView.builder(
+                padding: const EdgeInsets.all(14.0),
+                itemCount: _pendingUsers.length,
+                itemBuilder: (context, index) {
+                  final user = _pendingUsers[index] as Map<String, dynamic>;
+                  return SafetyCard(
                         accentColor: AppTheme.alertAmber,
                         margin: const EdgeInsets.only(bottom: 12),
                         child: Column(
@@ -195,29 +236,52 @@ class _ApprovalsViewState extends State<ApprovalsView> {
                                 Container(
                                   padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
-                                    color: AppTheme.accentBlue.withValues(alpha: 0.12),
+                                    color: AppTheme.accentBlue.withValues(
+                                      alpha: 0.12,
+                                    ),
                                     shape: BoxShape.circle,
                                   ),
-                                  child: Icon(Icons.local_police_rounded, color: AppTheme.accentBlue, size: 22),
+                                  child: Icon(
+                                    Icons.local_police_rounded,
+                                    color: AppTheme.accentBlue,
+                                    size: 22,
+                                  ),
                                 ),
                                 const SizedBox(width: 14),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         user['nombre'] ?? 'Sin nombre',
-                                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: isDark ? AppTheme.textPrimary : Colors.black87),
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 16,
+                                          color: isDark
+                                              ? AppTheme.textPrimary
+                                              : Colors.black87,
+                                        ),
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
                                         user['email'] ?? 'Sin correo',
-                                        style: TextStyle(fontSize: 13, color: isDark ? AppTheme.textSecondary : Colors.grey[700]),
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: isDark
+                                              ? AppTheme.textSecondary
+                                              : Colors.grey[700],
+                                        ),
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
                                         'Registrado: ${_formatFecha(user['creado_en'])}',
-                                        style: TextStyle(fontSize: 12, color: isDark ? AppTheme.textMuted : Colors.grey[500]),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: isDark
+                                              ? AppTheme.textMuted
+                                              : Colors.grey[500],
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -225,16 +289,9 @@ class _ApprovalsViewState extends State<ApprovalsView> {
                               ],
                             ),
                             const SizedBox(height: 12),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: AppTheme.alertAmber.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                'PENDIENTE DE VERIFICACIÓN',
-                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.alertAmber, letterSpacing: 0.5),
-                              ),
+                            const StatusBadge(
+                              status: 'pendiente',
+                              label: 'PENDIENTE DE VERIFICACIÓN',
                             ),
                             const SizedBox(height: 16),
                             Row(
@@ -261,11 +318,19 @@ class _ApprovalsViewState extends State<ApprovalsView> {
                           ],
                         ),
                       )
-                          .animate()
-                          .fadeIn(delay: Duration(milliseconds: 50 * index), duration: 300.ms)
-                          .slideY(begin: 0.05, end: 0, duration: 300.ms, curve: Curves.easeOut);
-                    },
-                  ),
+                      .animate()
+                      .fadeIn(
+                        delay: Duration(milliseconds: 50 * index),
+                        duration: 300.ms,
+                      )
+                      .slideY(
+                        begin: 0.05,
+                        end: 0,
+                        duration: 300.ms,
+                        curve: Curves.easeOut,
+                      );
+                },
+              ),
       ),
     );
   }
@@ -277,22 +342,45 @@ class _ApprovalsViewState extends State<ApprovalsView> {
         SizedBox(
           height: MediaQuery.of(context).size.height * 0.7,
           child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(shape: BoxShape.circle, color: isDark ? AppTheme.bgSurface : Colors.grey.shade100),
-                  child: Icon(Icons.shield_outlined, size: 56, color: AppTheme.successGreen.withValues(alpha: 0.8)),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'No hay solicitudes policiales pendientes',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: isDark ? AppTheme.textSecondary : Colors.grey),
-                ),
-              ],
-            ).animate().fadeIn(duration: 500.ms).scale(begin: const Offset(0.9, 0.9), end: const Offset(1, 1), duration: 500.ms),
+            child:
+                Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isDark
+                                ? AppTheme.bgSurface
+                                : Colors.grey.shade100,
+                          ),
+                          child: Icon(
+                            Icons.shield_outlined,
+                            size: 56,
+                            color: AppTheme.successGreen.withValues(alpha: 0.8),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          'No hay solicitudes policiales pendientes',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: isDark
+                                ? AppTheme.textSecondary
+                                : Colors.grey,
+                          ),
+                        ),
+                      ],
+                    )
+                    .animate()
+                    .fadeIn(duration: 500.ms)
+                    .scale(
+                      begin: const Offset(0.9, 0.9),
+                      end: const Offset(1, 1),
+                      duration: 500.ms,
+                    ),
           ),
         ),
       ],

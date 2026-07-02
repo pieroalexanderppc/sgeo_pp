@@ -1,11 +1,16 @@
 // Reescrito: usa AdminService (GET /api/admin/usuarios, antes apuntaba a un endpoint que no
 // existia) y agrega chips de filtro, menu contextual de Suspender/Eliminar.
+// Rediseño visual v2: RoleBadge y StatusBadge reemplazan los chips de rol/estado armados a
+// mano (icono de cada fila ahora usa el mismo color que su RoleBadge, antes no coincidian).
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../../core/services/admin_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/safety_layout.dart';
 import '../../../../core/widgets/safety_card.dart';
+import '../../../../core/widgets/role_badge.dart';
+import '../../../../core/widgets/status_badge.dart';
+import '../../../../core/widgets/skeleton_loader.dart';
 
 enum _UserFilter { todos, ciudadanos, policias, suspendidos }
 
@@ -39,7 +44,12 @@ class _UsersManageViewState extends State<UsersManageView> {
       } else {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(resultado['message'] ?? 'No se pudo cargar la lista.'), backgroundColor: AppTheme.alertRed),
+          SnackBar(
+            content: Text(
+              resultado['message'] ?? 'No se pudo cargar la lista.',
+            ),
+            backgroundColor: AppTheme.alertRed,
+          ),
         );
       }
     }
@@ -48,9 +58,17 @@ class _UsersManageViewState extends State<UsersManageView> {
   List<dynamic> get _filteredUsers {
     switch (_filter) {
       case _UserFilter.ciudadanos:
-        return _allUsers.where((u) => (u['rol'] ?? '').toString().toLowerCase() == 'ciudadano').toList();
+        return _allUsers
+            .where(
+              (u) => (u['rol'] ?? '').toString().toLowerCase() == 'ciudadano',
+            )
+            .toList();
       case _UserFilter.policias:
-        return _allUsers.where((u) => (u['rol'] ?? '').toString().toLowerCase() == 'policia').toList();
+        return _allUsers
+            .where(
+              (u) => (u['rol'] ?? '').toString().toLowerCase() == 'policia',
+            )
+            .toList();
       case _UserFilter.suspendidos:
         return _allUsers.where((u) => u['activo'] == false).toList();
       case _UserFilter.todos:
@@ -63,12 +81,20 @@ class _UsersManageViewState extends State<UsersManageView> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Eliminar usuario'),
-        content: Text('¿Eliminar permanentemente la cuenta de ${user['nombre']}? Esta acción no se puede deshacer.'),
+        content: Text(
+          '¿Eliminar permanentemente la cuenta de ${user['nombre']}? Esta acción no se puede deshacer.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.alertRed, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.alertRed,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Eliminar'),
           ),
         ],
@@ -81,11 +107,19 @@ class _UsersManageViewState extends State<UsersManageView> {
     if (resultado['success'] == true) {
       setState(() => _allUsers.removeWhere((u) => u['_id'] == user['_id']));
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(resultado['message'] ?? 'Usuario eliminado.'), backgroundColor: AppTheme.successGreen),
+        SnackBar(
+          content: Text(resultado['message'] ?? 'Usuario eliminado.'),
+          backgroundColor: AppTheme.successGreen,
+        ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(resultado['message'] ?? 'No se pudo eliminar el usuario.'), backgroundColor: AppTheme.alertRed),
+        SnackBar(
+          content: Text(
+            resultado['message'] ?? 'No se pudo eliminar el usuario.',
+          ),
+          backgroundColor: AppTheme.alertRed,
+        ),
       );
     }
   }
@@ -97,13 +131,24 @@ class _UsersManageViewState extends State<UsersManageView> {
       setState(() => user['activo'] = resultado['activo']);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(resultado['activo'] == true ? 'Usuario reactivado.' : 'Usuario suspendido.'),
-          backgroundColor: resultado['activo'] == true ? AppTheme.successGreen : AppTheme.alertAmber,
+          content: Text(
+            resultado['activo'] == true
+                ? 'Usuario reactivado.'
+                : 'Usuario suspendido.',
+          ),
+          backgroundColor: resultado['activo'] == true
+              ? AppTheme.successGreen
+              : AppTheme.alertAmber,
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(resultado['message'] ?? 'No se pudo cambiar el estado.'), backgroundColor: AppTheme.alertRed),
+        SnackBar(
+          content: Text(
+            resultado['message'] ?? 'No se pudo cambiar el estado.',
+          ),
+          backgroundColor: AppTheme.alertRed,
+        ),
       );
     }
   }
@@ -116,13 +161,19 @@ class _UsersManageViewState extends State<UsersManageView> {
         label: Text(label),
         selected: isActive,
         onSelected: (_) => setState(() => _filter = value),
-        selectedColor: AppTheme.accentBlue.withValues(alpha: 0.2),
+        selectedColor: AppTheme.accentCyan.withValues(alpha: 0.2),
         labelStyle: TextStyle(
-          color: isActive ? AppTheme.accentBlue : (isDark ? Colors.white70 : Colors.black54),
+          color: isActive
+              ? AppTheme.accentCyan
+              : (isDark ? Colors.white70 : Colors.black54),
           fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
         ),
         backgroundColor: isDark ? AppTheme.bgSurface : Colors.white,
-        side: BorderSide(color: isActive ? AppTheme.accentBlue : (isDark ? AppTheme.borderTactical : Colors.grey.shade300)),
+        side: BorderSide(
+          color: isActive
+              ? AppTheme.accentCyan
+              : (isDark ? AppTheme.borderSubtle : Colors.grey.shade300),
+        ),
       ),
     );
   }
@@ -138,7 +189,10 @@ class _UsersManageViewState extends State<UsersManageView> {
         title: const Text('Gestión de Personal'),
         centerTitle: true,
         actions: [
-          IconButton(icon: const Icon(Icons.sync_rounded), onPressed: _fetchUsers),
+          IconButton(
+            icon: const Icon(Icons.sync_rounded),
+            onPressed: _fetchUsers,
+          ),
         ],
       ),
       body: Column(
@@ -150,9 +204,17 @@ class _UsersManageViewState extends State<UsersManageView> {
               child: Row(
                 children: [
                   _buildFilterChip('Todos', _UserFilter.todos, isDark),
-                  _buildFilterChip('Ciudadanos', _UserFilter.ciudadanos, isDark),
+                  _buildFilterChip(
+                    'Ciudadanos',
+                    _UserFilter.ciudadanos,
+                    isDark,
+                  ),
                   _buildFilterChip('Policías', _UserFilter.policias, isDark),
-                  _buildFilterChip('Suspendidos', _UserFilter.suspendidos, isDark),
+                  _buildFilterChip(
+                    'Suspendidos',
+                    _UserFilter.suspendidos,
+                    isDark,
+                  ),
                 ],
               ),
             ),
@@ -161,54 +223,78 @@ class _UsersManageViewState extends State<UsersManageView> {
             child: RefreshIndicator(
               onRefresh: _fetchUsers,
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const SkeletonLoader(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 14,
+                      ),
+                    )
                   : users.isEmpty
-                      ? ListView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          children: [
-                            SizedBox(
-                              height: MediaQuery.of(context).size.height * 0.6,
-                              child: Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.people_alt_outlined, size: 60, color: isDark ? AppTheme.textMuted : Colors.grey),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      'No hay usuarios en este filtro',
-                                      style: TextStyle(color: isDark ? AppTheme.textSecondary : Colors.grey[700], fontSize: 16),
-                                    ),
-                                  ],
-                                ).animate().fadeIn(duration: 400.ms),
-                              ),
-                            ),
-                          ],
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                          itemCount: users.length,
-                          itemBuilder: (ctx, i) {
-                            final u = users[i];
-                            final rol = (u['rol'] ?? 'CIUDADANO').toString().toUpperCase();
-                            final bool activo = u['activo'] != false;
-                            final bool pendiente = u['aprobacion_pendiente'] == true;
+                  ? ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.6,
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.people_alt_outlined,
+                                  size: 60,
+                                  color: isDark
+                                      ? AppTheme.textMuted
+                                      : Colors.grey,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'No hay usuarios en este filtro',
+                                  style: TextStyle(
+                                    color: isDark
+                                        ? AppTheme.textSecondary
+                                        : Colors.grey[700],
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ],
+                            ).animate().fadeIn(duration: 400.ms),
+                          ),
+                        ),
+                      ],
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 14,
+                      ),
+                      itemCount: users.length,
+                      itemBuilder: (ctx, i) {
+                        final u = users[i];
+                        final rol = (u['rol'] ?? 'CIUDADANO')
+                            .toString()
+                            .toUpperCase();
+                        final bool activo = u['activo'] != false;
+                        final bool pendiente =
+                            u['aprobacion_pendiente'] == true;
 
-                            IconData roleIcon = Icons.person_rounded;
-                            Color roleColor = AppTheme.accentBlue;
-                            if (rol == 'POLICIA') {
-                              roleIcon = Icons.local_police_rounded;
-                              roleColor = AppTheme.successGreen;
-                            } else if (rol == 'ADMIN' || rol == 'ADMINISTRADOR') {
-                              roleIcon = Icons.admin_panel_settings_rounded;
-                              roleColor = AppTheme.alertRed;
-                            }
+                        IconData roleIcon = Icons.person_rounded;
+                        if (rol == 'POLICIA') {
+                          roleIcon = Icons.local_police_rounded;
+                        } else if (rol == 'ADMIN' || rol == 'ADMINISTRADOR') {
+                          roleIcon = Icons.admin_panel_settings_rounded;
+                        }
+                        final Color roleColor = RoleBadge.colorFor(rol);
 
-                            final String estadoLabel = pendiente ? 'PENDIENTE' : (activo ? 'ACTIVO' : 'SUSPENDIDO');
-                            final Color estadoColor = pendiente ? AppTheme.alertAmber : (activo ? AppTheme.successGreen : AppTheme.alertRed);
+                        final String estadoStatus = pendiente
+                            ? 'pendiente'
+                            : (activo ? 'activo' : 'suspendido');
 
-                            return SafetyCard(
+                        return SafetyCard(
                               margin: const EdgeInsets.only(bottom: 12),
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
                               child: Row(
                                 children: [
                                   Container(
@@ -216,68 +302,99 @@ class _UsersManageViewState extends State<UsersManageView> {
                                     decoration: BoxDecoration(
                                       color: roleColor.withValues(alpha: 0.15),
                                       shape: BoxShape.circle,
-                                      border: Border.all(color: roleColor.withValues(alpha: 0.3)),
+                                      border: Border.all(
+                                        color: roleColor.withValues(alpha: 0.3),
+                                      ),
                                     ),
-                                    child: Icon(roleIcon, color: roleColor, size: 24),
+                                    child: Icon(
+                                      roleIcon,
+                                      color: roleColor,
+                                      size: 24,
+                                    ),
                                   ),
                                   const SizedBox(width: 16),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           u['nombre'] ?? 'Sin Nombre',
-                                          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: isDark ? AppTheme.textPrimary : Colors.black87),
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 16,
+                                            color: isDark
+                                                ? AppTheme.textPrimary
+                                                : Colors.black87,
+                                          ),
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
                                           u['email'] ?? 'Sin Correo',
-                                          style: TextStyle(fontSize: 13, color: isDark ? AppTheme.textSecondary : Colors.grey[700]),
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: isDark
+                                                ? AppTheme.textSecondary
+                                                : Colors.grey[700],
+                                          ),
                                         ),
                                         const SizedBox(height: 6),
                                         Wrap(
                                           spacing: 6,
+                                          runSpacing: 6,
                                           children: [
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                              decoration: BoxDecoration(color: roleColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-                                              child: Text(rol, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: roleColor, letterSpacing: 0.5)),
-                                            ),
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                              decoration: BoxDecoration(color: estadoColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-                                              child: Text(estadoLabel, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: estadoColor, letterSpacing: 0.5)),
-                                            ),
+                                            RoleBadge(role: rol),
+                                            StatusBadge(status: estadoStatus),
                                           ],
                                         ),
                                       ],
                                     ),
                                   ),
                                   PopupMenuButton<String>(
-                                    icon: Icon(Icons.more_vert_rounded, color: isDark ? AppTheme.textSecondary : Colors.grey[700]),
+                                    icon: Icon(
+                                      Icons.more_vert_rounded,
+                                      color: isDark
+                                          ? AppTheme.textSecondary
+                                          : Colors.grey[700],
+                                    ),
                                     onSelected: (value) {
-                                      if (value == 'suspender') _toggleSuspender(u);
-                                      if (value == 'eliminar') _confirmarEliminar(u);
+                                      if (value == 'suspender')
+                                        _toggleSuspender(u);
+                                      if (value == 'eliminar')
+                                        _confirmarEliminar(u);
                                     },
                                     itemBuilder: (ctx) => [
                                       PopupMenuItem(
                                         value: 'suspender',
-                                        child: Text(activo ? 'Suspender' : 'Reactivar'),
+                                        child: Text(
+                                          activo ? 'Suspender' : 'Reactivar',
+                                        ),
                                       ),
                                       const PopupMenuItem(
                                         value: 'eliminar',
-                                        child: Text('Eliminar', style: TextStyle(color: Colors.red)),
+                                        child: Text(
+                                          'Eliminar',
+                                          style: TextStyle(color: Colors.red),
+                                        ),
                                       ),
                                     ],
                                   ),
                                 ],
                               ),
                             )
-                                .animate()
-                                .fadeIn(delay: Duration(milliseconds: 50 * i), duration: 300.ms)
-                                .slideX(begin: 0.05, end: 0, duration: 300.ms, curve: Curves.easeOut);
-                          },
-                        ),
+                            .animate()
+                            .fadeIn(
+                              delay: Duration(milliseconds: 50 * i),
+                              duration: 300.ms,
+                            )
+                            .slideX(
+                              begin: 0.05,
+                              end: 0,
+                              duration: 300.ms,
+                              curve: Curves.easeOut,
+                            );
+                      },
+                    ),
             ),
           ),
         ],

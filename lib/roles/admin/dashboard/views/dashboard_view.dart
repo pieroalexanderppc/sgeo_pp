@@ -1,5 +1,6 @@
 // Se reemplazan las llamadas http directas por AdminService (ahora exige header X-User-Role),
 // y se agrega la fila de KPIs de usuarios (ciudadanos/policias activos/pendientes).
+// Rediseño visual v2: tabs en accent accentCyan (antes accentBlue, para alinear con el nav del rol).
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../../core/services/admin_service.dart';
@@ -15,16 +16,17 @@ class DashboardView extends StatefulWidget {
   State<DashboardView> createState() => _DashboardViewState();
 }
 
-class _DashboardViewState extends State<DashboardView> with SingleTickerProviderStateMixin {
+class _DashboardViewState extends State<DashboardView>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  
+
   // Tab 1: Live Reports
   bool _isLoadingLive = true;
   String _selectedFiltroTiempo = 'Todos';
   Map<String, dynamic> _liveStats = {
     'total': 0,
     'por_tipo': {},
-    'por_estado': {}
+    'por_estado': {},
   };
 
   // Tab 2: Big Data SIDPOL
@@ -55,7 +57,9 @@ class _DashboardViewState extends State<DashboardView> with SingleTickerProvider
 
   Future<void> _fetchLiveStats() async {
     setState(() => _isLoadingLive = true);
-    final resultado = await AdminService.getDashboardStats(filtroTiempo: _selectedFiltroTiempo);
+    final resultado = await AdminService.getDashboardStats(
+      filtroTiempo: _selectedFiltroTiempo,
+    );
     if (mounted) {
       if (resultado['success'] == true) {
         setState(() => _liveStats = resultado['stats']);
@@ -71,13 +75,16 @@ class _DashboardViewState extends State<DashboardView> with SingleTickerProvider
     final statsResultado = await AdminService.getSidpolStats();
     final predResultado = await AdminService.getSidpolPredict();
     if (mounted) {
-      if (statsResultado['success'] == true && predResultado['success'] == true) {
+      if (statsResultado['success'] == true &&
+          predResultado['success'] == true) {
         setState(() {
           _sidpolStats = statsResultado['stats'];
           _sidpolPred = predResultado['data'];
         });
       } else {
-        debugPrint('Error big data: ${statsResultado['message'] ?? predResultado['message']}');
+        debugPrint(
+          'Error big data: ${statsResultado['message'] ?? predResultado['message']}',
+        );
       }
       setState(() => _isLoadingBigData = false);
     }
@@ -90,9 +97,21 @@ class _DashboardViewState extends State<DashboardView> with SingleTickerProvider
       if (resultado['success'] == true) {
         final usuarios = resultado['usuarios'] as List;
         setState(() {
-          _totalCiudadanos = usuarios.where((u) => (u['rol'] ?? '').toString().toLowerCase() == 'ciudadano').length;
-          _totalPoliciasActivos = usuarios.where((u) => (u['rol'] ?? '').toString().toLowerCase() == 'policia' && u['activo'] != false).length;
-          _totalPendientes = usuarios.where((u) => u['aprobacion_pendiente'] == true).length;
+          _totalCiudadanos = usuarios
+              .where(
+                (u) => (u['rol'] ?? '').toString().toLowerCase() == 'ciudadano',
+              )
+              .length;
+          _totalPoliciasActivos = usuarios
+              .where(
+                (u) =>
+                    (u['rol'] ?? '').toString().toLowerCase() == 'policia' &&
+                    u['activo'] != false,
+              )
+              .length;
+          _totalPendientes = usuarios
+              .where((u) => u['aprobacion_pendiente'] == true)
+              .length;
         });
       } else {
         debugPrint('Error KPIs de usuarios: ${resultado['message']}');
@@ -104,7 +123,7 @@ class _DashboardViewState extends State<DashboardView> with SingleTickerProvider
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return SafetyLayout(
       showGradientBackground: true,
       appBar: AppBar(
@@ -112,9 +131,9 @@ class _DashboardViewState extends State<DashboardView> with SingleTickerProvider
         centerTitle: true,
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: AppTheme.accentBlue,
-          labelColor: isDark ? AppTheme.accentBlueLight : AppTheme.accentBlue,
-          unselectedLabelColor: isDark ? Colors.grey[500] : Colors.grey[700],
+          indicatorColor: AppTheme.accentCyan,
+          labelColor: AppTheme.accentCyan,
+          unselectedLabelColor: isDark ? AppTheme.textMuted : Colors.grey[700],
           tabs: const [
             Tab(icon: Icon(Icons.speed_rounded), text: 'App en Vivo'),
             Tab(icon: Icon(Icons.analytics_rounded), text: 'Big Data (SIDPOL)'),
@@ -127,10 +146,7 @@ class _DashboardViewState extends State<DashboardView> with SingleTickerProvider
           Expanded(
             child: TabBarView(
               controller: _tabController,
-              children: [
-                _buildLiveTab(isDark),
-                _buildBigDataTab(isDark),
-              ],
+              children: [_buildLiveTab(isDark), _buildBigDataTab(isDark)],
             ),
           ),
         ],
@@ -142,7 +158,13 @@ class _DashboardViewState extends State<DashboardView> with SingleTickerProvider
     if (_isLoadingUserKPIs) {
       return const Padding(
         padding: EdgeInsets.all(20),
-        child: Center(child: SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 2))),
+        child: Center(
+          child: SizedBox(
+            height: 24,
+            width: 24,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
       );
     }
     return Padding(
@@ -188,7 +210,7 @@ class _DashboardViewState extends State<DashboardView> with SingleTickerProvider
 
   Widget _buildLiveTab(bool isDark) {
     if (_isLoadingLive) return const Center(child: CircularProgressIndicator());
-    
+
     return RefreshIndicator(
       onRefresh: _fetchLiveStats,
       child: SingleChildScrollView(
@@ -212,17 +234,35 @@ class _DashboardViewState extends State<DashboardView> with SingleTickerProvider
                   decoration: BoxDecoration(
                     color: isDark ? AppTheme.bgElevated : Colors.white,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: isDark ? AppTheme.borderTactical : Colors.grey.shade300),
+                    border: Border.all(
+                      color: isDark
+                          ? AppTheme.borderTactical
+                          : Colors.grey.shade300,
+                    ),
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       value: _selectedFiltroTiempo,
-                      dropdownColor: isDark ? AppTheme.bgElevated : Colors.white,
+                      dropdownColor: isDark
+                          ? AppTheme.bgElevated
+                          : Colors.white,
                       items: const [
-                        DropdownMenuItem(value: 'Todos', child: Text('Histórico Total')),
-                        DropdownMenuItem(value: 'Mes Actual', child: Text('Mes Actual')),
-                        DropdownMenuItem(value: 'Ultimos 3 Meses', child: Text('Últimos 3 Meses')),
-                        DropdownMenuItem(value: 'Ultimos 6 Meses', child: Text('Últimos 6 Meses')),
+                        DropdownMenuItem(
+                          value: 'Todos',
+                          child: Text('Histórico Total'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Mes Actual',
+                          child: Text('Mes Actual'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Ultimos 3 Meses',
+                          child: Text('Últimos 3 Meses'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Ultimos 6 Meses',
+                          child: Text('Últimos 6 Meses'),
+                        ),
                       ],
                       onChanged: (val) {
                         if (val != null) {
@@ -238,17 +278,52 @@ class _DashboardViewState extends State<DashboardView> with SingleTickerProvider
             const SizedBox(height: 24),
             Row(
               children: [
-                Expanded(child: _buildKPICard(title: 'Total Reportes', value: _liveStats['total'].toString(), icon: Icons.assignment_late_rounded, color: AppTheme.accentBlue, isDark: isDark)),
+                Expanded(
+                  child: _buildKPICard(
+                    title: 'Total Reportes',
+                    value: _liveStats['total'].toString(),
+                    icon: Icons.assignment_late_rounded,
+                    color: AppTheme.accentBlue,
+                    isDark: isDark,
+                  ),
+                ),
                 const SizedBox(width: 16),
-                Expanded(child: _buildKPICard(title: 'Pendientes', value: (_liveStats['por_estado']['pendiente'] ?? 0).toString(), icon: Icons.hourglass_empty_rounded, color: AppTheme.alertAmber, isDark: isDark)),
+                Expanded(
+                  child: _buildKPICard(
+                    title: 'Pendientes',
+                    value: (_liveStats['por_estado']['pendiente'] ?? 0)
+                        .toString(),
+                    icon: Icons.hourglass_empty_rounded,
+                    color: AppTheme.alertAmber,
+                    isDark: isDark,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 16),
             Row(
               children: [
-                Expanded(child: _buildKPICard(title: 'Confirmados', value: (_liveStats['por_estado']['confirmado'] ?? 0).toString(), icon: Icons.check_circle_rounded, color: AppTheme.successGreen, isDark: isDark)),
+                Expanded(
+                  child: _buildKPICard(
+                    title: 'Confirmados',
+                    value: (_liveStats['por_estado']['confirmado'] ?? 0)
+                        .toString(),
+                    icon: Icons.check_circle_rounded,
+                    color: AppTheme.successGreen,
+                    isDark: isDark,
+                  ),
+                ),
                 const SizedBox(width: 16),
-                Expanded(child: _buildKPICard(title: 'Rechazados', value: (_liveStats['por_estado']['rechazado'] ?? 0).toString(), icon: Icons.cancel_rounded, color: AppTheme.alertRed, isDark: isDark)),
+                Expanded(
+                  child: _buildKPICard(
+                    title: 'Rechazados',
+                    value: (_liveStats['por_estado']['rechazado'] ?? 0)
+                        .toString(),
+                    icon: Icons.cancel_rounded,
+                    color: AppTheme.alertRed,
+                    isDark: isDark,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 32),
@@ -257,13 +332,33 @@ class _DashboardViewState extends State<DashboardView> with SingleTickerProvider
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('DISTRIBUCIÓN POR TIPO DE DELITO', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: isDark ? AppTheme.accentBlueLight : AppTheme.accentBlue)),
+                  Text(
+                    'DISTRIBUCIÓN POR TIPO DE DELITO',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.2,
+                      color: isDark
+                          ? AppTheme.accentBlueLight
+                          : AppTheme.accentBlue,
+                    ),
+                  ),
                   const SizedBox(height: 24),
                   SizedBox(
                     height: 220,
-                    child: _liveStats['por_tipo'].isEmpty 
+                    child: _liveStats['por_tipo'].isEmpty
                         ? const Center(child: Text('No hay datos suficientes'))
-                        : PieChart(PieChartData(sectionsSpace: 2, centerSpaceRadius: 40, sections: _buildPieSections(isDark, _liveStats['por_tipo'], _liveStats['total']))),
+                        : PieChart(
+                            PieChartData(
+                              sectionsSpace: 2,
+                              centerSpaceRadius: 40,
+                              sections: _buildPieSections(
+                                isDark,
+                                _liveStats['por_tipo'],
+                                _liveStats['total'],
+                              ),
+                            ),
+                          ),
                   ),
                   const SizedBox(height: 24),
                   ...(_liveStats['por_tipo'] as Map).entries.map((e) {
@@ -271,10 +366,25 @@ class _DashboardViewState extends State<DashboardView> with SingleTickerProvider
                       padding: const EdgeInsets.only(bottom: 8.0),
                       child: Row(
                         children: [
-                          Container(width: 12, height: 12, decoration: BoxDecoration(color: _getColorForType(e.key.toString()), shape: BoxShape.circle)),
+                          Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: _getColorForType(e.key.toString()),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
                           const SizedBox(width: 8),
-                          Expanded(child: Text(e.key.toString(), style: const TextStyle(fontSize: 13))),
-                          Text(e.value.toString(), style: const TextStyle(fontWeight: FontWeight.bold)),
+                          Expanded(
+                            child: Text(
+                              e.key.toString(),
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ),
+                          Text(
+                            e.value.toString(),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
                         ],
                       ),
                     );
@@ -289,25 +399,33 @@ class _DashboardViewState extends State<DashboardView> with SingleTickerProvider
   }
 
   Widget _buildBigDataTab(bool isDark) {
-    if (_isLoadingBigData) return const Center(child: CircularProgressIndicator());
+    if (_isLoadingBigData)
+      return const Center(child: CircularProgressIndicator());
     if (_sidpolStats.isEmpty || _sidpolPred.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.table_chart_rounded, size: 60, color: Colors.grey.withValues(alpha: 0.5)),
+            Icon(
+              Icons.table_chart_rounded,
+              size: 60,
+              color: Colors.grey.withValues(alpha: 0.5),
+            ),
             const SizedBox(height: 16),
             const Text('Sin datos históricos en SIDPOL'),
-            TextButton(onPressed: _fetchBigDataStats, child: const Text('Actualizar'))
+            TextButton(
+              onPressed: _fetchBigDataStats,
+              child: const Text('Actualizar'),
+            ),
           ],
-        )
+        ),
       );
     }
 
     final distritoRiesgo = _sidpolPred['distrito_riesgo'];
     final valorRiesgo = _sidpolPred['valor_riesgo'];
     final List predsGlobales = _sidpolPred['predicciones_globales'] ?? [];
-    
+
     return RefreshIndicator(
       onRefresh: _fetchBigDataStats,
       child: SingleChildScrollView(
@@ -323,68 +441,154 @@ class _DashboardViewState extends State<DashboardView> with SingleTickerProvider
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.auto_awesome_rounded, color: Colors.purpleAccent, size: 24),
+                      Icon(
+                        Icons.auto_awesome_rounded,
+                        color: Colors.purpleAccent,
+                        size: 24,
+                      ),
                       const SizedBox(width: 8),
-                      Text('PREDICCIÓN IA (PRÓXIMOS MESES)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, letterSpacing: 1.2, color: Colors.purpleAccent)),
+                      Text(
+                        'PREDICCIÓN IA (PRÓXIMOS MESES)',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.2,
+                          color: Colors.purpleAccent,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 20),
-                  Text('Distrito con mayor riesgo proyectado:', style: TextStyle(color: isDark ? AppTheme.textSecondary : Colors.grey[700])),
+                  Text(
+                    'Distrito con mayor riesgo proyectado:',
+                    style: TextStyle(
+                      color: isDark ? AppTheme.textSecondary : Colors.grey[700],
+                    ),
+                  ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
                       Expanded(
                         child: Text(
-                          distritoRiesgo.toString().toUpperCase(), 
-                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.alertRed),
+                          distritoRiesgo.toString().toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.alertRed,
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(color: AppTheme.alertRed.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
-                        child: Text('+$valorRiesgo casos/mes', style: const TextStyle(color: AppTheme.alertRed, fontWeight: FontWeight.bold, fontSize: 13)),
-                      )
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.alertRed.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '+$valorRiesgo casos/mes',
+                          style: const TextStyle(
+                            color: AppTheme.alertRed,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                   const Divider(height: 32),
                   if (predsGlobales.isNotEmpty) ...[
-                    Text('Tendencia General Estimada:', style: TextStyle(fontSize: 13, color: isDark ? AppTheme.textSecondary : Colors.grey[700])),
+                    Text(
+                      'Tendencia General Estimada:',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark
+                            ? AppTheme.textSecondary
+                            : Colors.grey[700],
+                      ),
+                    ),
                     const SizedBox(height: 12),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: predsGlobales.map((p) => Column(
-                        children: [
-                          Text('${p["mes"]}/${p["anio"]}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                          const SizedBox(height: 4),
-                          Text('${p["prediccion"]} casos', style: TextStyle(color: isDark ? AppTheme.textMuted : Colors.grey, fontSize: 12)),
-                        ],
-                      )).toList(),
-                    )
-                  ]
+                      children: predsGlobales
+                          .map(
+                            (p) => Column(
+                              children: [
+                                Text(
+                                  '${p["mes"]}/${p["anio"]}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${p["prediccion"]} casos',
+                                  style: TextStyle(
+                                    color: isDark
+                                        ? AppTheme.textMuted
+                                        : Colors.grey,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ],
                 ],
               ),
             ),
             const SizedBox(height: 24),
-            
+
             // TOP DISTRICTS (BAR CHART MOCKUP OR LIST)
             SafetyCard(
               padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('TOP DISTRITOS CON MÁS INCIDENCIAS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: isDark ? AppTheme.accentBlueLight : AppTheme.accentBlue)),
+                  Text(
+                    'TOP DISTRITOS CON MÁS INCIDENCIAS',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.2,
+                      color: isDark
+                          ? AppTheme.accentBlueLight
+                          : AppTheme.accentBlue,
+                    ),
+                  ),
                   const SizedBox(height: 16),
-                  ...(_sidpolStats['por_distrito'] as Map).entries.take(5).map((e) {
+                  ...(_sidpolStats['por_distrito'] as Map).entries.take(5).map((
+                    e,
+                  ) {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12.0),
                       child: Row(
                         children: [
-                          Icon(Icons.location_city_rounded, size: 18, color: Colors.grey[500]),
+                          Icon(
+                            Icons.location_city_rounded,
+                            size: 18,
+                            color: Colors.grey[500],
+                          ),
                           const SizedBox(width: 8),
-                          Expanded(child: Text(e.key.toString().toUpperCase(), style: const TextStyle(fontWeight: FontWeight.w600))),
-                          Text(e.value.toString(), style: const TextStyle(fontWeight: FontWeight.bold)),
+                          Expanded(
+                            child: Text(
+                              e.key.toString().toUpperCase(),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            e.value.toString(),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
                         ],
                       ),
                     );
@@ -392,7 +596,7 @@ class _DashboardViewState extends State<DashboardView> with SingleTickerProvider
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 24),
             // TOP TIPOS DE DELITO SIDPOL
             SafetyCard(
@@ -400,13 +604,32 @@ class _DashboardViewState extends State<DashboardView> with SingleTickerProvider
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('DISTRIBUCIÓN DE DELITOS HISTÓRICA', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: isDark ? AppTheme.accentBlueLight : AppTheme.accentBlue)),
+                  Text(
+                    'DISTRIBUCIÓN DE DELITOS HISTÓRICA',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.2,
+                      color: isDark
+                          ? AppTheme.accentBlueLight
+                          : AppTheme.accentBlue,
+                    ),
+                  ),
                   const SizedBox(height: 24),
                   SizedBox(
                     height: 200,
-                    child: _sidpolStats['por_tipo'].isEmpty 
+                    child: _sidpolStats['por_tipo'].isEmpty
                         ? const Center(child: Text('Sin datos'))
-                        : PieChart(PieChartData(sectionsSpace: 2, centerSpaceRadius: 40, sections: _buildPieSectionsSidpol(isDark, _sidpolStats['por_tipo']))),
+                        : PieChart(
+                            PieChartData(
+                              sectionsSpace: 2,
+                              centerSpaceRadius: 40,
+                              sections: _buildPieSectionsSidpol(
+                                isDark,
+                                _sidpolStats['por_tipo'],
+                              ),
+                            ),
+                          ),
                   ),
                   const SizedBox(height: 24),
                   ...(_sidpolStats['por_tipo'] as Map).entries.take(5).map((e) {
@@ -414,17 +637,32 @@ class _DashboardViewState extends State<DashboardView> with SingleTickerProvider
                       padding: const EdgeInsets.only(bottom: 8.0),
                       child: Row(
                         children: [
-                          Container(width: 12, height: 12, decoration: BoxDecoration(color: _getColorForType(e.key.toString()), shape: BoxShape.circle)),
+                          Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: _getColorForType(e.key.toString()),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
                           const SizedBox(width: 8),
-                          Expanded(child: Text(e.key.toString(), style: const TextStyle(fontSize: 13))),
-                          Text(e.value.toString(), style: const TextStyle(fontWeight: FontWeight.bold)),
+                          Expanded(
+                            child: Text(
+                              e.key.toString(),
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ),
+                          Text(
+                            e.value.toString(),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
                         ],
                       ),
                     );
                   }),
                 ],
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -445,13 +683,30 @@ class _DashboardViewState extends State<DashboardView> with SingleTickerProvider
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.15), shape: BoxShape.circle),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
             child: Icon(icon, color: color, size: 20),
           ),
           const SizedBox(height: 16),
-          Text(value, style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: isDark ? AppTheme.textPrimary : Colors.black87)),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: isDark ? AppTheme.textPrimary : Colors.black87,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(title, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isDark ? AppTheme.textSecondary : Colors.grey[600])),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: isDark ? AppTheme.textSecondary : Colors.grey[600],
+            ),
+          ),
         ],
       ),
     );
@@ -459,32 +714,64 @@ class _DashboardViewState extends State<DashboardView> with SingleTickerProvider
 
   Color _getColorForType(String type) {
     switch (type.toUpperCase()) {
-      case 'ROBO': return AppTheme.alertRed;
-      case 'HURTO': return AppTheme.alertAmber;
-      case 'EXTORSION': return Colors.purpleAccent;
-      case 'HOMICIDIO': return Colors.red[900]!;
-      case 'SECUESTRO': return Colors.deepOrange;
-      default: return AppTheme.accentBlue;
+      case 'ROBO':
+        return AppTheme.alertRed;
+      case 'HURTO':
+        return AppTheme.alertAmber;
+      case 'EXTORSION':
+        return Colors.purpleAccent;
+      case 'HOMICIDIO':
+        return Colors.red[900]!;
+      case 'SECUESTRO':
+        return Colors.deepOrange;
+      default:
+        return AppTheme.accentBlue;
     }
   }
 
-  List<PieChartSectionData> _buildPieSections(bool isDark, Map tipos, dynamic total) {
+  List<PieChartSectionData> _buildPieSections(
+    bool isDark,
+    Map tipos,
+    dynamic total,
+  ) {
     if (tipos.isEmpty || total == 0) return [];
     return tipos.entries.map((entry) {
       final value = (entry.value as num).toDouble();
-      return PieChartSectionData(color: _getColorForType(entry.key), value: value, title: '${((value / total) * 100).toStringAsFixed(1)}%', radius: 50, titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white));
+      return PieChartSectionData(
+        color: _getColorForType(entry.key),
+        value: value,
+        title: '${((value / total) * 100).toStringAsFixed(1)}%',
+        radius: 50,
+        titleStyle: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
+      );
     }).toList();
   }
 
   List<PieChartSectionData> _buildPieSectionsSidpol(bool isDark, Map tipos) {
     if (tipos.isEmpty) return [];
     double total = 0;
-    for (var v in tipos.values) { total += (v as num).toDouble(); }
+    for (var v in tipos.values) {
+      total += (v as num).toDouble();
+    }
     if (total == 0) return [];
-    
+
     return tipos.entries.map((entry) {
       final value = (entry.value as num).toDouble();
-      return PieChartSectionData(color: _getColorForType(entry.key), value: value, title: '${((value / total) * 100).toStringAsFixed(1)}%', radius: 50, titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white));
+      return PieChartSectionData(
+        color: _getColorForType(entry.key),
+        value: value,
+        title: '${((value / total) * 100).toStringAsFixed(1)}%',
+        radius: 50,
+        titleStyle: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
+      );
     }).toList();
   }
 }

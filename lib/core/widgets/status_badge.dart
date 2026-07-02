@@ -27,8 +27,10 @@ class StatusBadge extends StatelessWidget {
         return AppTheme.alertRed;
       case 'aprobado':
         return AppTheme.accentCyan;
+      case 'activo':
+        return AppTheme.successGreen;
       case 'suspendido':
-        return AppTheme.textMuted;
+        return AppTheme.alertRed;
       case 'agrupado':
         return AppTheme.accentBlue;
       default:

@@ -2,6 +2,7 @@
 // Rediseño visual v2: usa StatusBadge, agrega boton directo de eliminar en la card (antes
 // solo estaba dentro del detalle), boton "Ir al mapa" en el estado vacio (onNavigateToMap
 // ahora acepta LatLng? para poder navegar al mapa sin centrar en ningun reporte especifico).
+// Rediseño visual v2 (BLOQUE 7): SkeletonLoader (shimmer) reemplaza el spinner de carga.
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
@@ -14,12 +15,17 @@ import '../../../../core/widgets/safety_layout.dart';
 import '../../../../core/widgets/safety_card.dart';
 import '../../../../core/widgets/safety_button.dart';
 import '../../../../core/widgets/status_badge.dart';
+import '../../../../core/widgets/skeleton_loader.dart';
 
 class MyReportsView extends StatefulWidget {
   final String userId;
   final Function(LatLng?) onNavigateToMap;
 
-  const MyReportsView({super.key, required this.userId, required this.onNavigateToMap});
+  const MyReportsView({
+    super.key,
+    required this.userId,
+    required this.onNavigateToMap,
+  });
 
   @override
   State<MyReportsView> createState() => _MyReportsViewState();
@@ -37,9 +43,9 @@ class _MyReportsViewState extends State<MyReportsView> {
 
   Future<void> _fetchMyReports() async {
     setState(() => _isLoading = true);
-    
+
     final reports = await ReportService.getMyReports(widget.userId);
-    
+
     if (mounted) {
       setState(() {
         _reports = reports;
@@ -50,7 +56,7 @@ class _MyReportsViewState extends State<MyReportsView> {
 
   Future<void> _deleteReport(ReportModel report) async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -61,15 +67,28 @@ class _MyReportsViewState extends State<MyReportsView> {
             const Expanded(child: Text('Eliminar reporte')),
           ],
         ),
-        content: const Text('¿Estás seguro de que deseas eliminar permanentemente este reporte? Esta acción no se puede deshacer.'),
+        content: const Text(
+          '¿Estás seguro de que deseas eliminar permanentemente este reporte? Esta acción no se puede deshacer.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancelar', style: TextStyle(color: isDark ? AppTheme.textSecondary : Colors.grey)),
+            child: Text(
+              'Cancelar',
+              style: TextStyle(
+                color: isDark ? AppTheme.textSecondary : Colors.grey,
+              ),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Eliminar', style: TextStyle(color: AppTheme.alertRed, fontWeight: FontWeight.w600)),
+            child: Text(
+              'Eliminar',
+              style: TextStyle(
+                color: AppTheme.alertRed,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
@@ -79,7 +98,9 @@ class _MyReportsViewState extends State<MyReportsView> {
 
     if (mounted) {
       // Show loading indicator
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Eliminando reporte...')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Eliminando reporte...')));
     }
 
     final resultado = await ReportService.deleteReport(report.id);
@@ -88,7 +109,9 @@ class _MyReportsViewState extends State<MyReportsView> {
       if (resultado['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(resultado['message'] ?? 'Reporte eliminado con éxito.'),
+            content: Text(
+              resultado['message'] ?? 'Reporte eliminado con éxito.',
+            ),
             backgroundColor: AppTheme.successGreen,
           ),
         );
@@ -96,7 +119,9 @@ class _MyReportsViewState extends State<MyReportsView> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(resultado['message'] ?? 'Hubo un error al eliminar el reporte.'),
+            content: Text(
+              resultado['message'] ?? 'Hubo un error al eliminar el reporte.',
+            ),
             backgroundColor: AppTheme.alertRed,
           ),
         );
@@ -107,7 +132,7 @@ class _MyReportsViewState extends State<MyReportsView> {
   void _showMapPreview(ReportModel report) {
     if (report.latitud == null || report.longitud == null) return;
     final latLng = LatLng(report.latitud!, report.longitud!);
-    
+
     // Navegamos usando la función que viene desde HomeView hacia el mapa original
     widget.onNavigateToMap(latLng);
   }
@@ -143,7 +168,12 @@ class _MyReportsViewState extends State<MyReportsView> {
     }
   }
 
-  void _showReportDetails(BuildContext context, ReportModel report, String formattedDate, String direccionStr) {
+  void _showReportDetails(
+    BuildContext context,
+    ReportModel report,
+    String formattedDate,
+    String direccionStr,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isPending = report.estado.toLowerCase() == 'pendiente';
 
@@ -156,7 +186,7 @@ class _MyReportsViewState extends State<MyReportsView> {
           decoration: BoxDecoration(
             color: isDark ? AppTheme.bgSurface : Colors.white,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            border: Border.all(color: AppTheme.borderTactical, width: 0.5),
+            border: Border.all(color: AppTheme.borderSubtle, width: 1),
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -199,15 +229,20 @@ class _MyReportsViewState extends State<MyReportsView> {
                 // Details
                 _buildDetailRow(Icons.calendar_today, formattedDate, isDark),
                 const SizedBox(height: 12),
-                _buildDetailRow(Icons.location_on_outlined, direccionStr, isDark),
+                _buildDetailRow(
+                  Icons.location_on_outlined,
+                  direccionStr,
+                  isDark,
+                ),
                 const SizedBox(height: 12),
                 _buildDetailRow(
                   Icons.comment_outlined,
-                  report.descripcion != null && report.descripcion!.isNotEmpty 
-                      ? report.descripcion! 
+                  report.descripcion != null && report.descripcion!.isNotEmpty
+                      ? report.descripcion!
                       : "Sin descripción",
                   isDark,
-                  isItalic: report.descripcion == null || report.descripcion!.isEmpty,
+                  isItalic:
+                      report.descripcion == null || report.descripcion!.isEmpty,
                 ),
                 const SizedBox(height: 24),
 
@@ -220,7 +255,7 @@ class _MyReportsViewState extends State<MyReportsView> {
                     _showMapPreview(report);
                   },
                 ),
-                
+
                 if (isPending) ...[
                   const SizedBox(height: 12),
                   SafetyButton.outline(
@@ -243,7 +278,12 @@ class _MyReportsViewState extends State<MyReportsView> {
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String text, bool isDark, {bool isItalic = false}) {
+  Widget _buildDetailRow(
+    IconData icon,
+    String text,
+    bool isDark, {
+    bool isItalic = false,
+  }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -275,181 +315,229 @@ class _MyReportsViewState extends State<MyReportsView> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _fetchMyReports,
-          )
+          ),
         ],
       ),
       body: RefreshIndicator(
         color: AppTheme.accentCyan,
         onRefresh: _fetchMyReports,
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const SkeletonLoader()
             : _reports.isEmpty
-                ? ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    children: [
-                      SizedBox(
-                        height: MediaQuery.of(context).size.height * 0.7,
-                        child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(24),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: isDark ? AppTheme.bgSurface : Colors.grey.shade100,
-                                ),
-                                child: Icon(
-                                  Icons.description_outlined,
-                                  size: 48,
-                                  color: isDark ? AppTheme.textMuted : Colors.grey.shade400,
-                                ),
+            ? ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: [
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.7,
+                    child: Center(
+                      child:
+                          Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(24),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: isDark
+                                          ? AppTheme.bgSurface
+                                          : Colors.grey.shade100,
+                                    ),
+                                    child: Icon(
+                                      Icons.description_outlined,
+                                      size: 48,
+                                      color: isDark
+                                          ? AppTheme.textMuted
+                                          : Colors.grey.shade400,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  Text(
+                                    'No has realizado ningún reporte',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: isDark
+                                          ? AppTheme.textSecondary
+                                          : Colors.grey,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Tus reportes de seguridad aparecerán aquí',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: isDark
+                                          ? AppTheme.textMuted
+                                          : Colors.grey.shade500,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  SafetyButton.ghost(
+                                    label: 'Ir al mapa',
+                                    icon: Icons.map_outlined,
+                                    expand: false,
+                                    onPressed: () =>
+                                        widget.onNavigateToMap(null),
+                                  ),
+                                ],
+                              )
+                              .animate()
+                              .fadeIn(duration: 500.ms)
+                              .scale(
+                                begin: const Offset(0.9, 0.9),
+                                end: const Offset(1, 1),
+                                duration: 500.ms,
                               ),
-                              const SizedBox(height: 20),
-                              Text(
-                                'No has realizado ningún reporte',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: isDark ? AppTheme.textSecondary : Colors.grey,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                'Tus reportes de seguridad aparecerán aquí',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              SafetyButton.ghost(
-                                label: 'Ir al mapa',
-                                icon: Icons.map_outlined,
-                                expand: false,
-                                onPressed: () => widget.onNavigateToMap(null),
-                              ),
-                            ],
-                          )
-                          .animate()
-                          .fadeIn(duration: 500.ms)
-                          .scale(begin: const Offset(0.9, 0.9), end: const Offset(1, 1), duration: 500.ms),
+                    ),
+                  ),
+                ],
+              )
+            : ListView.builder(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(14.0),
+                itemCount: _reports.length,
+                itemBuilder: (context, index) {
+                  final report = _reports[index];
+                  final statusColor = _getStatusColor(report.estado);
+                  final statusIcon = _getStatusIcon(report.estado);
+
+                  DateTime? date;
+                  if (report.creadoEn != null) {
+                    try {
+                      date = DateTime.parse(report.creadoEn!).toLocal();
+                    } catch (e) {
+                      debugPrint('Error parseando fecha: $e');
+                    }
+                  }
+                  final formattedDate = date != null
+                      ? DateFormat('dd/MM/yyyy HH:mm').format(date)
+                      : 'Fecha desconocida';
+
+                  String direccionStr = report.direccion ?? '';
+                  if (direccionStr.trim().isEmpty) {
+                    if (report.latitud != null && report.longitud != null) {
+                      final lat = report.latitud!.toStringAsFixed(5);
+                      final lng = report.longitud!.toStringAsFixed(5);
+                      direccionStr = 'GPS: Lat $lat, Lng $lng';
+                    } else {
+                      direccionStr = 'Ubicación por mapa';
+                    }
+                  }
+
+                  return SafetyCard(
+                        accentColor: statusColor,
+                        margin: const EdgeInsets.only(bottom: 10),
+                        onTap: () => _showReportDetails(
+                          context,
+                          report,
+                          formattedDate,
+                          direccionStr,
                         ),
-                      )
-                    ],
-                  )
-                : ListView.builder(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(14.0),
-                  itemCount: _reports.length,
-                  itemBuilder: (context, index) {
-                    final report = _reports[index];
-                    final statusColor = _getStatusColor(report.estado);
-                    final statusIcon = _getStatusIcon(report.estado);
-                    
-                    DateTime? date;
-                    if (report.creadoEn != null) {
-                      try {
-                        date = DateTime.parse(report.creadoEn!).toLocal();
-                      } catch (e) {
-                        debugPrint('Error parseando fecha: $e');
-                      }
-                    }
-                    final formattedDate = date != null ? DateFormat('dd/MM/yyyy HH:mm').format(date) : 'Fecha desconocida';
-
-                    String direccionStr = report.direccion ?? '';
-                    if (direccionStr.trim().isEmpty) {
-                      if (report.latitud != null && report.longitud != null) {
-                        final lat = report.latitud!.toStringAsFixed(5);
-                        final lng = report.longitud!.toStringAsFixed(5);
-                        direccionStr = 'GPS: Lat $lat, Lng $lng';
-                      } else {
-                        direccionStr = 'Ubicación por mapa';
-                      }
-                    }
-
-                    return SafetyCard(
-                      accentColor: statusColor,
-                      margin: const EdgeInsets.only(bottom: 10),
-                      onTap: () => _showReportDetails(context, report, formattedDate, direccionStr),
-                      child: Row(
-                        children: [
-                          // ── Ícono de estado ──
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: statusColor.withValues(alpha: 0.12),
-                              shape: BoxShape.circle,
+                        child: Row(
+                          children: [
+                            // ── Ícono de estado ──
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: statusColor.withValues(alpha: 0.12),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                statusIcon,
+                                color: statusColor,
+                                size: 22,
+                              ),
                             ),
-                            child: Icon(statusIcon, color: statusColor, size: 22),
-                          ),
-                          const SizedBox(width: 14),
+                            const SizedBox(width: 14),
 
-                          // ── Contenido ──
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            // ── Contenido ──
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    report.subTipo,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 15,
+                                      color: isDark
+                                          ? AppTheme.textPrimary
+                                          : null,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    direccionStr,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: isDark
+                                          ? AppTheme.textSecondary
+                                          : Colors.grey[600],
+                                      height: 1.3,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    formattedDate,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: isDark
+                                          ? AppTheme.textMuted
+                                          : Colors.grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            // ── Estado badge + acción rápida (eliminar si esta pendiente) ──
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                Text(
-                                  report.subTipo,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 15,
-                                    color: isDark ? AppTheme.textPrimary : null,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  direccionStr,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: isDark ? AppTheme.textSecondary : Colors.grey[600],
-                                    height: 1.3,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  formattedDate,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: isDark ? AppTheme.textMuted : Colors.grey,
-                                  ),
-                                ),
+                                StatusBadge(status: report.estado),
+                                const SizedBox(height: 6),
+                                report.estado.toLowerCase() == 'pendiente'
+                                    ? IconButton(
+                                        icon: Icon(
+                                          Icons.delete_outline,
+                                          color: AppTheme.alertRed,
+                                          size: 20,
+                                        ),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(
+                                          minWidth: 28,
+                                          minHeight: 28,
+                                        ),
+                                        tooltip: 'Eliminar reporte',
+                                        onPressed: () => _deleteReport(report),
+                                      )
+                                    : Icon(
+                                        Icons.chevron_right,
+                                        size: 18,
+                                        color: isDark
+                                            ? AppTheme.textMuted
+                                            : Colors.grey,
+                                      ),
                               ],
                             ),
-                          ),
-
-                          // ── Estado badge + acción rápida (eliminar si esta pendiente) ──
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              StatusBadge(status: report.estado),
-                              const SizedBox(height: 6),
-                              report.estado.toLowerCase() == 'pendiente'
-                                  ? IconButton(
-                                      icon: Icon(Icons.delete_outline, color: AppTheme.alertRed, size: 20),
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                                      tooltip: 'Eliminar reporte',
-                                      onPressed: () => _deleteReport(report),
-                                    )
-                                  : Icon(
-                                      Icons.chevron_right,
-                                      size: 18,
-                                      color: isDark ? AppTheme.textMuted : Colors.grey,
-                                    ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    )
+                          ],
+                        ),
+                      )
                       .animate()
-                      .fadeIn(delay: Duration(milliseconds: 40 * index), duration: 300.ms)
-                      .slideX(begin: 0.03, end: 0, duration: 300.ms, curve: Curves.easeOut);
-                  },
-                ),
+                      .fadeIn(
+                        delay: Duration(milliseconds: 40 * index),
+                        duration: 300.ms,
+                      )
+                      .slideX(
+                        begin: 0.03,
+                        end: 0,
+                        duration: 300.ms,
+                        curve: Curves.easeOut,
+                      );
+                },
+              ),
       ),
     );
   }

@@ -1,4 +1,6 @@
-// Se desactiva el joystick de pruebas (_isTestMode) que quedo expuesto en produccion; no se modifica el widget FlutterMap.
+// Joystick de simulacion de posicion (solo pruebas): boton toggle + panel de flechas,
+// igual patron que el del mapa de policia. Pedido explicito del usuario (antes estaba
+// _isTestMode fijo en false, sin boton para activarlo). No se modifica el widget FlutterMap.
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_map/flutter_map.dart';
@@ -58,8 +60,12 @@ class _MapViewState extends State<MapView> {
   bool _showInsightsPanel = false;
 
   // ── TEST MODE JOYSTICK ──
-  // Desactivado: este joystick es solo para pruebas internas y no debe exponerse en produccion.
-  final bool _isTestMode = false;
+  // Habilitado a peticion del usuario, vía un boton toggle (igual que en el mapa de policia).
+  bool _isTestMode = false;
+
+  void _toggleTestMode() {
+    setState(() => _isTestMode = !_isTestMode);
+  }
 
   void _moveJoystick(double dLat, double dLng) {
     if (_realUserPosition == null) return;
@@ -859,6 +865,10 @@ class _MapViewState extends State<MapView> {
                                       final isCitizen = fuente == 'ciudadano';
 
                                       return Marker(
+                                        // Key estable: evita que flutter_map recree el
+                                        // AnimationController de _buildAnimatedMarker en
+                                        // cada setState (causaba jank/ANR con muchos puntos).
+                                        key: ValueKey('hist_${punto['_id']}'),
                                         point: LatLng(
                                           (coords[1] as num).toDouble(),
                                           (coords[0] as num).toDouble(),
@@ -931,6 +941,8 @@ class _MapViewState extends State<MapView> {
                                       }
 
                                       return Marker(
+                                        // Key estable: mismo motivo que en el grupo de historial.
+                                        key: ValueKey('rep_${punto['_id']}'),
                                         point: LatLng(
                                           (coords[1] as num).toDouble(),
                                           (coords[0] as num).toDouble(),
@@ -993,6 +1005,8 @@ class _MapViewState extends State<MapView> {
                                     })
                                     .map((reporte) {
                                       return Marker(
+                                        // Key estable: mismo motivo que en los otros grupos.
+                                        key: ValueKey('mio_${reporte.id}'),
                                         point: LatLng(
                                           reporte.latitud!,
                                           reporte.longitud!,
@@ -1289,6 +1303,33 @@ class _MapViewState extends State<MapView> {
                           child: _buildDateFilters(isDark),
                         ).animate().fadeIn(),
                     ],
+                  ),
+                ),
+
+                // ====== JOYSTICK DE SIMULACION (boton toggle) ======
+                Positioned(
+                  bottom: 222,
+                  left: 16,
+                  child: FloatingActionButton(
+                    heroTag: 'joystick_toggle_user',
+                    mini: true,
+                    elevation: 6,
+                    backgroundColor: _isTestMode
+                        ? AppTheme.accentBlue
+                        : (isDark ? AppTheme.bgSurface : Colors.white),
+                    shape: CircleBorder(
+                      side: BorderSide(
+                        color: AppTheme.accentBlue.withValues(alpha: _isTestMode ? 1 : 0.6),
+                        width: 1.5,
+                      ),
+                    ),
+                    onPressed: _toggleTestMode,
+                    tooltip: _isTestMode ? 'Desactivar simulación de posición' : 'Simular posición (pruebas)',
+                    child: Icon(
+                      Icons.sports_esports_rounded,
+                      color: _isTestMode ? Colors.white : AppTheme.accentBlue,
+                      size: 22,
+                    ),
                   ),
                 ),
 

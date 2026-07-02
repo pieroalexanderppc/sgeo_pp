@@ -1,11 +1,13 @@
 // Rediseño visual v2: swipe-to-dismiss por notificacion (nuevo
 // NotificationsStorageService.deleteNotification), leidas con opacidad 70%,
 // "Marcar todas" ahora es un TextButton en accentCyan (antes IconButton).
+// Rediseño visual v2 (BLOQUE 7): SkeletonLoader (shimmer) reemplaza el spinner de carga.
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../../core/services/notifications_storage_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/safety_layout.dart';
+import '../../../../core/widgets/skeleton_loader.dart';
 
 class NotificationsView extends StatefulWidget {
   const NotificationsView({super.key});
@@ -151,7 +153,9 @@ class _NotificationsViewState extends State<NotificationsView> {
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const SkeletonLoader(
+              padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            )
           : _notifications.isEmpty
           ? _buildEmptyView(isDark)
           : RefreshIndicator(

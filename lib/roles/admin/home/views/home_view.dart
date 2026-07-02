@@ -1,4 +1,7 @@
 // Se agrega tab "Solicitudes" con badge de policias pendientes (pendingCountNotifier).
+// Rediseño visual v2: nav bar con accent accentCyan (mismo accent principal del sistema).
+// Rediseño visual v2 (BLOQUE 7): NavBounceIcon (pulso al seleccionar tab) y
+// AnimatedCountBadge (scale-pop al cambiar el conteo de solicitudes pendientes).
 import 'package:flutter/material.dart';
 import '../../dashboard/views/dashboard_view.dart';
 import '../../approvals/views/approvals_view.dart';
@@ -6,6 +9,8 @@ import '../../users/views/users_manage_view.dart';
 import '../../profile/views/profile_view.dart';
 import '../../../../core/services/admin_service.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/nav_bounce_icon.dart';
+import '../../../../core/widgets/animated_count_badge.dart';
 
 class AdminHomeView extends StatefulWidget {
   final String userName;
@@ -70,15 +75,18 @@ class _AdminHomeViewState extends State<AdminHomeView> {
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
+          color: isDark ? AppTheme.bgSurface : null,
           border: Border(
             top: BorderSide(
-              color: isDark ? AppTheme.borderTactical : Colors.grey.shade200,
-              width: 0.5,
+              color: isDark ? AppTheme.borderSubtle : Colors.grey.shade200,
+              width: 1,
             ),
           ),
         ),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
+          selectedItemColor: AppTheme.accentCyan,
+          unselectedItemColor: AppTheme.textMuted,
           type: BottomNavigationBarType.fixed,
           onTap: (index) {
             setState(() {
@@ -87,24 +95,33 @@ class _AdminHomeViewState extends State<AdminHomeView> {
             });
           },
           items: [
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard_outlined),
-              activeIcon: Icon(Icons.dashboard_rounded),
+            BottomNavigationBarItem(
+              icon: _navIcon(0, const Icon(Icons.dashboard_outlined)),
+              activeIcon: _navIcon(0, const Icon(Icons.dashboard_rounded)),
               label: 'Dashboard',
             ),
             BottomNavigationBarItem(
-              icon: _buildBadgedIcon(Icons.fact_check_outlined),
-              activeIcon: _buildBadgedIcon(Icons.fact_check_rounded),
+              icon: _navIcon(1, _buildBadgedIcon(Icons.fact_check_outlined)),
+              activeIcon: _navIcon(
+                1,
+                _buildBadgedIcon(Icons.fact_check_rounded),
+              ),
               label: 'Solicitudes',
             ),
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.people_outline_rounded),
-              activeIcon: Icon(Icons.people_alt_rounded),
+            BottomNavigationBarItem(
+              icon: _navIcon(2, const Icon(Icons.people_outline_rounded)),
+              activeIcon: _navIcon(2, const Icon(Icons.people_alt_rounded)),
               label: 'Usuarios',
             ),
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.admin_panel_settings_outlined),
-              activeIcon: Icon(Icons.admin_panel_settings_rounded),
+            BottomNavigationBarItem(
+              icon: _navIcon(
+                3,
+                const Icon(Icons.admin_panel_settings_outlined),
+              ),
+              activeIcon: _navIcon(
+                3,
+                const Icon(Icons.admin_panel_settings_rounded),
+              ),
               label: 'Perfil',
             ),
           ],
@@ -118,13 +135,17 @@ class _AdminHomeViewState extends State<AdminHomeView> {
     return ValueListenableBuilder<int>(
       valueListenable: AdminService.pendingCountNotifier,
       builder: (context, count, _) {
-        if (count <= 0) return Icon(icon);
-        return Badge(
-          backgroundColor: AppTheme.alertRed,
-          label: Text(count > 9 ? '9+' : count.toString()),
-          child: Icon(icon),
+        return AnimatedCountBadge(
+          icon: icon,
+          count: count,
+          badgeColor: AppTheme.alertRed,
         );
       },
     );
+  }
+
+  // Envuelve el icono de un tab con el pulso de seleccion (NavBounceIcon)
+  Widget _navIcon(int index, Widget child) {
+    return NavBounceIcon(isSelected: _currentIndex == index, child: child);
   }
 }

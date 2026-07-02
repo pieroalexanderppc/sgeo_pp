@@ -9,6 +9,12 @@ import '../theme/app_theme.dart';
 // anillo de progreso alrededor. Al tocar, expande un tooltip estilizado
 // con los detalles del score.
 //
+// Rediseño visual v2 (BLOQUE 8): fondo con gradiente accentCyan -> accentBlue
+// (antes un gris solido 0xFF141619) y animacion de entrada elasticOut (antes
+// solo tenia la animacion del anillo de progreso). El anillo y la burbuja del
+// icono siguen tiñéndose con el color de riesgo (rojo/ambar/verde) — eso no
+// se tocó, es la señal de seguridad que comunica el widget.
+//
 // USO:
 //   SafetyScoreFab(
 //     score: 54,
@@ -49,6 +55,9 @@ class _SafetyScoreFabState extends State<SafetyScoreFab>
   late Animation<double> _tooltipOpacity;
   late Animation<Offset> _tooltipSlide;
 
+  late AnimationController _entryController;
+  late Animation<double> _entryScale;
+
   bool _showTooltip = false;
 
   @override
@@ -60,13 +69,25 @@ class _SafetyScoreFabState extends State<SafetyScoreFab>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     );
-    _progressAnimation = Tween<double>(
-      begin: 0,
-      end: widget.score / 100,
-    ).animate(
-      CurvedAnimation(parent: _progressController, curve: Curves.easeOutCubic),
-    );
+    _progressAnimation = Tween<double>(begin: 0, end: widget.score / 100)
+        .animate(
+          CurvedAnimation(
+            parent: _progressController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
     _progressController.forward();
+
+    // Animación de entrada del botón (pop con rebote)
+    _entryController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+    _entryScale = CurvedAnimation(
+      parent: _entryController,
+      curve: Curves.elasticOut,
+    );
+    _entryController.forward();
 
     // Animación del tooltip
     _tooltipController = AnimationController(
@@ -76,27 +97,29 @@ class _SafetyScoreFabState extends State<SafetyScoreFab>
     _tooltipOpacity = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _tooltipController, curve: Curves.easeOut),
     );
-    _tooltipSlide = Tween<Offset>(
-      begin: const Offset(0.15, 0),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _tooltipController, curve: Curves.easeOutCubic),
-    );
+    _tooltipSlide =
+        Tween<Offset>(begin: const Offset(0.15, 0), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _tooltipController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
   }
 
   @override
   void didUpdateWidget(SafetyScoreFab oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.score != widget.score) {
-      _progressAnimation = Tween<double>(
-        begin: _progressAnimation.value,
-        end: widget.score / 100,
-      ).animate(
-        CurvedAnimation(
-          parent: _progressController,
-          curve: Curves.easeOutCubic,
-        ),
-      );
+      _progressAnimation =
+          Tween<double>(
+            begin: _progressAnimation.value,
+            end: widget.score / 100,
+          ).animate(
+            CurvedAnimation(
+              parent: _progressController,
+              curve: Curves.easeOutCubic,
+            ),
+          );
       _progressController.forward(from: 0);
     }
   }
@@ -105,6 +128,7 @@ class _SafetyScoreFabState extends State<SafetyScoreFab>
   void dispose() {
     _progressController.dispose();
     _tooltipController.dispose();
+    _entryController.dispose();
     super.dispose();
   }
 
@@ -160,10 +184,7 @@ class _SafetyScoreFabState extends State<SafetyScoreFab>
             builder: (context, child) {
               return SlideTransition(
                 position: _tooltipSlide,
-                child: FadeTransition(
-                  opacity: _tooltipOpacity,
-                  child: child,
-                ),
+                child: FadeTransition(opacity: _tooltipOpacity, child: child),
               );
             },
             child: Container(
@@ -234,58 +255,74 @@ class _SafetyScoreFabState extends State<SafetyScoreFab>
           ),
 
         // ── Botón Circular Principal ──
-        GestureDetector(
-          onTap: _toggleTooltip,
-          onLongPress: () {
-            _toggleTooltip();
-            widget.onExpandInsights?.call();
-          },
-          child: AnimatedBuilder(
-            animation: _progressAnimation,
-            builder: (context, child) {
-              return Container(
-                width: widget.diameter,
-                height: widget.diameter,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF141619),
-                  boxShadow: [
-                    BoxShadow(
-                      color: scoreColor.withValues(alpha: 0.25),
-                      blurRadius: 12,
-                      spreadRadius: -2,
-                    ),
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.5),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: CustomPaint(
-                  painter: _RingProgressPainter(
-                    progress: _progressAnimation.value,
-                    color: scoreColor,
-                    strokeWidth: 3.5,
-                  ),
-                  child: Center(
-                    child: Container(
-                      width: widget.diameter * 0.68,
-                      height: widget.diameter * 0.68,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: scoreColor.withValues(alpha: 0.12),
-                      ),
-                      child: Icon(
-                        Icons.shield_rounded,
-                        color: scoreColor,
-                        size: widget.diameter * 0.38,
-                      ),
-                    ),
-                  ),
-                ),
-              );
+        ScaleTransition(
+          scale: _entryScale,
+          child: GestureDetector(
+            onTap: _toggleTooltip,
+            onLongPress: () {
+              _toggleTooltip();
+              widget.onExpandInsights?.call();
             },
+            child: AnimatedBuilder(
+              animation: _progressAnimation,
+              builder: (context, child) {
+                return Container(
+                  width: widget.diameter,
+                  height: widget.diameter,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color.alphaBlend(
+                          AppTheme.accentCyan.withValues(alpha: 0.22),
+                          const Color(0xFF141619),
+                        ),
+                        Color.alphaBlend(
+                          AppTheme.accentBlue.withValues(alpha: 0.22),
+                          const Color(0xFF141619),
+                        ),
+                      ],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: scoreColor.withValues(alpha: 0.25),
+                        blurRadius: 12,
+                        spreadRadius: -2,
+                      ),
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.5),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: CustomPaint(
+                    painter: _RingProgressPainter(
+                      progress: _progressAnimation.value,
+                      color: scoreColor,
+                      strokeWidth: 3.5,
+                    ),
+                    child: Center(
+                      child: Container(
+                        width: widget.diameter * 0.68,
+                        height: widget.diameter * 0.68,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: scoreColor.withValues(alpha: 0.12),
+                        ),
+                        child: Icon(
+                          Icons.shield_rounded,
+                          color: scoreColor,
+                          size: widget.diameter * 0.38,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
         ),
       ],
@@ -365,16 +402,8 @@ class _RingProgressPainter extends CustomPainter {
       );
 
       // Dot
-      canvas.drawCircle(
-        Offset(dotX, dotY),
-        3,
-        Paint()..color = color,
-      );
-      canvas.drawCircle(
-        Offset(dotX, dotY),
-        1.5,
-        Paint()..color = Colors.white,
-      );
+      canvas.drawCircle(Offset(dotX, dotY), 3, Paint()..color = color);
+      canvas.drawCircle(Offset(dotX, dotY), 1.5, Paint()..color = Colors.white);
     }
   }
 

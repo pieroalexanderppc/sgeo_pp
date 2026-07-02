@@ -20,3 +20,6 @@ export 'status_badge.dart';
 export 'role_badge.dart';
 export 'section_header.dart';
 export 'info_row.dart';
+export 'nav_bounce_icon.dart';
+export 'animated_count_badge.dart';
+export 'skeleton_loader.dart';

@@ -272,12 +272,14 @@ class AppTheme {
       ),
 
       // ── Dialog ──
+      // Rediseño v2: borde -> borderSubtle (antes borderTactical), para alinear con
+      // el resto de los componentes "elevados" (cards, inputs) del rediseño.
       dialogTheme: DialogThemeData(
         backgroundColor: bgElevated,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: borderTactical, width: 0.5),
+          side: const BorderSide(color: borderSubtle, width: 1),
         ),
         titleTextStyle: GoogleFonts.inter(
           fontSize: 20,
@@ -388,14 +390,11 @@ class AppTheme {
       // ── SnackBar ──
       snackBarTheme: SnackBarThemeData(
         backgroundColor: bgElevated,
-        contentTextStyle: GoogleFonts.inter(
-          color: textPrimary,
-          fontSize: 14,
-        ),
+        contentTextStyle: GoogleFonts.inter(color: textPrimary, fontSize: 14),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: borderTactical, width: 0.5),
+          side: const BorderSide(color: borderSubtle, width: 1),
         ),
       ),
 
@@ -405,7 +404,7 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          side: BorderSide(color: borderTactical, width: 0.5),
+          side: BorderSide(color: borderSubtle, width: 1),
         ),
       ),
 
