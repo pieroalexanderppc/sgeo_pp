@@ -19,7 +19,6 @@ MES_OBJETIVO = None   # None = todos los meses del año; ej: 5 = solo mayo
 
 def extract_arcgis_data(anio: int = ANO_OBJETIVO, mes: int | None = MES_OBJETIVO):
     peru = timezone(timedelta(hours=-5))
-    ahora_peru = datetime.now(peru)
 
     desc = f"año {anio}" + (f" mes {mes}" if mes else "")
     print(f"\n📅 Extrayendo datos SIDPOL — {desc} (Tacna)")

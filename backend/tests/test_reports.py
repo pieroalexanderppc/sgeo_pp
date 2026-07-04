@@ -67,3 +67,15 @@ def test_sexto_reporte_del_dia_devuelve_429(client, mongo_db):
 
     assert response.status_code == 429
     assert "alcanzado" in response.json()["detail"].lower()
+
+
+def test_payload_sin_coordenadas_devuelve_422(client):
+    """Pydantic rechaza cargas malformadas antes de tocar la BD (CP-RF-008)."""
+    response = client.post("/api/reportes", json={"subtipo_hecho": "ROBO"})
+    assert response.status_code == 422
+
+
+def test_eliminar_reporte_inexistente_devuelve_404(client):
+    """DELETE es idempotente-seguro: un id desconocido responde 404 (CP-RF-010)."""
+    response = client.delete(f"/api/reportes/{ObjectId()}")
+    assert response.status_code == 404

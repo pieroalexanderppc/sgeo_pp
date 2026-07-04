@@ -350,7 +350,7 @@ Docente: Alberto Johnatan Flor Rodriguez
 
 <div class="flow-step"><div class="flow-num">1</div><div class="flow-text">Ciudadano reporta incidente con GPS desde la app movil</div></div>
 <div class="flow-step"><div class="flow-num">2</div><div class="flow-text">Backend guarda el reporte en estado <strong>pendiente</strong></div></div>
-<div class="flow-step"><div class="flow-num">3</div><div class="flow-text">Policia en radio de 3 km <strong>valida o rechaza</strong> el reporte</div></div>
+<div class="flow-step"><div class="flow-num">3</div><div class="flow-text">Policia en su radio de patrullaje de 1 km <strong>valida o rechaza</strong> el reporte</div></div>
 <div class="flow-step"><div class="flow-num">4</div><div class="flow-text">Si se valida, se ejecuta <strong>DBSCAN</strong> en segundo plano sobre incidentes confirmados</div></div>
 <div class="flow-step"><div class="flow-num">5</div><div class="flow-text">Si se detecta nueva zona de riesgo, se dispara <strong>alerta push preventiva</strong> a ciudadanos cercanos</div></div>
 
@@ -388,7 +388,7 @@ Las predicciones y zonas de riesgo se generan de forma asincrona y no bloquean l
 # Roles y Modulos
 
 <div class="role-card ciudadano"><h3>👤 Ciudadano</h3><p>Reportar incidentes geolocalizados · ver zonas de riesgo en mapa · recibir alertas push · historial personal</p></div>
-<div class="role-card policia"><h3>🚔 Policia</h3><p>Ver reportes pendientes en radio de 3 km · validar o rechazar · priorizar respuesta · registro de auditoria</p></div>
+<div class="role-card policia"><h3>🚔 Policia</h3><p>Mapa sonar con radio de patrullaje de 1 km · validar o rechazar · priorizar respuesta · historial de atendidos</p></div>
 <div class="role-card admin"><h3>🖥 Administrador</h3><p>Dashboard de estadisticas y tendencias · consulta de predicciones por distrito · gestion de usuarios y reportes criticos</p></div>
 
 ---

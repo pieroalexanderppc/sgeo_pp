@@ -68,7 +68,7 @@ Desarrollar e implementar un sistema inteligente de geolocalización criminal qu
 **1.4.2. Objetivos Específicos**  
 - **Interfaz Multirrol Táctica:** Diseñar e implementar tres interfaces nativas diferenciadas en Flutter bajo el sistema visual "Premium Tactical Dark" para los roles Ciudadano, Policía y Administrador, con enrutamiento estricto basado en el atributo `rol` persistido en `SharedPreferences`.
 - **Alertas Preventivas de Geofencing:** Implementar un servicio de seguimiento GPS continuo (`distanceFilter=50m`) que detecte la entrada del usuario a zonas de riesgo calculadas por DBSCAN y emita alertas locales contextuales con información del turno horario, con un mecanismo de cooldown de 30 minutos para evitar saturación.
-- **Motor de Inteligencia Artificial:** Implementar el algoritmo DBSCAN con parámetros geoespaciales (`epsilon=150m`, `min_samples=5`, métrica Haversine) para clusterización de hotspots, el Safety Score dinámico (0-100) con cuatro factores de cálculo, y la Regresión Lineal para predicción de incidentes a 3 meses por distrito sobre el historial SIDPOL 2018-2026.
+- **Motor de Inteligencia Artificial:** Implementar el algoritmo DBSCAN con parámetros geoespaciales (`epsilon=150m`, `min_samples=5`, métrica Haversine) para clusterización de hotspots calculados sobre el mes más reciente de datos SIDPOL disponibles (evitando que estadísticas antiguas generen zonas obsoletas), el Safety Score dinámico (0-100) con cuatro factores de cálculo, y la Regresión Lineal para predicción de incidentes a 3 meses por distrito sobre el historial SIDPOL vigente.
 - **Reducción de Costos Policiales:** Proveer dashboards analíticos con `fl_chart` a los administradores policiales para visualizar estadísticas de reportes, tendencias por distrito, y predicciones futuras que optimicen la asignación de recursos de patrullaje.
 
 ---
@@ -76,12 +76,12 @@ Desarrollar e implementar un sistema inteligente de geolocalización criminal qu
 ## 2. Riesgos
 
 **2.1. Riesgos Técnicos**  
-- **Inconsistencia de Web Scraping:** Probabilidad media, impacto alto. Las páginas gubernamentales (SIDPOL, Corte Superior de Tacna) podrían cambiar su estructura HTML, afectando los pipelines ETL automatizados en el backend.
+- **Inestabilidad del servicio de datos gubernamental:** Probabilidad media, impacto alto. El servicio ArcGIS REST del MININTER (`SIDPOL_DELITOS_TOTAL`) podría cambiar sus endpoints o esquema de campos, afectando el pipeline ETL (mitigado: el extractor valida la distribución de datos por mes y reporta errores en cada corrida).
 - **Falsos Positivos en ML DBSCAN:** Probabilidad media, impacto medio. Radios o agrupaciones calculados erróneamente por ruido o alta densidad inusual en los reportes de los ciudadanos.
 - **Degradación de rendimiento con mapas pesados:** Probabilidad media, impacto alto. La carga simultánea de miles de polígonos geoespaciales podría afectar los FPS de la aplicación móvil en dispositivos de gama baja.
 
 **2.2. Riesgos Operativos**  
-- **Reportes Falsos (Trolleo):** Probabilidad alta, impacto medio. Ciudadanos malintencionados podrían enviar reportes de crímenes falsos (mitigado mediante sistema de validación policial exclusivo a 3km a la redonda).
+- **Reportes Falsos (Trolleo):** Probabilidad alta, impacto medio. Ciudadanos malintencionados podrían enviar reportes de crímenes falsos (mitigado mediante triple barrera: límite de 5 reportes diarios por usuario, validación policial obligatoria dentro del radio de patrullaje de 1 km, y agrupación automática de reportes duplicados en un radio de 500 m).
 - **Resistencia al cambio institucional:** Probabilidad alta, impacto medio. El personal policial podría ser reticente a adoptar nuevas tecnologías tácticas de validación vía smartphone.
 - **Limitación en penetración ciudadana:** Probabilidad media, impacto alto. Si no se alcanza una masa crítica de usuarios reportando, el mapa en tiempo real perderá eficacia.
 
@@ -105,7 +105,7 @@ Los problemas identificados incluyen:
 
 **Hardware disponible y alcanzable:**
 - Servidores virtuales en cloud: Backend desplegado en Railway PaaS, con escalado automático mediante contenedores y `Procfile` de inicio (`uvicorn main:app`).
-- Equipo de desarrollo: Estación de trabajo con Windows 11, procesador multi-núcleo para emuladores Android y procesamiento de DataFrames Pandas sobre datos SIDPOL (~3.4 MB de datos históricos).
+- Equipo de desarrollo: Estación de trabajo con Windows 11, procesador multi-núcleo para emuladores Android y procesamiento de DataFrames Pandas sobre el dataset oficial SIDPOL del año vigente.
 - Dispositivos móviles físicos: Smartphones Android (API 26+) con chip GPS integrado para pruebas del módulo de geofencing y notificaciones push.
 
 **Software implementado (versiones reales):**
@@ -131,7 +131,7 @@ Los resultados esperados del estudio de factibilidad incluyen la validación té
 La evaluación confirma y la implementación valida la disponibilidad absoluta de infraestructura tecnológica y de servicios en la nube para el levantamiento y operación del sistema SGEO.
 
 **Hardware evaluado e implementado:**
-- **Infraestructura local:** Estación de trabajo Windows 11 con procesador multi-núcleo empleada para el desarrollo, emulación Android y procesamiento del pipeline ETL sobre el dataset histórico SIDPOL (~3.4 MB, miles de registros criminológicos georeferenciados).
+- **Infraestructura local:** Estación de trabajo Windows 11 con procesador multi-núcleo empleada para el desarrollo, emulación Android y procesamiento del pipeline ETL sobre el dataset oficial SIDPOL del año vigente (miles de registros criminológicos georeferenciados de la provincia de Tacna).
 - **Hardware en nube:** Railway PaaS con inicio automático vía `Procfile`, capaz de ejecutar los `BackgroundTasks` de FastAPI para el motor DBSCAN sin bloquear el Event Loop de la API.
 - **Hardware externo:** Smartphones Android (API 26+) con GPS de alta precisión para el módulo de geofencing (`LocationAccuracy.high`, `distanceFilter=50m`).
 
@@ -142,7 +142,7 @@ La evaluación confirma y la implementación valida la disponibilidad absoluta d
 - **Persistencia en Nube:** MongoDB Atlas con base `geocrimen_tacna`, índices `2dsphere` en `ubicacion` (reportes) y `centroide` (zonas_riesgo) para consultas geoespaciales `$nearSphere` en tiempo sub-250ms.
 
 **Integración con sistemas externos:**  
-Se implementaron scripts ETL (`extract_arcgis_data.py`, `import_arcgis_data.py`) para la extracción e importación de datos históricos de la plataforma ArcGIS/SIDPOL hacia MongoDB. El archivo `datos_historicos_tacna.json` (~3.4 MB) contiene el historial de delitos 2018-2026 que alimenta los motores predictivos.
+Se implementaron scripts ETL (`extract_arcgis_data.py`, `import_arcgis_data.py`) para la extracción e importación de datos oficiales desde el servicio `SIDPOL_DELITOS_TOTAL` de la plataforma ArcGIS del MININTER hacia MongoDB. La extracción filtra por departamento y provincia de Tacna, tipo de hecho PATRIMONIO (DELITO) y año vigente, alimentando los motores predictivos con datos actuales (1,286 registros de enero a mayo de 2026 en la última corrida) en lugar de estadísticas históricas obsoletas.
 
 **Conclusión técnica:**  
 El proyecto se encuentra completamente implementado con la infraestructura tecnológica open-source evaluada. La pila tecnológica real ha demostrado soporte para geolocalización en milisegundos (`$nearSphere`), clustering espacial automático (DBSCAN), análisis predictivo temporal (LinearRegression) y distribución masiva de alertas push (FCM). Todos los componentes han sido validados en entorno de desarrollo con datos reales del SIDPOL de la región de Tacna.
@@ -236,7 +236,7 @@ No existen conflictos legales identificados. El proyecto cumple con:
 Existe una fuerte presión ciudadana hacia la reducción de tasas de crimen. Total aceptación de herramientas tecnológicas cívicas que democratizan el acceso a la seguridad.
 
 **Aspectos éticos:**  
-Mitigación algorítmica para evitar el estigma a zonas vulnerables (los mapas de riesgo se calculan estadísticamente y expiran de manera dinámica tras 72 horas, no manchando permanentemente la reputación de un distrito).
+Mitigación algorítmica para evitar el estigma a zonas vulnerables: los mapas de riesgo se recalculan íntegramente con cada validación policial usando únicamente el mes más reciente de datos, de modo que una zona deja de aparecer cuando la incidencia real disminuye — sin manchar permanentemente la reputación de un distrito.
 
 ### 4.6. Factibilidad Ambiental
 

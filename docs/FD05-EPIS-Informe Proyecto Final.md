@@ -73,7 +73,7 @@ El proyecto SGEO surge como respuesta a esta brecha tecnológica, proponiendo e 
 
 ## 2.2 Problemas Específicos
 
-- **PE-01:** ¿Cómo puede un algoritmo de clustering espacial DBSCAN, entrenado sobre el historial criminológico confirmado del SIDPOL 2018-2026, identificar y delimitar automáticamente las zonas geográficas de mayor concentración delictiva en Tacna?
+- **PE-01:** ¿Cómo puede un algoritmo de clustering espacial DBSCAN, alimentado con el historial criminológico oficial vigente del SIDPOL y los reportes ciudadanos confirmados, identificar y delimitar automáticamente las zonas geográficas de mayor concentración delictiva actual en Tacna?
 
 - **PE-02:** ¿De qué manera un motor predictivo contextual basado en Regresión Lineal y análisis temporal puede generar proyecciones de riesgo por distrito, horario y turno que sean consultables en tiempo real por ciudadanos y autoridades a través de una API REST?
 
@@ -87,7 +87,7 @@ El sistema SGEO abarca el desarrollo, implementación y validación de los sigui
 
 **Alcance del Frontend (Flutter):**
 - Interfaz del Ciudadano: mapa interactivo con zonas DBSCAN, Safety Score dinámico, creación de reportes geolocalizados, historial personal, noticias de seguridad, notificaciones push y geofencing automático.
-- Interfaz del Policía: mapa táctico con reportes pendientes filtrados a radio de 3km, módulo de validación (confirmar/rechazar), mapa de puntos exactos confirmados.
+- Interfaz del Policía: mapa táctico con radar sonar animado sobre el radio de patrullaje de 1 km, contador de reportes pendientes en zona, módulo de validación (confirmar/rechazar) con actualización automática cada 30 segundos, e historial de reportes atendidos.
 - Interfaz del Administrador: dashboard analítico con estadísticas de reportes (por estado y tipo) mediante `fl_chart`, predicción de incidentes por distrito vía Regresión Lineal, gestión de usuarios del sistema.
 
 **Alcance del Backend (FastAPI):**
@@ -101,7 +101,10 @@ El sistema SGEO abarca el desarrollo, implementación y validación de los sigui
 - Índices geoespaciales `2dsphere` para consultas `$nearSphere` en tiempo sub-250ms.
 
 **Alcance del ETL:**
-- Importación del historial criminológico SIDPOL 2018-2026 (~3.4 MB de datos ArcGIS) mediante scripts `extract_arcgis_data.py` e `import_arcgis_data.py`.
+- Importación del historial criminológico oficial desde el servicio ArcGIS REST `SIDPOL_DELITOS_TOTAL` del MININTER mediante scripts `extract_arcgis_data.py` e `import_arcgis_data.py`, filtrado por provincia de Tacna, tipo PATRIMONIO (DELITO) y año vigente (1,286 registros de enero a mayo de 2026 en la última corrida).
+
+**Alcance del Aseguramiento de Calidad:**
+- Suite de 82 pruebas automatizadas (68 backend con pytest + mongomock, 14 frontend con flutter_test), documentadas en `docs/Informe_de_Pruebas.md` junto al Plan de Pruebas ISO/IEC/IEEE 29119-3.
 
 **Fuera del alcance (Roadmap futuro):**
 - Integración de videocámaras municipales en el mapa.
@@ -310,17 +313,17 @@ SGEO implementa una arquitectura Cliente-Servidor de N capas con integración de
 | POST | `/api/reportes` | Crear reporte con límite de 5 reportes diarios por usuario |
 | GET | `/api/reportes/mis_reportes/{user_id}` | Historial de reportes del usuario autenticado |
 | DELETE | `/api/reportes/{reporte_id}` | Eliminar reporte propio en estado pendiente |
-| POST | `/api/reportes/confirmar/{reporte_id}` | Confirmar reporte (Policía) + push FCM + BackgroundTask DBSCAN |
-| POST | `/api/reportes/rechazar/{reporte_id}` | Rechazar reporte como falsa alarma (Policía) |
-| GET | `/api/reportes/policia` | Todos los reportes pendientes y confirmados para vista policial |
+| POST | `/api/reportes/confirmar/{reporte_id}` | Confirmar reporte (Policía): copia a historial (`fuente="ciudadano"`), agrupa duplicados en 500m, push FCM con coordenadas + BackgroundTask DBSCAN |
+| POST | `/api/reportes/rechazar/{reporte_id}` | Rechazar reporte como falsa alarma (Policía), sin efectos en historial ni push |
+| GET | `/api/reportes/policia` | Reportes en los tres estados (pendiente/confirmado/rechazado) para el mapa, la validación y el historial policial |
 
 **Módulo de Mapas (`/api/map`):**
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| GET | `/api/map/zonas_riesgo` | Zonas DBSCAN calculadas con caché de 60 segundos |
-| GET | `/api/map/puntos_exactos` | Solo reportes confirmados por la Policía |
-| GET | `/api/map/historial_puntos` | Historial completo ArcGIS + ciudadanos confirmados |
+| GET | `/api/map/zonas_riesgo` | Zonas DBSCAN con caché de 60 segundos; incluyen `anio_periodo`/`mes_periodo` para el auto-filtrado del cliente |
+| GET | `/api/map/puntos_exactos` | Solo reportes confirmados de los últimos 60 días (alertas operativas vigentes) |
+| GET | `/api/map/historial_puntos` | Historial ArcGIS + ciudadanos confirmados, excluyendo registros SIN COORDENADA |
 | POST | `/api/map/generar_zonas_ia` | Disparador manual del motor DBSCAN en BackgroundTask |
 
 **Módulo Predictivo (`/api/predictive`):**
@@ -340,14 +343,20 @@ SGEO implementa una arquitectura Cliente-Servidor de N capas con integración de
 | GET | `/api/admin/dashboard_stats` | Estadísticas de reportes (total, por estado, por tipo) con filtro temporal |
 | GET | `/api/admin/sidpol_stats` | Top 5 distritos y tipos delictivos del historial SIDPOL |
 | GET | `/api/admin/sidpol_predict` | Predicción LinearRegression: próximos 3 meses + distrito de mayor riesgo |
+| GET | `/api/admin/usuarios` | Inventario de cuentas, filtrable por rol o por aprobación pendiente |
+| PUT | `/api/admin/usuarios/{id}/aprobar` | Aprobar cuenta policial pendiente (activa la cuenta y notifica por correo) |
+| PUT | `/api/admin/usuarios/{id}/rechazar` | Rechazar cuenta policial registrando el motivo comunicado al solicitante |
+| PUT | `/api/admin/usuarios/{id}/suspender` | Suspender/reactivar cuentas infractoras |
+| DELETE | `/api/admin/usuarios/{id}` | Eliminar cuenta del sistema |
 
 ### 5.2.3 Motor de Inteligencia Artificial
 
 **Motor Espacial DBSCAN (`motor_ia_zonas_riesgo.py`):**
 - **Configuración:** `epsilon=0.15/6371.0` radianes (≈150m), `min_samples=5`, `algorithm='ball_tree'`, `metric='haversine'`.
-- **Proceso:** Extrae todos los incidentes con coordenadas válidas de `historial_delitos`, aplica DBSCAN, calcula el centroide geométrico y el delito predominante por clúster, asigna nivel de riesgo según volumen (≥50=crítico, ≥25=alto, ≥10=medio, <10=bajo), calcula radio dinámico (150m–350m), determina tendencia real comparando últimos 3 meses vs 3 meses anteriores.
+- **Ventana de vigencia:** Detecta automáticamente el mes más reciente con datos SIDPOL (agregación `$max` sobre `fecha_hecho`) y calcula las zonas exclusivamente con los incidentes de ese mes más los reportes ciudadanos confirmados de los últimos 60 días — ambos de la provincia de Tacna y con coordenadas válidas. Así las zonas reflejan la situación actual y no estadísticas históricas acumuladas.
+- **Proceso:** Aplica DBSCAN, calcula el centroide geométrico y el delito predominante por clúster, asigna nivel de riesgo según volumen (≥50=crítico, ≥25=alto, ≥10=medio, <10=bajo), calcula radio dinámico (150m–350m), determina tendencia real, y persiste el periodo fuente (`anio_periodo`, `mes_periodo`) en cada zona. El guardado es atómico: elimina las zonas anteriores antes de insertar las nuevas.
 - **Ciclo de vida:** Se ejecuta en hilo daemon al arrancar el servidor y como `BackgroundTask` cada vez que un policía confirma un reporte.
-- **Notificación:** Tras el recálculo, envía push FCM de tipo `update` al tópico `alertas_ciudadanos` para invalidar la caché de mapas en todos los clientes Flutter.
+- **Notificación con cooldown:** Tras el recálculo, envía push FCM de tipo `update` al tópico `alertas_ciudadanos` como máximo una vez cada 24 horas (marca persistida en la colección `config`), evitando saturar a los usuarios cuando hay múltiples confirmaciones seguidas.
 
 **Motor Predictivo Contextual (`predictive_context_engine.py`):**
 
@@ -371,7 +380,7 @@ SGEO implementa una arquitectura Cliente-Servidor de N capas con integración de
 |-----------|---------|-------------|
 | `usuarios` | `email` (único), `nombre` (único) | Cuentas de sistema con hash Bcrypt y rol RBAC |
 | `reportes_ciudadano` | `ubicacion` (2dsphere), `creado_en` (-1) | Reportes ciudadanos con ciclo de vida (pendiente/confirmado/rechazado) |
-| `historial_delitos` | `ubicacion` (2dsphere), `creado_en` (-1), `distrito` (asc) | Historial ArcGIS/SIDPOL 2018-2026 importado vía ETL |
+| `historial_delitos` | `ubicacion` (2dsphere), `creado_en` (-1), `distrito` (asc) | Historial oficial ArcGIS/SIDPOL del año vigente (`fuente="arcgis_sidpol"`) + reportes ciudadanos confirmados (`fuente="ciudadano"`) |
 | `zonas_riesgo` | `centroide` (2dsphere) | Hotspots calculados por DBSCAN con nivel y radio |
 
 ## 5.3 Metodología de Implementación
@@ -391,7 +400,7 @@ El proyecto SGEO fue desarrollado siguiendo la metodología **Scrum** con tres s
 
 **Entregables:**
 - Script `setup_db.py` con validadores y creación automática de índices.
-- Pipeline ETL funcional con dataset `datos_historicos_tacna.json` (~3.4 MB) importado.
+- Pipeline ETL funcional con el dataset oficial `datos_historicos_tacna.json` importado a MongoDB (actualizado en cada corrida al año vigente).
 - Estructura de carpetas del proyecto definida y funcional.
 
 ### Sprint 2: Roles (RBAC), UI Táctica y Validaciones (Completado)
@@ -404,8 +413,9 @@ El proyecto SGEO fue desarrollado siguiendo la metodología **Scrum** con tres s
 - Separación de carpetas `lib/roles/user`, `lib/roles/police`, `lib/roles/admin`.
 - Implementación del enrutamiento dinámico basado en `rol` con `SharedPreferences`.
 - Módulo de validación policial: `/api/reportes/confirmar/{id}` y `/api/reportes/rechazar/{id}`.
-- Restricción de radio táctico de 3km para la vista policial.
-- Sistema anti-spam: límite de 5 reportes diarios por usuario.
+- Radio de patrullaje táctico de 1 km para la vista policial con visualización sonar.
+- Flujo de aprobación de cuentas policiales: registro pendiente + correo de acreditación (Resend) + aprobación/rechazo del Administrador.
+- Sistema anti-spam: límite de 5 reportes diarios por usuario y agrupación de duplicados en 500 m.
 
 **Entregables:**
 - Sistema de login funcional con RBAC estricto.
@@ -427,6 +437,8 @@ El proyecto SGEO fue desarrollado siguiendo la metodología **Scrum** con tres s
 - Servicio `NotificationsStorageService` para persistencia local del historial de alertas.
 - Módulo de noticias de seguridad ciudadana en la interfaz del Ciudadano.
 - Despliegue del backend en Railway PaaS con `Procfile` y variables de entorno.
+- Construcción de la suite de pruebas automatizadas: 68 pruebas backend (pytest + mongomock + TestClient, sin dependencia de servicios reales) y 14 pruebas Flutter (widget y unitarias), con prueba de regresión permanente del defecto crítico de validación de MongoDB.
+- Redacción del Plan de Pruebas (ISO/IEC/IEEE 29119-3) y del Informe de Ejecución de Pruebas.
 - Redacción y actualización de documentación técnica universitaria (FD01–FD05).
 
 **Entregables:**
@@ -443,7 +455,8 @@ Una historia de usuario se considera completada cuando:
 2. La funcionalidad es accesible desde la interfaz del rol correspondiente.
 3. El endpoint REST asociado retorna respuestas con status 200 bajo datos válidos.
 4. No existen errores en `flutter analyze` ni advertencias críticas de Pydantic v2.
-5. La funcionalidad ha sido validada manualmente en emulador Android API 34.
+5. La funcionalidad ha sido validada manualmente en emulador Android API 34 o dispositivo físico.
+6. Las suites automatizadas (`pytest` y `flutter test`) se ejecutan íntegramente en verde.
 
 ## 5.4 Tecnologías Utilizadas
 
@@ -502,7 +515,8 @@ Una historia de usuario se considera completada cuando:
 
 | Componente | Resultado |
 |-----------|-----------|
-| Motor DBSCAN | Genera hotspots automáticamente sobre el historial SIDPOL 2018-2026 con clasificación por nivel (bajo/medio/alto/crítico) y radio dinámico |
+| Motor DBSCAN | Genera hotspots automáticamente sobre el mes más reciente de datos SIDPOL (mayo 2026: 6 zonas con HURTO/DAÑOS como delitos predominantes) con clasificación por nivel y radio dinámico |
+| Pruebas automatizadas | 82/82 en verde (68 pytest + 14 flutter_test); `flutter analyze` sin issues; 8 defectos detectados y corregidos en la iteración (ver `docs/Informe_de_Pruebas.md`) |
 | Safety Score | Endpoint `/api/predictive/safety_score` retorna score 0-100 con latencia <250ms gracias a índices `2dsphere` |
 | Endpoints predictivos | 5 endpoints funcionales con caché por TTL (30s a 10min) para optimización de consultas |
 | Geofencing | `GeofenceService` detecta ingreso a zonas de riesgo con `distanceFilter=50m` y emite alertas contextuales por turno horario |
@@ -524,9 +538,11 @@ Una historia de usuario se considera completada cuando:
 - Historial persistente de notificaciones recibidas.
 
 **Policía:**
-- Visualización del mapa táctico con reportes pendientes filtrados a 3km.
-- Acciones de confirmación y rechazo de reportes con feedback visual.
-- Vista de todos los reportes (pendientes y confirmados) en el mapa.
+- Mapa táctico con radar sonar animado sobre el radio de patrullaje de 1 km y contador de pendientes en zona.
+- Marcadores diferenciados por estado (ámbar=pendiente, verde=confirmado) con leyenda.
+- Pestaña de Validación con agrupación visual de reportes duplicados y actualización automática cada 30 segundos.
+- Acciones de confirmación y rechazo con diálogo de confirmación y feedback visual.
+- Registro con acreditación: la cuenta queda pendiente hasta la aprobación del Administrador.
 - Perfil con información del agente.
 
 **Administrador:**
@@ -534,7 +550,8 @@ Una historia de usuario se considera completada cuando:
 - Estadísticas del historial SIDPOL: top 5 distritos y tipos delictivos más frecuentes.
 - Predicción de incidentes a 3 meses a nivel global y por distrito (LinearRegression).
 - Identificación automática del distrito con mayor riesgo proyectado.
-- Gestión del inventario de usuarios del sistema.
+- Gestión del inventario de usuarios: suspensión, eliminación y filtro por rol.
+- Módulo de Aprobaciones: aprobar o rechazar (con motivo) las cuentas policiales pendientes, con notificación por correo al solicitante.
 
 ### Métricas de Rendimiento Estimadas
 
@@ -544,9 +561,11 @@ Una historia de usuario se considera completada cuando:
 | Latencia consultas geoespaciales | ≤250ms | `$nearSphere` con índices `2dsphere` |
 | Latencia Safety Score | ≤250ms | 4 factores sobre `$nearSphere` |
 | Throughput Uvicorn (2 núcleos) | ~300 RPS | Bajo carga concurrente moderada |
-| Procesamiento ETL SIDPOL (~3.4MB) | 8–15 seg | Pandas.read_json() en CPU ordinario |
+| Procesamiento ETL SIDPOL (extracción + import) | < 60 seg | 1,286 registros del año vigente vía ArcGIS REST paginado |
 | Cooldown geofencing | 30 minutos | Para evitar saturación de alertas locales |
+| Cooldown notificación "Mapa Actualizado" | 24 horas | Marca persistida en colección `config` de MongoDB |
 | Distancia GPS para activar geofencing | 50 metros | `distanceFilter` del plugin `geolocator` |
+| Auto-refresh de datos en vivo | 30 s (policía) / 60 s (ciudadano) | Timers silenciosos sin parpadeo de UI |
 
 ---
 
@@ -631,7 +650,7 @@ La inversión total del proyecto SGEO asciende a **S/ 23,540**, financiada ínte
 
 1. **Viabilidad técnica demostrada:** El proyecto SGEO ha demostrado que es técnicamente viable implementar un sistema de geolocalización criminal con Machine Learning sobre la pila tecnológica open-source seleccionada (Flutter, FastAPI, MongoDB, Scikit-Learn, Firebase). Todos los componentes han sido implementados y validados con datos reales del SIDPOL de la región de Tacna.
 
-2. **Efectividad del Motor DBSCAN:** El algoritmo DBSCAN con parámetros geoespaciales (`epsilon=150m`, `min_samples=5`, `metric='haversine'`) ha demostrado ser capaz de identificar automáticamente hotspots delictivos reales sobre el historial criminológico 2018-2026, sin requerir conocimiento previo del número de zonas de riesgo ni de los límites distritales.
+2. **Efectividad del Motor DBSCAN:** El algoritmo DBSCAN con parámetros geoespaciales (`epsilon=150m`, `min_samples=5`, `metric='haversine'`) ha demostrado ser capaz de identificar automáticamente hotspots delictivos reales sobre el mes más reciente del historial criminológico oficial (mayo 2026), sin requerir conocimiento previo del número de zonas de riesgo ni de los límites distritales. La ventana de vigencia mensual garantiza que las zonas mostradas al ciudadano reflejen la situación delictiva actual y no acumulados históricos ambiguos.
 
 3. **Innovación del Motor Predictivo Contextual:** La implementación de `predictive_context_engine.py` con sus cuatro clases especializadas (`SafetyScoreCalculator`, `TemporalAnalyzer`, `InsightGenerator`, `SafeHoursCalculator`) constituye una contribución técnica significativa que supera el objetivo inicial de una única predicción por Regresión Lineal, ofreciendo análisis multidimensional en tiempo real accesible vía 5 endpoints REST.
 
@@ -639,7 +658,9 @@ La inversión total del proyecto SGEO asciende a **S/ 23,540**, financiada ínte
 
 5. **Validez del Modelo RBAC:** La separación estricta de interfaces y endpoints por rol (Ciudadano, Policía, Administrador) mediante `SharedPreferences` en el cliente y Bcrypt en el servidor ha demostrado ser una estrategia efectiva para garantizar la integridad del proceso de validación policial y prevenir la contaminación del historial analítico por reportes no verificados.
 
-6. **Retorno de inversión positivo:** El análisis financiero confirma un VAN positivo de S/ 1,501 y una relación B/C de 1.06, validando la rentabilidad económica del proyecto frente a los beneficios tangibles en optimización logística policial y reducción de costos operativos.
+6. **Calidad verificada con pruebas automatizadas:** La campaña de pruebas ejecutada (82 pruebas automatizadas: 68 backend y 14 frontend, 100 % en verde, análisis estático sin issues) valida las reglas de negocio críticas del sistema — límite antispam, aprobación policial, ventana de vigencia del motor IA, cooldown de notificaciones — y blinda con regresión permanente el defecto crítico de validación de esquema detectado durante la iteración (ver `docs/Informe_de_Pruebas.md`).
+
+7. **Retorno de inversión positivo:** El análisis financiero confirma un VAN positivo de S/ 1,501 y una relación B/C de 1.06, validando la rentabilidad económica del proyecto frente a los beneficios tangibles en optimización logística policial y reducción de costos operativos.
 
 ---
 

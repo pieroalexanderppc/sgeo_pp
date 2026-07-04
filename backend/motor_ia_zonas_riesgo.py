@@ -1,6 +1,11 @@
 import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+
+
+def _utcnow() -> datetime:
+    """UTC naive (compatible con los datetimes que devuelve PyMongo)."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 from sklearn.cluster import DBSCAN
 from config.database import db
 from utils.string_helpers import limpiar_distrito
@@ -25,11 +30,12 @@ def _detectar_ultimo_mes_sidpol() -> tuple[int, int]:
             return d.year, d.month
     except Exception as e:
         print("Aviso: no se pudo detectar ultimo mes SIDPOL:", e)
-    return datetime.utcnow().year, datetime.utcnow().month
+    ahora = _utcnow()
+    return ahora.year, ahora.month
 
 
 def ejecutar_ia_zonas_riesgo():
-    hoy = datetime.utcnow()
+    hoy = _utcnow()
     print("🧠 Iniciando Motor IA de Zonas de Riesgo...")
 
     # ── Detectar el mes más reciente con datos disponibles ──────────────

@@ -57,6 +57,8 @@ Future<void> _handleNotificationTap(RemoteMessage message) async {
 
     if (lat != null && lng != null) {
       final prefs = await SharedPreferences.getInstance();
+      // Sin sesión activa no se puede reconstruir el Home: mandar al login normal.
+      if (!(prefs.getBool('is_logged_in') ?? false)) return;
       final userRole = prefs.getString('user_role') ?? 'ciudadano';
       navigatorKey.currentState!.pushReplacement(
         MaterialPageRoute(

@@ -25,8 +25,8 @@ Crear una plataforma táctica móvil (iOS/Android) que prevenga el crimen median
 
 ### Épica 3: Validación Policial y Zonas de Riesgo
 - [x] **Historia 3.1:** Crear interfaz especial para el Policía con botón "Validar" / "Rechazar".
-- [x] **Historia 3.2:** Restringir al policía auditar solo incidentes en un radio táctico de 3 km a la redonda.
-- [x] **Historia 3.3:** Sancionar a los ciudadanos civiles con "Strikes" (baneos temporales) si hacen reportes falsos o *troll*.
+- [x] **Historia 3.2:** Mapa táctico policial con radio de patrullaje de 1 km resaltado mediante efecto sonar animado y contador de pendientes en zona.
+- [x] **Historia 3.3:** Contención de reportes falsos: límite de 5 reportes/día por usuario, agrupación de duplicados en 500 m y suspensión manual de cuentas infractoras desde el panel administrativo.
 
 ### Épica 4: Inteligencia Artificial y Dashboards
 - [x] **Historia 4.1:** Algoritmo espacial **DBSCAN** que agrupa reportes validados para dibujar polígonos rojos de peligro.
@@ -49,8 +49,8 @@ Crear una plataforma táctica móvil (iOS/Android) que prevenga el crimen median
 **Objetivo:** Desarrollar el sistema de login seguro y aislar las vistas por Rol para evitar deuda técnica, implementando el diseño Premium.
 **Entregables:**
 - [x] Diseño UI *Tactical Dark* implementado en todos los componentes.
-- [x] Separación de carpetas `lib/roles/admin`, `lib/roles/police` y `lib/roles/citizen`.
-- [x] Lógica de validación policial a 3km operativa en FastAPI.
+- [x] Separación de carpetas `lib/roles/admin`, `lib/roles/police` y `lib/roles/user`.
+- [x] Flujo de validación policial (confirmar/rechazar con cascada de efectos) operativo en FastAPI.
 
 ### Sprint 3: Machine Learning, Analítica y Despliegue (Completado)
 **Objetivo:** Darle "inteligencia" al sistema procesando Big Data, dibujando gráficas financieras y redactando la documentación universitaria.

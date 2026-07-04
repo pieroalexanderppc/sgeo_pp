@@ -10,10 +10,15 @@ MONGO_URL = os.getenv("MONGO_URL")
 PERU = timezone(timedelta(hours=-5))
 
 
+def _utcnow() -> datetime:
+    """UTC naive (compatible con los datetimes que devuelve PyMongo)."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
 def _parse_fecha(valor) -> datetime:
     """Convierte timestamp ms (ArcGIS) o string ISO a datetime UTC."""
     if valor is None:
-        return datetime.utcnow()
+        return _utcnow()
     if isinstance(valor, (int, float)) and valor > 1e9:
         return datetime.fromtimestamp(valor / 1000.0, tz=timezone.utc).replace(tzinfo=None)
     if isinstance(valor, str):
@@ -22,7 +27,7 @@ def _parse_fecha(valor) -> datetime:
                 return datetime.strptime(valor, fmt)
             except ValueError:
                 pass
-    return datetime.utcnow()
+    return _utcnow()
 
 
 def import_arcgis_data():
@@ -88,7 +93,7 @@ def import_arcgis_data():
                 "modalidad_hecho": r.get("modalidad_hecho"),
                 "estado_coord": estado_coord,
                 "fuente": "arcgis_sidpol",
-                "creado_en": datetime.utcnow(),
+                "creado_en": _utcnow(),
                 # Campos numéricos directos (útiles para agregaciones futuras)
                 "anio": r.get("año_hecho") or r.get("a�o_hecho"),
                 "mes": r.get("mes_hecho"),

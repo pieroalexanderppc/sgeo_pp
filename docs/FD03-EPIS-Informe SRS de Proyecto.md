@@ -208,14 +208,14 @@ Se omitio en favor de presentar un inventario de requerimientos funcionales inte
 **Categoria: Seguridad (SEC)**
 - **RNF-SEC-01 (Autenticacion Segura):** El sistema debe utilizar mecanismos de cifrado unidireccional con sal (salting) para el almacenamiento de contrasenias.
 - **RNF-SEC-02 (Transito de Datos):** Toda comunicacion cliente-servidor debe estar encriptada obligatoriamente bajo protocolo TLS 1.2 o superior (HTTPS).
-- **RNF-SEC-03 (Sesiones):** Las sesiones moviles y web deben expirar automaticamente o caducar los tokens de acceso tras 24 horas de inactividad sin renovacion.
+- **RNF-SEC-03 (Sesiones):** *(planificado — depende de la adopcion de JWT del roadmap)* Las sesiones moviles deben expirar automaticamente o caducar los tokens de acceso tras 24 horas de inactividad sin renovacion. En la version actual la sesion persiste en el cliente (SharedPreferences) hasta el cierre de sesion manual.
 
 **Categoria: Rendimiento (PER)**
 - **RNF-PER-01 (Consultas Espaciales):** El sistema debe resolver las consultas de proximidad geografica (busqueda de reportes cercanos) en un tiempo menor a 500 milisegundos bajo una carga concurrente nominal de 100 usuarios.
 - **RNF-PER-02 (Latencia de Notificaciones):** El retardo maximo aceptable entre el despacho de una notificacion y el envio a la plataforma externa de mensajeria debe ser estrictamente menor a 2 segundos.
 
 **Categoria: Confiabilidad y Disponibilidad (REL)**
-- **RNF-REL-01 (Tolerancia a Fallos):** El sistema debe ser capaz de reintentar la persistencia de datos en caso de una perdidad temporal de conexion con el servicio de base de datos.
+- **RNF-REL-01 (Tolerancia a Fallos):** El sistema debe ser capaz de reintentar la persistencia de datos en caso de una perdida temporal de conexion con el servicio de base de datos.
 - **RNF-REL-02 (Disponibilidad Operativa):** El entorno principal del servidor de aplicaciones debe mantener un nivel de disponibilidad (Uptime) contractual del 99.9% anual.
 
 **Categoria: Usabilidad (USA)**
@@ -233,22 +233,23 @@ A continuacion se detallan exhaustivamente los Requerimientos Funcionales (RF), 
 
 #### Modulo 1: Autenticacion y Gestion de Identidad
 
-- **RF-AUT-01: Registro de Usuarios Ciudadanos**
-  - **Descripcion formal:** El sistema debe permitir a un usuario no registrado crear una cuenta ingresando su correo electronico, contrasenia, nombre completo y numero de documento.
+- **RF-AUT-01: Registro de Usuarios**
+  - **Descripcion formal:** El sistema debe permitir a un usuario no registrado crear una cuenta ingresando su nombre completo, correo electronico, contrasenia y rol solicitado. Tanto el correo como el nombre deben ser unicos en el sistema (HTTP 400 si ya existen). Si el rol solicitado es "policia", la cuenta se crea desactivada con marca `aprobacion_pendiente` y se envia un correo solicitando los datos de acreditacion (CIP), quedando a la espera de la aprobacion del Administrador.
   - **Actor:** Usuario Anonimo
-  - **Precondiciones:** El usuario no debe poseer sesion activa ni el DNI/Email debe existir en el registro.
+  - **Precondiciones:** El usuario no debe poseer sesion activa; el email y el nombre no deben existir en el registro.
   - **Identificador de Endpoint:** POST /api/auth/register
 
 - **RF-AUT-02: Inicio de Sesion**
-  - **Descripcion formal:** El sistema debe autenticar credenciales y devolver un token de acceso seguro que asocie temporalmente el dispositivo con la sesion del usuario.
+  - **Descripcion formal:** El sistema debe autenticar las credenciales contra el hash bcrypt almacenado y devolver los datos del perfil (id, nombre, email, rol) que el cliente persiste en `SharedPreferences` para el enrutamiento por rol. Las respuestas de error usan un mensaje generico unico ("Correo o contrasenia incorrectos") para no revelar si el correo existe. Cuentas policiales pendientes de aprobacion o rechazadas reciben HTTP 403 con el motivo.
   - **Actor:** Todos los Roles.
-  - **Entradas:** Credenciales de usuario. **Salidas:** Estado de aprobacion y token temporal.
+  - **Entradas:** Credenciales de usuario. **Salidas:** Perfil del usuario y rol para enrutamiento.
+  - **Identificador de Endpoint:** POST /api/auth/login
 
 - **RF-AUT-03: Cierre de Sesion Seguro**
   - **Descripcion formal:** El sistema debe permitir la revocacion del token activo y purgar los datos de sesion local del cliente.
 
-- **RF-AUT-04: Recuperacion de Acceso**
-  - **Descripcion formal:** El sistema debe emitir un mecanismo (enlace o codigo por correo electronico) para restaurar credenciales de accounts ciudadanas perdidas.
+- **RF-AUT-04: Recuperacion de Acceso** *(diferido a roadmap)*
+  - **Descripcion formal:** El sistema debe emitir un mecanismo (enlace o codigo por correo electronico) para restaurar credenciales de cuentas ciudadanas perdidas. La infraestructura de correo transaccional (servicio Resend en `email_service.py`) ya esta operativa para el flujo de acreditacion policial; el flujo de recuperacion se encuentra planificado para la siguiente iteracion.
 
 - **RF-AUT-05: Modificacion de Perfil Propio**
   - **Descripcion formal:** El sistema debe permitir actualizar nombre o numero de contacto del perfil, restringiendo cambios en campos inmutables como el correo root.
@@ -258,7 +259,7 @@ A continuacion se detallan exhaustivamente los Requerimientos Funcionales (RF), 
 - **RF-REP-01: Creacion de Alerta de Incidente**
   - **Descripcion formal:** El sistema debe proveer de un formulario que capture coordenadas geograficas (Latitud/Longitud), nivel de criticidad o tipo de delito y una descripcion opcional.
   - **Actor:** Ciudadano / Policia
-  - **Restricciones:** Un usuario no podra emitir mas de 3 reportes pendientes de verificacion en un rango de 10 minutos (Regla Antispam).
+  - **Restricciones:** Un usuario registrado no podra emitir mas de 5 reportes por dia calendario; el sexto intento recibe HTTP 429 (Regla Antispam, validada por prueba automatizada). Los subtipos admitidos son HURTO y ROBO.
   - **Identificador de Endpoint:** POST /api/reportes
 
 - **RF-REP-02: Visualizacion de Detalle de Reporte**
@@ -273,13 +274,15 @@ A continuacion se detallan exhaustivamente los Requerimientos Funcionales (RF), 
 #### Modulo 3: Interacciones Tacticas de Unidades Oficiales
 
 - **RF-TAC-01: Listado de Reportes Cercanos**
-  - **Descripcion formal:** El sistema debe proveer una lista filtrada de incidentes con estado "Pendiente" acotada exclusivamente a un radio en kilometros basado en la locacion en tiempo real del dispositivo consultante.
+  - **Descripcion formal:** El sistema debe proveer al Rol Policial la totalidad de reportes ciudadanos (pendientes, confirmados y rechazados) para su pestania de Validacion e historial, y su mapa tactico debe resaltar visualmente el radio de patrullaje de 1 km alrededor de la posicion del efectivo mediante un efecto sonar animado, con contador de reportes pendientes dentro de la zona. La lista y el mapa se refrescan automaticamente cada 30 segundos para captar reportes emitidos desde otros dispositivos.
   - **Actor:** Policia
   - **Precondiciones:** Permisos validos de Rol Policial y hardware GPS funcional.
+  - **Identificador de Endpoint:** GET /api/reportes/policia
 
 - **RF-TAC-02: Confirmacion Oficial de Incidencia**
-  - **Descripcion formal:** El sistema debe otorgar potestad al Rol Policial de alterar permanentemente el estado transaccional de un reporte de "Pendiente" a "Confirmado".
-  - **Salidas:** Modificacion exitosa del estado del registro.
+  - **Descripcion formal:** El sistema debe otorgar potestad al Rol Policial de alterar permanentemente el estado transaccional de un reporte de "Pendiente" a "Confirmado". La confirmacion desencadena en cascada: (1) copia del incidente al historial estandarizado `historial_delitos` con `fuente="ciudadano"`, (2) agrupacion automatica de reportes pendientes del mismo subtipo en un radio de 500 m, (3) notificacion push masiva con las coordenadas GPS exactas, y (4) recalculo del motor DBSCAN en segundo plano. Si la copia al historial falla, la confirmacion se aborta integralmente (atomicidad).
+  - **Salidas:** Modificacion exitosa del estado del registro y efectos en cascada.
+  - **Identificador de Endpoint:** POST /api/reportes/confirmar/{id}
 
 - **RF-TAC-03: Rechazo de Falsas Alarmas**
   - **Descripcion formal:** El sistema debe permitir transicionar alertas infundadas al estado "Descartado", aislando dicha data de modulos futuros de evaluacion estadistica.
@@ -291,8 +294,8 @@ A continuacion se detallan exhaustivamente los Requerimientos Funcionales (RF), 
   - **Actor:** Administrador
   - **Identificador de Endpoint:** GET /api/admin/usuarios
 
-- **RF-ADM-02: Elevacion de Privilegios de Acceso**
-  - **Descripcion formal:** El sistema debe exponer una vista u opcion para modificar el estado identificativo de Rol de una cuenta (Ej. Ascender un cuenta generica a "Policia").
+- **RF-ADM-02: Aprobacion de Cuentas Policiales**
+  - **Descripcion formal:** El sistema debe exponer al Administrador una vista de aprobaciones con las cuentas policiales pendientes (`aprobacion_pendiente`), permitiendo aprobarlas (activando la cuenta) o rechazarlas registrando un motivo que sera comunicado al solicitante en su siguiente intento de inicio de sesion.
 
 - **RF-ADM-03: Suspension de Cuentas Ciudadanas**
   - **Descripcion formal:** El sistema debe habilitar el bloqueo transaccional temporal o indefinido sobre cuentas infractoras reiteradas.
@@ -322,7 +325,7 @@ A continuacion se detallan exhaustivamente los Requerimientos Funcionales (RF), 
   - **Identificador de Endpoint:** GET /api/predictive/safe_hours
 
 - **RF-MAP-05: Actualizacion Interna del Arbol de Riesgo (Sistema)**
-  - **Descripcion formal:** El sistema debe gatillar autonomicamente calculos de identificacion de hotspots mediante DBSCAN cada vez que el subsistema recaude un reporte confirmado, ejecutandose en segundo plano via BackgroundTasks sin bloquear el Event Loop.
+  - **Descripcion formal:** El sistema debe gatillar autonomicamente calculos de identificacion de hotspots mediante DBSCAN cada vez que el subsistema recaude un reporte confirmado, ejecutandose en segundo plano via BackgroundTasks sin bloquear el Event Loop. El motor detecta automaticamente el mes mas reciente con datos SIDPOL disponibles y calcula las zonas exclusivamente con: (a) incidentes SIDPOL de ese mes, y (b) reportes ciudadanos confirmados de los ultimos 60 dias — ambos restringidos a la provincia de Tacna y con coordenadas validas. Cada zona persiste su periodo fuente (`anio_periodo`, `mes_periodo`) para que el cliente auto-filtre la vista. El guardado es atomico (borra las zonas anteriores antes de insertar las nuevas).
   - **Actor:** Sistema (Proceso Interno — BackgroundTask FastAPI)
 
 - **RF-MAP-06: Analisis Temporal de Incidentes**
@@ -351,8 +354,11 @@ A continuacion se detallan exhaustivamente los Requerimientos Funcionales (RF), 
 - **RF-NOT-04: Notificacion Push Masiva de Incidentes Confirmados**
   - **Descripcion formal:** Al confirmar un reporte policial, el sistema debe emitir automaticamente una notificacion push masiva al topico `alertas_ciudadanos` con el tipo de incidente y las coordenadas GPS exactas del hecho.
 
-- **RF-NOT-05: Notificacion Push de Actualizacion de Mapa**
-  - **Descripcion formal:** Al recalcularse las zonas de riesgo DBSCAN, el sistema debe emitir una notificacion de tipo `update` que instruye a los clientes Flutter a limpiar su cache local y refrescar los datos del mapa.
+- **RF-NOT-05: Notificacion Push de Actualizacion de Mapa (con Cooldown)**
+  - **Descripcion formal:** Al recalcularse las zonas de riesgo DBSCAN, el sistema debe emitir una notificacion de tipo `update` que instruye a los clientes Flutter a limpiar su cache local y refrescar los datos del mapa. Para no saturar a los usuarios (el motor corre con cada confirmacion policial), esta notificacion se emite como maximo una vez cada 24 horas; la marca temporal del ultimo envio se persiste en la coleccion `config` de MongoDB.
+
+- **RF-NOT-06: Apertura Contextual desde Notificaciones**
+  - **Descripcion formal:** Al tocar una notificacion (con la app en primer plano, segundo plano o cerrada), el sistema debe navegar a la vista correspondiente: las de tipo `incident` centran el mapa en las coordenadas del hecho; las de tipo `update` abren el panel de alertas tras limpiar el cache del mapa. Si no existe sesion activa, el toque se ignora de forma segura.
 
 ---
 
@@ -377,8 +383,13 @@ A continuacion se detallan exhaustivamente los Requerimientos Funcionales (RF), 
 ### d) Reglas de Negocio
 
 - **RN-01 (Exclusividad Mutacional):** Ningun "Ciudadano" bajo registro estandar podra jamas transicionar un estado reportado hacia resoluciones oficiales confirmables. Solo identidades "Policia" poseen aval de transicion de fase.
-- **RN-02 (Causal de Exclusion Predictiva):** Todo requerimiento de elaboracion de mapas predictivos omitira en fase total de extraccion los reportes que presenten estado de negacion ("Descartado") o inadmision validada.
-- **RN-03 (Malla Radial Condicionada):** Un intento de presentacion perimetral del personal tactico (RF-TAC-01) estara supeditada invariablemente a un diametro preestablecido y validado en configuracion principal no parametrizable (ejemplo de radio operativo: limite urbano de Tacna).
+- **RN-02 (Causal de Exclusion Predictiva):** Todo requerimiento de elaboracion de mapas predictivos omitira en fase total de extraccion los reportes que presenten estado de negacion ("Rechazado") o inadmision validada. Los rechazos no alimentan jamas el historial de la IA.
+- **RN-03 (Malla Radial Condicionada):** El radio de patrullaje del personal tactico (RF-TAC-01) es un parametro fijo de 1 km no modificable desde el cliente; la agrupacion de reportes duplicados opera con un radio fijo de 500 m sobre el mismo subtipo de hecho.
+- **RN-04 (Limite Antispam Diario):** Un usuario registrado puede emitir como maximo 5 reportes por dia calendario; el excedente se rechaza con HTTP 429 sin persistir.
+- **RN-05 (Vigencia del Analisis Espacial):** Las zonas de riesgo se calculan exclusivamente con el mes mas reciente de datos SIDPOL disponibles mas los reportes ciudadanos confirmados de los ultimos 60 dias, ambos de la provincia de Tacna. Los datos historicos antiguos no generan zonas, evitando informacion ambigua u obsoleta al ciudadano.
+- **RN-06 (Vigencia de Alertas en el Mapa Ciudadano):** El mapa ciudadano solo muestra como alertas operativas los reportes confirmados de los ultimos 60 dias; los mas antiguos permanecen unicamente en la capa de historial.
+- **RN-07 (Aprobacion Policial Obligatoria):** Toda cuenta registrada con rol "policia" nace desactivada y solo puede iniciar sesion tras la aprobacion explicita del Administrador; un rechazo debe registrar el motivo.
+- **RN-08 (Enfriamiento de Notificacion Masiva):** La notificacion "Mapa de Zonas Actualizado" se emite como maximo una vez cada 24 horas, independientemente de cuantas veces se recalcule el motor.
 
 ---
 
@@ -414,7 +425,7 @@ package "Arquitectura Logica SOA (Python)" as P_Logic {
 }
 
 package "Capa Almacenamiento Estructurado" as P_Data {
-  [Repositorio Indices Geosraciales]
+  [Repositorio Indices Geoespaciales]
 }
 
 package "Modulos Externos Complementarios" as P_Ext {
@@ -425,8 +436,8 @@ package "Modulos Externos Complementarios" as P_Ext {
 [Modulo de Mapas y Rutas] ..> [Controlador de Reportes y Mantenimiento]
 [Modulo Interfaz de Atencion Tactica] ..> [Controlador de Reportes y Mantenimiento]
 
-[Controlador de Reportes y Mantenimiento] --> [Repositorio Indices Geosraciales]
-[Instancia Central IA Identificadora] ..> [Repositorio Indices Geosraciales]
+[Controlador de Reportes y Mantenimiento] --> [Repositorio Indices Geoespaciales]
+[Instancia Central IA Identificadora] ..> [Repositorio Indices Geoespaciales]
 [Instancia Central IA Identificadora] --> [Integrador de Notificaciones Push]
 @enduml
 ```
@@ -479,8 +490,8 @@ S_BG --> CU11
 ```
 
 #### c) Escenarios de Caso de Uso (Narrativa)
-- **Modificacion Verificada de Sucesos (Policia):** El usuario Policia ingresa coordenadas estaticas para refrescar eventos locales. El sistema retorna la ubicacion puntual de la llamada ciudadana. El Policia avanza al sector y examina inconsistencias locales. Regresa al listado tactico en la interaccion visual y despacha el requerimiento como "Desestimado". El flujo termonal altera internamente la base e inhabilita su uso para agregacion logica a futuro.
-- **Exposicion Metrica Gerencial (Administrador):** La sesion validada como Administrador ejecuta un requerimiento analitico historico. El sistema recopila las tablas desde su coleccion temporal desde el ultimo semestre, secciona por categorizaciones delictivas formales (Hurto, Robo agravado, Distubio) y genera un payload numerico que la visualizacion dibuja graficamente sobre cuadrantes visuales de la region referenciada.
+- **Modificacion Verificada de Sucesos (Policia):** El usuario Policia ingresa coordenadas estaticas para refrescar eventos locales. El sistema retorna la ubicacion puntual de la llamada ciudadana. El Policia avanza al sector y examina inconsistencias locales. Regresa al listado tactico en la interaccion visual y despacha el requerimiento como "Desestimado". El flujo terminal altera internamente la base e inhabilita su uso para agregacion logica a futuro.
+- **Exposicion Metrica Gerencial (Administrador):** La sesion validada como Administrador ejecuta un requerimiento analitico historico. El sistema recopila las tablas desde su coleccion temporal desde el ultimo semestre, secciona por categorizaciones delictivas formales (Hurto, Robo agravado, Disturbio) y genera un payload numerico que la visualizacion dibuja graficamente sobre cuadrantes visuales de la region referenciada.
 
 ### 3. Modelo Logico
 
@@ -516,7 +527,7 @@ stop
 @enduml
 ```
 
-#### c) Diagrama de Secuencia General de Confirmacion Tonal
+#### c) Diagrama de Secuencia General de Confirmacion Policial
 
 ```plantuml
 @startuml
@@ -529,7 +540,7 @@ participant "Proceso Calculo Background" as MAT
 database "Persistencia Colecciones BSON" as MDB
 
 AP -> FP : Seleccionar Accion 'Confirmar Evento'
-FP -> REP : Enviar transaccion segura PATCH (id, estado)
+FP -> REP : POST /api/reportes/confirmar/{id}
 REP -> MDB : Ejecuta Modificacion Condicionada Transaccional
 MDB -->> REP : Modificacion Unica Completa (Retorno Confirmacional)
 REP -->> FP : Liberacion via Estado Red 200 HTTP
@@ -558,7 +569,7 @@ skinparam class {
 class Usuario {
   - ObjectId id_interno
   - String nombre_compuesto
-  - String correo_recorrido
+  - String correo_registrado
   - String clave_almacenada_secreta
   - String directriz_de_rol
 }
@@ -595,7 +606,7 @@ ReporteCiudadano "1..*" --> ZonaRiesgo : compone base material
 ---
 
 ## CONCLUSIONES
-Bajo los estandares aplicadis de revision de la ingenieria, el documento se alinea como la pieza madre descriptiva del contrato operativo. Se ha delimitado rigurosamente que las facultades de accion interactuan escalonadamente, confinando a cada actor un set verificable y rastreable de operabilidad sin depender en esta instancia de justificaciones de infraestructura inferior (como codigos de programacion). Todo ello garantiza certidumbre academica y profesional.
+Bajo los estandares aplicados de revision de la ingenieria, el documento se alinea como la pieza madre descriptiva del contrato operativo. Se ha delimitado rigurosamente que las facultades de accion interactuan escalonadamente, confinando a cada actor un set verificable y rastreable de operabilidad sin depender en esta instancia de justificaciones de infraestructura inferior (como codigos de programacion). Todo ello garantiza certidumbre academica y profesional.
 
 ## RECOMENDACIONES
 Se requiere la presentacion paralela y adjunta de un Documento de Disenio y Arquitectura (SAD) para volcar detalladamente las abstracciones implementadas a la interaccion tecnica final. Ademas, este informe base debera ser revisado de manera continua cada vez que el levantamiento iterativo identifique una modificacion en las Reglas de Negocio base (como por ejemplo nuevas fases estables para incidentes intermedios o reestructuras en division de los administradores policiales).

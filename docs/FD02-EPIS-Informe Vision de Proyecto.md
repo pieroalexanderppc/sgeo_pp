@@ -80,7 +80,7 @@ El proyecto abarca el desarrollo completo de un ecosistema móvil multiplataform
 - **Desarrollo Frontend Móvil:** Construcción en Flutter (SDK ^3.11.3, Dart) bajo el sistema de diseño "Premium Tactical Dark", separando estrictamente tres interfaces nativas para Ciudadanos, Policías y Administradores, con enrutamiento dinámico basado en el atributo `rol` almacenado en `SharedPreferences`.
 - **Implementación de Machine Learning:** Uso de Scikit-Learn para clustering espacial con el algoritmo **DBSCAN** (`epsilon=150m`, `min_samples=5`, métrica Haversine, `algorithm='ball_tree'`) para delimitar zonas de riesgo con radios dinámicos (150m–350m); **LinearRegression** para predicciones mensuales de incidentes por distrito; y el **Motor Predictivo Contextual** (`predictive_context_engine.py`) con cuatro clases especializadas: `SafetyScoreCalculator`, `TemporalAnalyzer`, `InsightGenerator` y `SafeHoursCalculator`.
 - **APIs REST:** Backend en FastAPI (`fastapi==0.104.1`) con seis módulos de rutas: autenticación (`/api/auth`), reportes (`/api/reportes`), mapas (`/api/map`), predictivo (`/api/predictive` con 5 endpoints), usuarios (`/api/users`) y administración (`/api/admin`).
-- **ETL Histórico:** Scripts `extract_arcgis_data.py` e `import_arcgis_data.py` para ingestión de datos ArcGIS/SIDPOL. Dataset histórico `datos_historicos_tacna.json` (~3.4 MB) con registros criminológicos 2018-2026.
+- **ETL de Datos Oficiales:** Scripts `extract_arcgis_data.py` e `import_arcgis_data.py` que consumen el servicio REST `SIDPOL_DELITOS_TOTAL` de la plataforma ArcGIS del MININTER, filtrando por provincia de Tacna, tipo PATRIMONIO (DELITO) y año vigente. El motor de zonas usa únicamente el mes más reciente con datos disponibles, garantizando que las zonas de riesgo reflejen la situación actual y no estadísticas antiguas.
 - **Sistema de Geofencing y Alertas Push:** Servicio `GeofenceService` implementado en Flutter con seguimiento GPS continuo (`distanceFilter=50m`, `LocationAccuracy.high`), detección de ingreso a zonas DBSCAN, cooldown de 30 minutos, y alertas contextuales con información del turno horario. Firebase Cloud Messaging (FCM) para notificaciones push masivas por tópico (`alertas_ciudadanos`).
 
 ### 1.3. Definiciones, Siglas y Abreviaturas
@@ -111,14 +111,14 @@ En el contexto actual de la ciudad de Tacna, la percepción de inseguridad ciuda
 
 La oportunidad se fundamenta en tres pilares principales:
 - **Democratización de la Prevención:** Las personas tienen derecho a saber de manera inmediata y visual cuáles son las rutas seguras. SGEO reemplaza la información desordenada en redes sociales con un mapa validado oficialmente.
-- **Evolución del Patrullaje (Patrullaje Predictivo):** El Comando Policial de Tacna (PNP) dejará de reaccionar al delito. Al poseer un algoritmo de ML Predictivo sobre la historia criminalística desde 2018, pueden dirigir sus limitados recursos logísticos hacia distritos específicos con alto riesgo futuro proyectado, ahorrando combustible y tiempo.
+- **Evolución del Patrullaje (Patrullaje Predictivo):** El Comando Policial de Tacna (PNP) dejará de reaccionar al delito. Al poseer un algoritmo de ML Predictivo sobre el historial criminalístico oficial vigente del SIDPOL, pueden dirigir sus limitados recursos logísticos hacia distritos específicos con alto riesgo futuro proyectado, ahorrando combustible y tiempo.
 - **Posicionamiento Cívico-Digital:** Consolida un puente directo entre el Estado Peruano, la municipalidad, la policía y el ciudadano a través de su dispositivo móvil, modernizando radicalmente la infraestructura social de Tacna.
 
 ### 2.2. Definición del problema
 La región de Tacna enfrenta desafíos críticos:
 - **Tiempos de latencia y burocracia:** Los ciudadanos se desaniman de realizar denuncias formales por procesos extensos. SGEO permite realizar reportes visuales geoespaciales en menos de tres clics.
 - **Información estadística estática:** Existen datos de la Unidad de Flagrancia y SIDPOL, pero son reportes en Excel poco intuitivos que no benefician al peatón.
-- **Sistemas sin validación táctica:** Herramientas similares sufren de reportes falsos. SGEO soluciona esto aislando el rol de Policía, que filtra y certifica los incidentes reportados por civiles en un radio de 3 kilómetros.
+- **Sistemas sin validación táctica:** Herramientas similares sufren de reportes falsos. SGEO soluciona esto aislando el rol de Policía, que filtra y certifica los incidentes reportados por civiles dentro de su radio de patrullaje de 1 kilómetro, con agrupación automática de reportes duplicados en 500 metros.
 
 ---
 
@@ -131,7 +131,7 @@ La región de Tacna enfrenta desafíos críticos:
 
 ### 3.2. Resumen de los usuarios
 - **Ciudadanos (70%):** Residentes de Tacna que usarán la aplicación diariamente para planificar rutas seguras, leer el Feed RSS de noticias de seguridad y reportar robos o accidentes in-situ.
-- **Policías (25%):** Efectivos activos que tendrán instalada la aplicación con un panel diferencial (Vista de Validación y Dashboard de 3km) para auditar el mapa cívico en tiempo real.
+- **Policías (25%):** Efectivos activos que tendrán instalada la aplicación con un panel diferencial: mapa de patrullaje con radar sonar animado de 1 km, pestaña de Validación con actualización automática cada 30 segundos, e historial de reportes atendidos.
 - **Administradores / Inteligencia Policial (5%):** Jefes operativos con acceso a los Dashboards Avanzados (fl_chart), gestión gráfica de la base de usuarios y tableros predictivos de Machine Learning.
 
 ### 3.3. Entorno de usuario
@@ -176,7 +176,7 @@ La región de Tacna enfrenta desafíos críticos:
 ## 4. Vista General del Producto
 
 ### 4.1. Perspectiva del producto
-SGEO es un sistema autoconteido y completamente modularizado. Actúa como el centro neurálgico de información situacional. Emplea la arquitectura C/S (Cliente-Servidor) y una conexión directa M2M (Machine to Machine) hacia bases gubernamentales.
+SGEO es un sistema autocontenido y completamente modularizado. Actúa como el centro neurálgico de información situacional. Emplea la arquitectura C/S (Cliente-Servidor) y una conexión directa M2M (Machine to Machine) hacia bases gubernamentales.
 
 - **Integración Transparente:** La app extrae por debajo Data del Estado (SIDPOL) para entrenar su ML y cruza la información en vivo (reportes de la app) para emitir alertas Push por tópicos vía Firebase Admin SDK.
 - **Microservicios (FastAPI):** Python permite cálculos pesados como DBSCAN y Linear Regression de manera asíncrona mediante `BackgroundTasks`, garantizando que la API nunca se bloquee frente a consultas HTTP de los usuarios móviles.
@@ -187,15 +187,15 @@ SGEO es un sistema autoconteido y completamente modularizado. Actúa como el cen
 |---------------------------|-----------------------------|
 | Prevención pasiva automática | - Geofencing GPS continuo (`distanceFilter=50m`, `LocationAccuracy.high`).<br>- Alerta sonora local con cooldown de 30 minutos y mensaje contextual por turno horario (mañana/tarde/noche/madrugada). |
 | Safety Score dinámico | - Cálculo escalar 0-100 en tiempo real basado en 4 factores: proximidad a zonas DBSCAN, densidad de incidentes en radio 1km, factor temporal por turno, tendencia distrital.<br>- Nivel de riesgo: Seguro (≥80, verde), Precaución (50-79, amarillo), Alto Riesgo (<50, rojo). |
-| Eliminación del ruido policial | - Módulo Táctico Policial de validación con radio de 3km.<br>- Solo reportes con estado `confirmado` nutren el historial y el modelo DBSCAN final. |
-| Visualización de Patrones de Crimen | - DBSCAN con `epsilon=150m`, `min_samples=5`, `algorithm='ball_tree'`, `metric='haversine'`.<br>- Radios dinámicos por hotspot (150m–350m) según densidad de incidentes. |
+| Eliminación del ruido policial | - Módulo Táctico Policial con radio de patrullaje de 1 km y efecto sonar animado.<br>- Agrupación automática de reportes duplicados en radio de 500 m.<br>- Solo reportes con estado `confirmado` nutren el historial y el modelo DBSCAN final. |
+| Visualización de Patrones de Crimen | - DBSCAN con `epsilon=150m`, `min_samples=5`, `algorithm='ball_tree'`, `metric='haversine'`.<br>- Radios dinámicos por hotspot (150m–350m) según densidad de incidentes.<br>- Zonas calculadas exclusivamente con el mes más reciente de datos SIDPOL + reportes ciudadanos de los últimos 60 días. |
 | Inteligencia Contextual | - 5 endpoints predictivos: `safety_score`, `temporal_analysis`, `context_insights`, `risk_forecast`, `safe_hours`.<br>- Insights automáticos (hasta 6 por consulta) personalizados por ubicación y hora. |
-| Administración Proactiva e IA | - Dashboards analíticos con `fl_chart` (reportes por estado, por tipo).<br>- Predicción de incidentes por distrito a 3 meses vía LinearRegression sobre histórico SIDPOL 2018-2026. |
+| Administración Proactiva e IA | - Dashboards analíticos con `fl_chart` (reportes por estado, por tipo).<br>- Predicción de incidentes por distrito a 3 meses vía LinearRegression sobre el histórico SIDPOL vigente. |
 | Feed de Noticias de Seguridad | - Módulo de noticias en la interfaz del Ciudadano con contenido de seguridad ciudadana.<br>- Historial de notificaciones persistido localmente con `SharedPreferences`. |
 | Acceso universal y fluido | - Frontend compilado a APK/AAB (Android) con tema "Premium Tactical Dark".<br>- Enrutamiento dinámico por rol (`ciudadano`, `policia`, `admin`/`administrador`). |
 
 ### 4.3. Suposiciones y dependencias
-- **Dependencias externas:** Servicios de MongoDB Atlas operativos, disponibilidad del servicio Google Maps/OSM Tiles, y operatividad del sitio web del SIDPOL (para el scraping mensual).
+- **Dependencias externas:** Servicios de MongoDB Atlas operativos, disponibilidad del servicio de tiles OSM/CartoDB, y operatividad del servicio ArcGIS REST del MININTER (`SIDPOL_DELITOS_TOTAL`) para la actualización periódica de datos oficiales.
 - **Dependencias internas:** Mantenimiento de los modelos de Machine Learning (reentrenamiento periódico cada fin de mes), claves privadas SSL y credenciales Firebase.
 
 ### 4.4. Costos y precios
@@ -231,9 +231,9 @@ SGEO es un sistema autoconteido y completamente modularizado. Actúa como el cen
 ---
 
 ## 6. Restricciones
-- **Técnicas:** Los algoritmos de scraping requieren mantenimiento si el Estado Peruano cambia las cabeceras HTML de sus portales.
+- **Técnicas:** El pipeline ETL depende del servicio ArcGIS REST público del MININTER; si el Estado cambia los endpoints o el esquema de campos, los scripts de extracción requieren mantenimiento (mitigado: el extractor valida y reporta la distribución de datos por mes en cada corrida).
 - **Rendimiento:** El mapa interactivo debe renderizar no más de 1,000 marcadores simultáneos usando técnicas de Clustering visual para no agotar la RAM en Androids de gama baja.
-- **Regulatorias:** No se expone información personal en el mapa, respetando la legislación peruana de Datos Personales (Ley N° 29733). Las ubicaciones de denuncias se anonimizan y randomizan a 5-10 metros de diferencia.
+- **Regulatorias:** No se expone información personal en el mapa, respetando la legislación peruana de Datos Personales (Ley N° 29733). Los reportes admiten emisión anónima, los marcadores públicos muestran únicamente tipo de hecho, fecha y estado (nunca la identidad del denunciante), y las contraseñas se almacenan exclusivamente como hash bcrypt.
 
 ---
 
@@ -257,7 +257,7 @@ SGEO es un sistema autoconteido y completamente modularizado. Actúa como el cen
 **Prioridad Media (Adopción y Optimización - Sprint 3):**
 1. Dashboards analíticos avanzados con `fl_chart`.
 2. Geocercas en segundo plano para notificaciones automáticas de proximidad.
-3. Tareas Cron para ingesta y scraping de bases (SIDPOL).
+3. Pipeline ETL para ingesta periódica de datos oficiales (ArcGIS/SIDPOL).
 4. Motor IA Predictivo de Regresión Lineal.
 
 **Prioridad Baja (Futuro - Roadmap):**
@@ -292,7 +292,7 @@ SGEO es un sistema autoconteido y completamente modularizado. Actúa como el cen
 El documento de Visión consolida el rumbo estratégico y tecnológico del SGEO, marcando hitos irrefutables: desde el diseño UI de su app móvil hasta la complejidad matemática de su motor en Python. Demuestra que la amalgama de reportes ciudadanos con Big Data oficial e Inteligencia Artificial es el paso inminente hacia un modelo de "Smart City" en Tacna, con viabilidad económica y técnica absoluta para ser lanzado de forma productiva.
 
 ## RECOMENDACIONES
-Se sugiere iniciar las pruebas piloto focalizadas en el Distrito Crítico (indicado por la predicción IA inicial) para validar el comportamiento real del algoritmo DBSCAN y la adherencia del personal de serenazgo/policía a la validación de alertas. Así mismo, formalizar el contacto con los entes gubernamentales para obtener accesos oficiales mediante API a los datos del SIDPOL, disminuyendo la dependencia actual del web scraping.
+Se sugiere iniciar las pruebas piloto focalizadas en el Distrito Crítico (indicado por la predicción IA inicial) para validar el comportamiento real del algoritmo DBSCAN y la adherencia del personal de serenazgo/policía a la validación de alertas. Así mismo, formalizar el contacto con los entes gubernamentales para obtener un acceso oficial y estable a los datos del SIDPOL, consolidando la dependencia actual del servicio ArcGIS REST público con un acuerdo institucional.
 
 ## BIBLIOGRAFÍA
 - Sommerville, I. (2016). *Software Engineering* (10th ed.). Pearson.

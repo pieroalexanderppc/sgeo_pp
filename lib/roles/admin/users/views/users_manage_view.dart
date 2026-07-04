@@ -358,10 +358,12 @@ class _UsersManageViewState extends State<UsersManageView> {
                                           : Colors.grey[700],
                                     ),
                                     onSelected: (value) {
-                                      if (value == 'suspender')
+                                      if (value == 'suspender') {
                                         _toggleSuspender(u);
-                                      if (value == 'eliminar')
+                                      }
+                                      if (value == 'eliminar') {
                                         _confirmarEliminar(u);
+                                      }
                                     },
                                     itemBuilder: (ctx) => [
                                       PopupMenuItem(

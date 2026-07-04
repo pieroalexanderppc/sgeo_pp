@@ -39,6 +39,7 @@ class _MapViewState extends State<MapView> {
   dynamic _selectedZona;
 
   StreamSubscription<Position>? _positionStreamSubscription;
+  Timer? _autoRefreshTimer;
   bool _isLoading = true;
   List<dynamic> _zonasRiesgo = [];
   List<dynamic> _puntosExactos = [];
@@ -169,6 +170,13 @@ class _MapViewState extends State<MapView> {
 
     TutorialService.triggerTutorialNotifier.addListener(_tutorialListener);
     ReportService.reportsUpdatedNotifier.addListener(_reportsUpdatedListener);
+
+    // Auto-refresh silencioso: capta confirmaciones hechas por la policía
+    // desde otros dispositivos sin necesidad de reabrir la app.
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      _loadPuntosExactos();
+      _loadMisReportes();
+    });
   }
 
   /// Carga el Safety Score y los Insights para la posición actual del usuario.
@@ -735,6 +743,7 @@ class _MapViewState extends State<MapView> {
       _reportsUpdatedListener,
     );
     _positionStreamSubscription?.cancel();
+    _autoRefreshTimer?.cancel();
     super.dispose();
   }
 
@@ -829,13 +838,6 @@ class _MapViewState extends State<MapView> {
                               if (_showReportesValidados && _currentZoom > 15.5)
                                 ..._puntosHistorial
                                     .where((punto) {
-                                      final fuente =
-                                          punto['fuente'] ?? 'sidpol';
-                                      if (fuente == 'ciudadano' &&
-                                          !_showReportesValidados) {
-                                        return false;
-                                      }
-
                                       if (_filterYear != null ||
                                           _filterMonth != null) {
                                         final dt = _extractDate(punto);

@@ -51,12 +51,12 @@ class _ValidationsViewState extends State<ValidationsView>
     // Auto-refresh para reportes enviados desde otros dispositivos.
     _refreshTimer = Timer.periodic(
       const Duration(seconds: 30),
-      (_) => _fetchReportes(),
+      (_) => _fetchReportes(silent: true),
     );
   }
 
   void _onReportsUpdated() {
-    if (mounted) _fetchReportes();
+    if (mounted) _fetchReportes(silent: true);
   }
 
   @override
@@ -67,8 +67,10 @@ class _ValidationsViewState extends State<ValidationsView>
     super.dispose();
   }
 
-  Future<void> _fetchReportes() async {
-    setState(() => _isLoading = true);
+  // silent: refresca datos sin mostrar el spinner (auto-refresh cada 30s);
+  // evita que la lista parpadee mientras el policía la está viendo.
+  Future<void> _fetchReportes({bool silent = false}) async {
+    if (!silent) setState(() => _isLoading = true);
     try {
       final reportes = await MapService.fetchPuntosPolicia();
 

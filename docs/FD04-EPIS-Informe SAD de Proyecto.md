@@ -76,7 +76,7 @@ El documento cubre el diseno logico, la persistencia, la logica de negocio en el
 - **SRS:** Software Requirements Specification.
 - **DBSCAN:** Density-Based Spatial Clustering of Applications with Noise. Algoritmo no parametrico para clustering.
 - **ETL:** Extract, Transform, Load. Proceso para importar origenes historicos (SIDPOL).
-- **JWT:** JSON Web Token. Estructura de autenticacion de estado descentralizado.
+- **JWT:** JSON Web Token. Estructura de autenticacion de estado descentralizado (planificado en el roadmap; la version actual autentica con bcrypt y enruta por rol persistido en el cliente).
 - **FCM:** Firebase Cloud Messaging. Plataforma para envio de notificaciones push.
 - **RBAC:** Role-Based Access Control. Manejo de dominios de autorizacion.
 
@@ -87,7 +87,7 @@ El documento cubre el diseno logico, la persistencia, la logica de negocio en el
 - Documentacion de MongoDB (Geospatial Queries, BSON).
 
 ### 1.5 Organizacion del documento
-El documento adopta el Modelo de Vistas 4+1 (Logica, Implementacion, Procesos, Despliegue y Casos de Uso) estandarizado, complementado con secciones obligatorizadas para el aseguramiento de la calidad y justificacion de decisiones arquitectonicas.
+El documento adopta el Modelo de Vistas 4+1 (Logica, Implementacion, Procesos, Despliegue y Casos de Uso) estandarizado, complementado con secciones obligatorias para el aseguramiento de la calidad y justificacion de decisiones arquitectonicas.
 
 ---
 
@@ -127,7 +127,7 @@ SGEO se fundamenta en un modelo de capas acoplado al estandar 4+1 de Kruchten:
 
 ### 3.3 Priorizacion de Requerimientos
 1. Persistencia de reportes geoespaciales inmutables.
-2. Autorizacion estricta (JWT + RBAC).
+2. Autenticacion con hash bcrypt, gate de aprobacion policial y enrutamiento RBAC por rol en el cliente (la emision de tokens JWT con middleware de autorizacion en el backend es deuda tecnica priorizada para la siguiente iteracion).
 3. Resilencia temporal frente a calculos espaciales defectuosos en etapa ML.
 
 ---
@@ -174,7 +174,7 @@ UC_Eval .> UC_Auth : include
 ### 4.2 Actores del Sistema
 - **Usuario Anonimo:** Solo posee persistencia base interactuando con metodos POST para registro.
 - **Ciudadano (Rol 1):** Acceso GET a datos procesados; POST limitado a su propiedad sobre "ReporteCiudadano".
-- **Policia (Rol 2):** Permiso de lectura geolocalizada `$near` y modificacion (PATCH) de estado de alerta.
+- **Policia (Rol 2):** Lectura completa del inventario de reportes para validacion y mutacion de estado via POST (/confirmar, /rechazar).
 - **Administrador (Rol 3):** Visibilidad global de los flujos de lectura transversal; ejecucion del ETL.
 
 ### 4.3 Especificacion de Casos de Uso
@@ -221,54 +221,75 @@ package "backend.api" {
 }
 
 package "backend.services" {
-  [jwt_service]
-  [reporte_service]
+  [report_service]
+  [analytics_service]
+  [email_service]
   [firebase_service]
 }
 
 package "backend.ia" {
   [motor_ia_zonas_riesgo]
   [predictive_context_engine]
-  [etl_historico_processor]
+}
+
+package "backend.utils" {
+  [crypto_bcrypt]
+  [time_helpers]
+  [string_helpers]
 }
 
 package "backend.models" {
   [pydantic_schemas]
 }
 
-[auth_router] --> [jwt_service]
-[ciudadano_router] --> [reporte_service]
-[policia_router] --> [motor_ia_zonas_riesgo]
-[admin_router] --> [etl_historico_processor]
+package "backend.scripts_iniciales (ETL CLI)" {
+  [extract_arcgis_data]
+  [import_arcgis_data]
+}
 
-[reporte_service] --> [pydantic_schemas]
+[auth_router] --> [crypto_bcrypt]
+[auth_router] --> [email_service]
+[ciudadano_router] --> [report_service]
+[policia_router] --> [motor_ia_zonas_riesgo]
+[admin_router] --> [analytics_service]
+
+[report_service] --> [pydantic_schemas]
+[report_service] --> [time_helpers]
 [motor_ia_zonas_riesgo] --> [firebase_service]
+[motor_ia_zonas_riesgo] --> [string_helpers]
 @enduml
 ```
 
 ### 5.3 Diagramas de Secuencia
 
-#### 5.3.1 Flujo de Autenticacion JWT
+#### 5.3.1 Flujo de Autenticacion (bcrypt + gate de aprobacion policial)
 ```plantuml
 @startuml
 skinparam shadowing false
 participant "Flutter UI" as UI
 participant "AuthRouter" as Router
-participant "AuthService" as Service
+participant "utils.crypto (bcrypt)" as Crypto
 database "MongoDB" as DB
 
-UI -> Router: POST /login {email, password}
-Router -> Service: verify_credentials(email, pw)
-Service -> DB: find_one({"email": email})
-DB --> Service: Documento Usuario BSON
-Service -> Service: match_bcrypt_hash(pw, hash_db)
-alt Valid Password
-    Service -> Service: encode_jwt(sub=id, rol=rol)
-    Service --> Router: Token string
-    Router --> UI: 200 OK {access_token, token_type}
-else Invalid Password
-    Service --> Router: HTTPException 401
-    Router --> UI: 401 Unauthorized
+UI -> Router: POST /api/auth/login {email, password}
+Router -> DB: find_one({"email": email})
+DB --> Router: Documento Usuario BSON
+alt Usuario inexistente
+    Router --> UI: 401 (mensaje generico anti-enumeracion)
+else Cuenta policial pendiente o rechazada
+    Router --> UI: 403 {motivo de revision/rechazo}
+else Cuenta activa
+    Router -> Crypto: verify_password(pw, password_hash)
+    alt Password valida
+        Router --> UI: 200 OK {id, nombre, email, rol}
+        note right of UI
+          El cliente persiste el rol en
+          SharedPreferences y enruta a la
+          interfaz del rol (RBAC de cliente)
+        end note
+    else Password invalida
+        Router --> UI: 401 (mismo mensaje generico)
+    end
 end
 @enduml
 ```
@@ -284,43 +305,55 @@ participant "MotorIA (DBSCAN)" as Motor
 participant "FirebaseService" as FCM
 database "MongoDB" as DB
 
-Router -> Service: PATCH /confirmar_reporte/{id}
+Router -> Service: POST /api/reportes/confirmar/{id}
+Service -> DB: insert_one(historial_delitos, fuente="ciudadano")
+Service -> DB: update_many(pendientes en radio 500m -> "agrupado")
 Service -> DB: update_one(id, estado="confirmado")
 DB --> Service: UpdateResult (Acknowledge)
-Service -> BG: add_task(recalcular_zonas_riesgo)
+Service -> FCM: push "incident" con lat/lng (topic alertas_ciudadanos)
+Service -> BG: add_task(ejecutar_ia_zonas_riesgo)
 Service --> Router: 200 OK (Desbloquea Event Loop)
 Router --> "Cliente Policia": "Reporte validado"
 
 == Tarea Asincrona en Paralelo ==
-BG -> Motor: invocar_clustering()
+BG -> Motor: ejecutar_ia_zonas_riesgo()
 activate Motor
-Motor -> DB: fetch all = reportes("confirmados") + historico(SIDPOL)
+Motor -> DB: max(fecha_hecho) de SIDPOL -> detecta ultimo mes con datos
+Motor -> DB: fetch SIDPOL(ultimo mes) + ciudadanos confirmados(60 dias)\nprovincia=TACNA, con coordenadas
 DB --> Motor: Pandas DataFrame / List[Dict]
-Motor -> Motor: fit_predict(haversine, epsilon, min_samples)
-Motor -> Motor: generate_geo_polygons()
-Motor -> DB: bulk_write (ZonasRiesgo)
-Motor -> FCM: send_multicast(topic="zonas_g", payload)
+Motor -> Motor: DBSCAN fit_predict(haversine, eps=150m, min_samples=5)
+Motor -> Motor: centroides + radios dinamicos + anio/mes_periodo
+Motor -> DB: delete_many + insert_many (zonas_riesgo, atomico)
+alt Ultimo envio hace >= 24h (cooldown en db.config)
+  Motor -> FCM: push "update" (topic alertas_ciudadanos)
+  Motor -> DB: upsert marca last_map_update_notification
+end
 deactivate Motor
 @enduml
 ```
 
-#### 5.3.3 Flujo Integracion Analitica ETL (SIDPOL)
+#### 5.3.3 Flujo Integracion Analitica ETL (ArcGIS/SIDPOL)
 ```plantuml
 @startuml
 skinparam shadowing false
-participant "AdminRouter" as Router
-participant "ETLService" as ETL
-participant "Sistema Archivos" as FS
-database "MongoDB" as DB
+participant "Operador (CLI)" as OP
+participant "extract_arcgis_data.py" as EXT
+participant "ArcGIS REST MININTER\n(SIDPOL_DELITOS_TOTAL)" as ARC
+participant "import_arcgis_data.py" as IMP
+database "MongoDB Atlas" as DB
 
-Router -> ETL: POST /api/admin/etl_upload (CSV/JSON)
-ETL -> FS: persist_temp_file()
-FS --> ETL: File pointer
-ETL -> ETL: Pandas.read_csv()
-ETL -> ETL: clean_data() -> map_to_geojson()
-ETL -> DB: insert_many(Documentos SIDPOL)
-DB --> ETL: bulk_result
-ETL -> Router: Reporte finalizacion (count)
+OP -> EXT: python extract_arcgis_data.py
+EXT -> ARC: query WHERE dpto=TACNA AND prov=TACNA\nAND tipo=PATRIMONIO AND anio=vigente (paginado 2000)
+ARC --> EXT: features JSON (atributos + lat/long)
+EXT -> EXT: valida distribucion por mes
+EXT -> EXT: guarda datos_historicos_tacna.json
+
+OP -> IMP: python import_arcgis_data.py
+IMP -> DB: delete_many({fuente: "arcgis_sidpol"})\n(no toca reportes ciudadanos)
+IMP -> IMP: normaliza fechas (epoch ms -> datetime UTC)\ny descarta registros sin coordenadas
+IMP -> DB: insert_many(historial_delitos, fuente="arcgis_sidpol")
+DB --> IMP: bulk_result
+IMP -> OP: Resumen (insertados / omitidos)
 @enduml
 ```
 
@@ -354,16 +387,23 @@ class ReporteCiudadano {
 class ZonaRiesgo {
   + ObjectId _id
   + GeoJSON Point centroide
-  + Float radio_metros
-  + Float puntaje_riesgo
-  + List<ObjectId> crimenes_relacionados
-  + DateTime ultima_actualizacion
+  + Integer radio_metros
+  + String nivel_riesgo (bajo/medio/alto/critico)
+  + Integer total_incidentes
+  + String delito_predominante
+  + String tendencia
+  + Integer anio_periodo
+  + Integer mes_periodo
+  + DateTime calculado_en
 }
 
 class ConfiguracionSistema {
-  + Float dbscan_epsilon_km
-  + Integer dbscan_min_samples
-  + Integer horas_vigencia_alerta
+  + String key (ej. last_map_update_notification)
+  + DateTime sent_at
+  .. Parametros fijos en codigo ..
+  + eps DBSCAN = 150 m
+  + min_samples = 5
+  + cooldown notificacion = 24 h
 }
 
 Usuario "1" --> "0..*" ReporteCiudadano : emite
@@ -396,7 +436,7 @@ package "Entorno Produccion Backend (Docker)" {
 database "MongoDB Atlas Cluster" as Mongo
 cloud "Google Firebase" as Firebase
 
-UI <--> Uvicorn : REST API / JWT
+UI <--> Uvicorn : REST API / HTTPS-JSON
 Uvicorn --> FastAPI
 FastAPI --> Routers
 FastAPI --> Services
@@ -486,10 +526,19 @@ sgeo_pp/
 |   |   |-- string_helpers.py       # Normalizacion de strings
 |   |   +-- time_helpers.py         # Turnos horarios y pesos temporales
 |   |-- scripts_iniciales/          # ETL e inicializacion
-|   |   |-- datos_historicos_tacna.json  # ~3.4MB historial SIDPOL 2018-2026
-|   |   |-- extract_arcgis_data.py  # Extraccion datos ArcGIS/SIDPOL
-|   |   |-- import_arcgis_data.py   # Importacion a MongoDB
-|   |   +-- setup_db.py             # Configuracion inicial de BD y esquemas
+|   |   |-- datos_historicos_tacna.json  # Dataset SIDPOL del anio vigente (PATRIMONIO, prov. Tacna)
+|   |   |-- extract_arcgis_data.py  # Extraccion desde ArcGIS REST (SIDPOL_DELITOS_TOTAL)
+|   |   |-- import_arcgis_data.py   # Importacion a MongoDB (reemplaza solo fuente arcgis_sidpol)
+|   |   +-- setup_db.py             # Configuracion inicial de BD y esquemas ($jsonSchema validators)
+|   |-- tests/                      # Suite pytest (68 pruebas, mongomock, sin BD real)
+|   |   |-- conftest.py             # Fixtures: TestClient + BD en memoria
+|   |   |-- test_utils.py           # Unitarias: turnos, distritos, bcrypt
+|   |   |-- test_report_service.py  # Unitarias del servicio de reportes (+ regresion D-01)
+|   |   |-- test_reports.py         # Integracion flujo ciudadano
+|   |   |-- test_reports_policia.py # Integracion flujo policia (confirmar/rechazar/push)
+|   |   |-- test_auth_api.py        # Integracion login/registro/aprobacion policial
+|   |   |-- test_maps_api.py        # Integracion endpoints de mapa y cache
+|   |   +-- test_motor_ia.py        # Integracion motor DBSCAN (periodo, cooldown, atomicidad)
 |   |-- firebase_service.py         # Firebase Admin SDK: init + send_push_notification
 |   |-- motor_ia_zonas_riesgo.py    # DBSCAN (epsilon=150m, min_samples=5, haversine)
 |   |-- predictive_context_engine.py # SafetyScoreCalculator, TemporalAnalyzer, InsightGenerator, SafeHoursCalculator
@@ -497,12 +546,16 @@ sgeo_pp/
 |   |-- requirements.txt            # Dependencias pip con versiones fijas
 |   |-- Procfile                    # Railway: web: uvicorn main:app --host 0.0.0.0 --port $PORT
 |   +-- .env.example                # Variables: MONGO_URL, SECRET_KEY, FIREBASE_CREDENTIALS_JSON, PORT
+|-- test/                            # Suite flutter_test (14 pruebas de widget/unitarias)
+|   |-- widget_test.dart             # Smoke de arranque (Splash -> LoginView)
+|   |-- safety_button_test.dart      # Widget SafetyButton del design system
+|   +-- notifications_storage_test.dart # Persistencia local de notificaciones
 +-- pubspec.yaml                    # Dependencias Flutter con versiones fijas
 ```
 
 ### 6.3 Configuracion de Servicios
 - **CORS:** Habilitado irrestrictamente en entorno de desarrollo (`allow_origins=["*"]`, `allow_methods=["*"]`, `allow_headers=["*"]`). Se recomienda restringir a dominios de confianza en produccion.
-- **Variables de Entorno (.env):** `MONGO_URL` (URI de conexion MongoDB Atlas), `SECRET_KEY` (clave de cifrado), `FIREBASE_CREDENTIALS_JSON` (JSON de credenciales Firebase Admin SDK para Railway), `PORT` (puerto del servidor, default 8000). En entorno local se usa el archivo `sgeo-firebase-adminsdk.json` para las credenciales Firebase.
+- **Variables de Entorno (.env):** `MONGO_URL` (URI de conexion MongoDB Atlas), `SECRET_KEY` (declarada, reservada para el futuro JWT), `FIREBASE_CREDENTIALS_JSON` (credenciales Firebase Admin SDK en Railway), `PORT` (default 8000), `ENV` (`development` habilita CORS abierto; otro valor usa la lista restringida de origenes), `RESEND_API_KEY` / `RESEND_FROM_EMAIL` / `ADMIN_EMAIL` (servicio de correo transaccional Resend para el flujo de acreditacion policial). En entorno local se usa el archivo `sgeo-firebase-adminsdk.json` para las credenciales Firebase.
 - **Inicializacion del Sistema:** Al arrancar, `main.py` conecta a MongoDB, crea los indices `2dsphere` e inicia el motor DBSCAN en un hilo daemon (`threading.Thread`) para el primer calculo de zonas de riesgo.
 
 ---
@@ -511,27 +564,38 @@ sgeo_pp/
 
 ### 7.1 Arquitectura Basada en Roles (Flujo RBAC)
 
+El control por roles opera en dos niveles complementarios:
+
+1. **Enrutamiento por rol en el cliente:** tras el login exitoso, Flutter persiste `user_role` en `SharedPreferences` y `main.dart` enruta a la interfaz del rol (`HomeView` ciudadano, `PoliceHomeView`, `AdminHomeView`). Cada interfaz solo expone las acciones de su dominio.
+2. **Gates de negocio en el backend:** el login aplica el gate de aprobacion policial (403 para cuentas pendientes o rechazadas) y las reglas de negocio restringen mutaciones (solo el flujo policial confirma/rechaza; el ciudadano solo elimina reportes propios en estado pendiente).
+
 ```plantuml
 @startuml
 skinparam shadowing false
 actor Cliente
-participant "FastAPI Request" as API
-participant "AuthMiddleware\n(Depends)" as MID
+participant "Flutter main.dart\n(RBAC de cliente)" as RBAC
+participant "FastAPI Router" as API
 participant "BusinessService" as SRV
 
-Cliente -> API: Endpoint protegido (Header: Bearer Token)
-API -> MID: get_current_active_user()
-MID -> MID: decodificar(JWT)
-alt Token Valido y Rol Permitido
-    MID --> API: Pydantic User Object
-    API -> SRV: Ejecutar Logica
-    SRV --> Cliente: DTO Response 200
-else Token Caducado o Rol Inaccesible
-    MID --> API: Raise HTTPException
-    API --> Cliente: 401 / 403 Forbidden
+Cliente -> RBAC: Abrir app (sesion persistida)
+RBAC -> RBAC: lee user_role de SharedPreferences
+alt rol = policia
+    RBAC --> Cliente: PoliceHomeView (mapa sonar + validaciones)
+else rol = admin
+    RBAC --> Cliente: AdminHomeView (dashboard + aprobaciones)
+else rol = ciudadano
+    RBAC --> Cliente: HomeView (mapa + reportes + alertas)
 end
+Cliente -> API: Operacion de negocio (user_id en payload)
+API -> SRV: Ejecutar logica + reglas de negocio
+SRV --> Cliente: DTO Response 200 / 4xx
 @enduml
 ```
+
+> **Deuda tecnica documentada:** el backend no emite tokens de sesion; los endpoints
+> confian en el `user_id` que envia el cliente. La incorporacion de JWT con middleware
+> de autorizacion por rol esta priorizada en el roadmap antes de un despliegue publico
+> masivo (ver Informe de Pruebas, seccion 8.4).
 
 ### 7.2 Procesos Criticos del Sistema: Analitica de Prediccion (Score)
 
@@ -612,7 +676,7 @@ cloud "Google Firebase" as GCloud {
   node "Firebase Cloud\nMessaging (FCM)" as FCM
 }
 
-Movil   ..>  Uvicorn : REST · HTTPS/TLS 1.2
+Movil   ..>  Uvicorn : REST · HTTPS/TLS 1.2+
 Uvicorn ..>  Mongo   : PyMongo · TLS
 Worker  ..>  FCM     : HTTP/JSON · FCM SDK
 FCM     ..>  Movil   : APNs / Google Play Services
@@ -632,7 +696,8 @@ FCM     ..>  Movil   : APNs / Google Play Services
 - **Escalabilidad Horizontal:** Debido a la naturaleza estandar HTTP REST sin guardar estado del lado del servidor (Stateless), FastAPI puede desplegar multiples web-workers detras de un balanceador de carga.
 - **Mantenibilidad:** Separacion inquebrantable de modelos (`models/`) respecto a rutas (`api/`) propicia pruebas unitarias agiles por dependencias.
 - **Rendimiento Optimo en Lectura Geoespacial:** Uso mandatorio del estandar geoespacial GeoJSON coordinado con indices tipo `2dsphere` para delegar la busqueda cartesiana al motor de C++ subyacente en Mongo, omitiendo castigar a Python con dichas iteraciones matriciales iniciales.
-- **Seguridad Logica:** Empleo de dependencias OAuth2 incorporadas nativamente en Starlette/FastAPI, invalidando de plano el secuestro de sesiones.
+- **Seguridad Logica:** Contrasenias con hash bcrypt y salt aleatorio (nunca en texto plano ni en respuestas), mensajes de error genericos anti-enumeracion de correos, gate de aprobacion administrativa para cuentas policiales, y validacion estricta de esquemas con Pydantic V2 (HTTP 422 ante payloads malformados). La emision de tokens de sesion (JWT/OAuth2 de Starlette) esta planificada como siguiente refuerzo.
+- **Testabilidad:** Suite automatizada de 82 pruebas (68 backend con pytest + mongomock, 14 frontend con flutter_test) ejecutable sin servicios externos; ver `docs/Informe_de_Pruebas.md`.
 
 ---
 
@@ -642,7 +707,7 @@ FCM     ..>  Movil   : APNs / Google Play Services
 2. **Eleccion de MongoDB vs PostGIS (PostgreSQL):** La dinamica organica de datos Json transferidos desde moviles se adecua inmejorablemente al estandar BSON sin necesidad de traductores ORM (Object-Relational Mapping). El motor `2dsphere` es suficiente para los limites cartograficos de este alcance.
 3. **Eleccion de Flutter vs React Native:** Flutter integra el motor de renderizado Skia capaz de soportar graficado cartografico multipoligonal asincrono (`flutter_map`) sosteniendo metricas cercanas a los 60 fps invariables, esquivando asi el puente nativo JS Bridge costoso de alternativas hibridas.
 4. **Justificacion de Scikit-Learn DBSCAN:** Modelos alternos como K-Means requieren determinar el numero de clusters previamente (lo cual es falaz en entornos de criminalidad desconocida). DBSCAN parametriza exclusivamente la proximidad geofisica y la densidad de incidentes para auto-descubrir clusters criminales con ruido.
-5. **Autenticacion basada en RBAC embebido via Headers:** Ocultacion frontal de rutas en UI y purga automatica via codigo HTTP 403. Simplifica despliegues en clientes delgados no autorizados.
+5. **RBAC por enrutamiento de cliente + gates de negocio en servidor:** La segregacion de interfaces por rol se resuelve en el arranque de Flutter (menor complejidad y cero latencia extra por request), mientras el backend impone los gates criticos (aprobacion policial 403, limites antispam 429, restricciones de mutacion por estado). Decision consciente para el alcance del piloto; la autorizacion por token en cada endpoint queda como evolucion prevista.
 
 ---
 

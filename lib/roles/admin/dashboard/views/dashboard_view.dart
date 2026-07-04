@@ -399,8 +399,9 @@ class _DashboardViewState extends State<DashboardView>
   }
 
   Widget _buildBigDataTab(bool isDark) {
-    if (_isLoadingBigData)
+    if (_isLoadingBigData) {
       return const Center(child: CircularProgressIndicator());
+    }
     if (_sidpolStats.isEmpty || _sidpolPred.isEmpty) {
       return Center(
         child: Column(
